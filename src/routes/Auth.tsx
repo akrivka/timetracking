@@ -1,7 +1,13 @@
-import { Component, createSignal, Show, Accessor, createEffect } from "solid-js";
+import {
+  Component,
+  createSignal,
+  Show,
+  Accessor,
+  createEffect,
+} from "solid-js";
 import axios from "axios";
 import { hashPassword } from "../lib/util";
-import { Link, useNavigate } from "solid-app-router";
+import { Link, useNavigate, Outlet } from "solid-app-router";
 import { Credentials, getLocalCredentials, saveCredentials } from "../lib/auth";
 
 type CredentialsFormProps = {
@@ -13,16 +19,16 @@ type CredentialsFormProps = {
 const CredentialsForm: Component<CredentialsFormProps> = ({
   onSubmit,
   submitLabel,
-  clear
+  clear,
 }) => {
   let usernameEl, passwordEl;
 
   createEffect(() => {
-    if(clear()) {
+    if (clear()) {
       usernameEl.value = "";
       passwordEl.value = "";
     }
-  })
+  });
   return (
     <form
       onSubmit={async (e) => {
@@ -53,39 +59,42 @@ const CredentialsForm: Component<CredentialsFormProps> = ({
   );
 };
 
-
 export const Signup: Component = () => {
-    const navigate = useNavigate();
-    
-    const signup = async (username: string, password: string) => {
-      const credentials = {
-        username: username,
-        hashedPassword: hashPassword(password),
-      };
-      const res = await axios.post("/api/signup", null, {
-        params: credentials,
-      });
-  
-      saveCredentials(credentials);
-      navigate("/track");
+  const navigate = useNavigate();
+
+  const signup = async (username: string, password: string) => {
+    const credentials = {
+      username: username,
+      hashedPassword: hashPassword(password),
     };
-    return (
-      <div class="pl-12 pt-12">
-        <CredentialsForm onSubmit={signup} submitLabel="Sign up" clear={() => true}/>
-        <div class="h-1" />
-        Already have an account?{" "}
-        <Link href="/login" class="hover:underline">
-          Log in instead.
-        </Link>
-      </div>
-    );
+    const res = await axios.post("/api/signup", null, {
+      params: credentials,
+    });
+
+    saveCredentials(credentials);
+    navigate("/track");
   };
-  
+  return (
+    <>
+      <CredentialsForm
+        onSubmit={signup}
+        submitLabel="Sign up"
+        clear={() => true}
+      />
+      <div class="h-1" />
+      Already have an account?{" "}
+      <Link href="/login" class="hover:underline">
+        Log in instead.
+      </Link>
+    </>
+  );
+};
+
 export const Login: Component = () => {
   const navigate = useNavigate();
-  
+
   const [invalid, setInvalid] = createSignal(false);
-  
+
   const login = async (username: string, password: string) => {
     setInvalid(false);
 
@@ -93,7 +102,6 @@ export const Login: Component = () => {
       username: username,
       hashedPassword: hashPassword(password),
     };
-    
 
     const res = await axios.get("/api/login", {
       params: credentials,
@@ -101,7 +109,7 @@ export const Login: Component = () => {
 
     if (res.data == "ok") {
       saveCredentials(credentials);
-      
+
       navigate("/track");
     } else if (res.data == "username+password not found") {
       setInvalid(true);
@@ -109,16 +117,22 @@ export const Login: Component = () => {
   };
 
   return (
-    <div class="pl-12 pt-12">
-      <CredentialsForm onSubmit={login} submitLabel="Log in" clear={invalid}/>
-      <Show when={invalid()}>
-        Invalid username and password.
-      </Show>
+    <>
+      <CredentialsForm onSubmit={login} submitLabel="Log in" clear={invalid} />
+      <Show when={invalid()}>Invalid username and password.</Show>
       <div class="h-1" />
       Don't have an account?{" "}
       <Link href="/signup" class="hover:underline">
         Sign up instead.
       </Link>
+    </>
+  );
+};
+
+export const Auth: Component = () => {
+  return (
+    <div class="pl-12 pt-12">
+      <Outlet />
     </div>
   );
 };

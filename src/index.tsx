@@ -1,14 +1,34 @@
 import { render } from "solid-js/web";
-import { Router } from "solid-app-router";
+import { Route, Router, Routes } from "solid-app-router";
 
 import "./index.css";
+import { Auth, Login, Signup } from "./routes/auth";
 import App from "./App";
+import Track from "./routes/Track";
+import Report from "./routes/report";
+import Calendar from "./routes/Calendar";
+import Mobile from "./routes/Mobile";
+import { NetworkProvider } from "./lib/network-context";
 
 render(
   () => (
-    <Router>
-      <App />
-    </Router>
+    <NetworkProvider>
+      <Router>
+        <Routes>
+          <Route path="/" component={Auth}>
+            <Route path="/login" component={Login} />
+            <Route path="/signup" component={Signup} />
+          </Route>
+          <Route path="/" component={App}>
+            <Route path="/track" component={Track} />
+            <Route path="/report" component={Report} />
+            <Route path="/calendar" component={Calendar} />
+          </Route>
+          <Route path="/mobile" component={Mobile} />
+          <Route path="/" element={<div>hello</div>} />
+        </Routes>
+      </Router>
+    </NetworkProvider>
   ),
   document.getElementById("root") as HTMLElement
 );

@@ -15,17 +15,13 @@ import {
   NavLink,
   useNavigate,
   useMatch,
+  Outlet,
 } from "solid-app-router";
 import axios from "axios";
 
-import Track from "./routes/Track";
-import Report from "./routes/report";
-import Calendar from "./routes/Calendar";
-import { Login, Signup } from "./routes/auth";
 import { deleteCredentials, getLocalCredentials } from "./lib/auth";
 import { EntriesProvider, useEntries } from "./lib/entries-context";
 import { NetworkProvider } from "./lib/network-context";
-import Mobile from "./routes/Mobile";
 
 type MyLinkProps = {
   href: string;
@@ -80,23 +76,14 @@ const App: Component = () => {
 
   return (
     <>
-      <NetworkProvider>
-        <Show when={loggedIn()} fallback={"loading"}>
-          <EntriesProvider loggedIn={loggedIn}>
-            <Show when={loggedIn() === "ok" && !useMatch(() => "/mobile")()}>
-              <Navbar />
-            </Show>
-            <Routes>
-              <Route path="/login" component={Login} />
-              <Route path="/signup" component={Signup} />
-              <Route path="/track" component={Track} />
-              <Route path="/report" component={Report} />
-              <Route path="/calendar" component={Calendar} />
-              <Route path="/mobile" component={Mobile} />
-            </Routes>
-          </EntriesProvider>
-        </Show>
-      </NetworkProvider>
+      <Show when={loggedIn()} fallback={"loading"}>
+        <EntriesProvider loggedIn={loggedIn}>
+          <Show when={loggedIn() === "ok"}>
+            <Navbar />
+          </Show>
+          <Outlet />
+        </EntriesProvider>
+      </Show>
     </>
   );
 };
