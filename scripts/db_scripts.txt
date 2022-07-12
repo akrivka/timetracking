@@ -1,0 +1,20 @@
+CREATE TABLE users (
+    name TEXT PRIMARY KEY,
+    password_hash TEXT NOT NULL
+);
+
+CREATE TABLE entries (
+    username TEXT NOT NULL,
+    time BIGINT NOT NULL,
+    id TEXT,
+    before TEXT,
+    after TEXT,
+    lastModified BIGINT NOT NULL,
+    deleted BOOLEAN NOT NULL,
+    CONSTRAINT uniqueness UNIQUE(username, id)
+);
+
+CREATE TABLE reports (
+    id TEXT PRIMARY KEY,
+    serialized TEXT NOT NULL
+);
