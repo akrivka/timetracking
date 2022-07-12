@@ -1,6 +1,6 @@
-import { delay, now, wait } from "./util";
-import { openDB, IDBPDatabase } from "idb/with-async-ittr";
+import { IDBPDatabase, openDB } from "idb/with-async-ittr";
 import { Entry, uid } from "./entries";
+import { delay, wait } from "./util";
 
 let db: undefined | IDBPDatabase;
 

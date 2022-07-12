@@ -1,27 +1,13 @@
 import {
-  Component,
-  createEffect,
-  createResource,
-  createSignal,
-  Match,
-  onMount,
-  Show,
-  Switch,
-} from "solid-js";
-import {
-  Routes,
-  Route,
-  Link,
-  NavLink,
-  useNavigate,
-  useMatch,
-  Outlet,
+  NavLink, Outlet
 } from "solid-app-router";
-import axios from "axios";
+import {
+  Component, Match, Switch
+} from "solid-js";
 
-import { deleteLocalCredentials, getLocalCredentials } from "./lib/auth";
-import { EntriesProvider, useEntries } from "./context/EntriesContext";
+import { EntriesProvider } from "./context/EntriesContext";
 import { UserProvider, useUser } from "./context/UserContext";
+import { deleteLocalCredentials } from "./lib/auth";
 
 type MyLinkProps = {
   href: string;

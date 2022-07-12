@@ -1,25 +1,11 @@
 import {
-  Component,
-  createResource,
-  createSignal,
-  Show,
-  Switch,
-  Match,
-  createEffect,
-  For,
-  createMemo,
-  Accessor,
+  Accessor, Component, createSignal, For, Show
 } from "solid-js";
-import { Entry, makeEntry } from "../lib/entries";
-import {
-  connectDB,
-  getAllEntries,
-} from "../lib/localDB";
-import { now, stringToColor, setDelay, delay } from "../lib/util";
-import { renderTime, renderDuration } from "../lib/formatTime";
+import { SyncState } from "../components/SyncState";
 import { Input } from "../components/wrappers";
 import { useEntries } from "../context/EntriesContext";
-import { SyncState } from "../components/SyncState";
+import { renderDuration, renderTime } from "../lib/formatTime";
+import { now, stringToColor } from "../lib/util";
 
 type BulletProps = {
   time: Date;

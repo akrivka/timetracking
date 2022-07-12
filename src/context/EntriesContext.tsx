@@ -1,37 +1,26 @@
+import axios from "axios";
 import {
-  Accessor,
-  createContext,
-  createEffect,
-  createMemo,
-  createResource,
+  createContext, createResource,
   createSignal,
   onMount,
-  useContext,
+  useContext
 } from "solid-js";
+import { getLocalCredentials } from "../lib/auth";
 import {
-  Entry,
-  uid,
-  entryEquals,
-  makeEntry,
-  entrySetEquals,
-  deserializeEntries,
-  serializeEntries,
+  deserializeEntries, Entry, entryEquals, entrySetEquals, makeEntry, serializeEntries, uid
 } from "../lib/entries";
-import { useNetwork } from "./NetworkContext";
 import {
   connectDB,
   getAllEntries,
   getAllEntriesModifiedAfter,
   putEntryLocal,
   removeEntryLocal,
-  updateEntriesLocal,
+  updateEntriesLocal
 } from "../lib/localDB";
-import { putEntryRemote } from "../lib/remoteDB";
 import { createSyncedStoreArray } from "../lib/solid-ext";
-import { now, wait } from "../lib/util";
+import { now } from "../lib/util";
+import { useNetwork } from "./NetworkContext";
 import { useUser } from "./UserContext";
-import axios from "axios";
-import { getLocalCredentials } from "../lib/auth";
 
 export async function pushUpdates() {
   const lastPushed = new Date(JSON.parse(localStorage.lastPushed || "0"));

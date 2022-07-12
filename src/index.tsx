@@ -1,14 +1,14 @@
-import { render } from "solid-js/web";
 import { Route, Router, Routes } from "solid-app-router";
+import { render } from "solid-js/web";
 
-import "./assets/index.css";
-import { Auth, Login, Signup } from "./pages/auth";
 import { App, Home, WithBackButton } from "./App";
-import Track from "./pages/Track";
-import Report from "./pages/report";
+import "./assets/index.css";
+import { NetworkProvider } from "./context/NetworkContext";
+import { Auth, Login, Signup } from "./pages/auth";
 import Calendar from "./pages/Calendar";
 import Mobile from "./pages/Mobile";
-import { NetworkProvider } from "./context/NetworkContext";
+import Report from "./pages/report";
+import Track from "./pages/Track";
 
 render(
   () => (

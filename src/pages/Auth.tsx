@@ -1,17 +1,11 @@
-import {
-  Component,
-  createSignal,
-  Show,
-  Accessor,
-  createEffect,
-} from "solid-js";
 import axios from "axios";
-import { Link, useNavigate, Outlet } from "solid-app-router";
+import { Link, Outlet, useNavigate } from "solid-app-router";
 import {
-  Credentials,
-  getLocalCredentials,
-  saveLocalCredentials,
-  hashPassword,
+  Accessor, Component, createEffect, createSignal,
+  Show
+} from "solid-js";
+import {
+  hashPassword, saveLocalCredentials
 } from "../lib/auth";
 
 type CredentialsFormProps = {

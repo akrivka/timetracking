@@ -1,7 +1,4 @@
 import { Component } from "solid-js";
-import { makeEntry } from "../lib/entries";
-import { useEntries } from "../context/EntriesContext";
-import { now } from "../lib/util";
 
 const Mobile: Component = () => {
   return (
