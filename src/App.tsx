@@ -59,7 +59,7 @@ export const WithBackButton: Component = () => {
   return (
     <>
       <div class="flex w-full justify-end">
-        <button onClick={() => {}}>Go back</button>
+        <NavLink href="/">Go back</NavLink>
       </div>
       <Outlet />
     </>
@@ -70,6 +70,7 @@ export const Home: Component = () => {
   return (
     <div>
       <Navbar />
+      
     </div>
   );
 };
