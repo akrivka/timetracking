@@ -1,7 +1,6 @@
 import { Component } from "solid-js";
 import { makeEntry } from "../lib/entries";
 import { useEntries } from "../lib/entries-context";
-import { addEntry } from "../lib/localDB";
 import { now } from "../lib/util";
 
 const Mobile: Component = () => {
@@ -14,7 +13,7 @@ const Mobile: Component = () => {
         <button
           class="px-12 py-6 text-lg hover:bg-gray-100 rounded border-2 border-black"
           onClick={() => {
-            addEntry(makeEntry());
+            //addEntryLocal(makeEntry());
           }}
         >
           Add entry.

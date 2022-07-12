@@ -11,7 +11,7 @@ import {
 } from "solid-js";
 import { Entry, makeEntry } from "../lib/entries";
 import {
-  addEntry,
+  addEntryLocal,
   connectDB,
   getAllEntries,
   updateEntry,
@@ -26,6 +26,7 @@ import {
 } from "../lib/util";
 import { Input } from "../components/wrappers";
 import { useEntries } from "../lib/entries-context";
+import { SyncState } from "../components/SyncState";
 
 type BulletProps = {
   time: Date;
@@ -98,106 +99,65 @@ const Range: Component<RangeProps> = ({
 };
 
 const Track: Component = () => {
-  const { entries, setEntries, update, syncState } = useEntries();
+  const { entries, addEntry, updateEntry, syncState } = useEntries();
 
   const [focusedIndex, setFocusedIndex] = createSignal(null);
 
   return (
     <div>
-      <div class="w-40 h-28 rounded-sm bg-sky-200 border border-sky-600 px-2 py-1 text-[0.6rem] absolute right-1 top-1 flex flex-col justify-between">
-        <div class="uppercase font-semibold text-sky-800">sync state</div>
-        <p class="whitespace-pre-wrap"> {syncState()}</p>
-        <div>
-          <input
-            class="w-6"
-            type="text"
-            value={delay}
-            onchange={(e) => setDelay(parseInt(e.target.value))}
-          />
-          ms simulated delay
-        </div>
-      </div>
-      <Show when={entries}>
-        <Show
-          when={entries.length !== 0}
-          fallback={
-            <button
-              onClick={() => {
-                const newEntry = makeEntry();
-
-                update({
-                  mutate: () => addEntry(newEntry),
-                  expect: () => setEntries([newEntry]),
-                });
-              }}
-            >
-              Create first entry
-            </button>
-          }
+      <SyncState syncState={syncState} />
+      <Show
+        when={entries.length !== 0}
+        fallback={
+          <button onClick={() => addEntry(null)}>Create first entry</button>
+        }
+      >
+        <div
+          class="pl-8 pt-4"
+          onkeydown={(e) => {
+            // if arrow key up
+            if (e.keyCode === 38) {
+              setFocusedIndex(Math.max(-1, focusedIndex() - 1));
+            }
+            // if arrow key down
+            if (e.keyCode === 40) {
+              setFocusedIndex(Math.min(entries.length - 1, focusedIndex() + 1));
+            }
+          }}
         >
-          <div
-            class="pl-8 pt-4"
-            onkeydown={(e) => {
-              // if arrow key up
-              if (e.keyCode === 38) {
-                setFocusedIndex(Math.max(-1, focusedIndex() - 1));
-              }
-              // if arrow key down
-              if (e.keyCode === 40) {
-                setFocusedIndex(
-                  Math.min(entries.length - 1, focusedIndex() + 1)
-                );
-              }
+          <EmptyBullet />
+          <Range
+            length={now() - entries[0].time}
+            label={() => "TBD"}
+            color={() => "gray"}
+            editCallback={(newLabel: string) => addEntry({ before: newLabel })}
+            focused={() => focusedIndex() === -1}
+            focusCallback={() => setFocusedIndex(-1)}
+            unfocusCallack={() => setFocusedIndex(null)}
+          />
+          <For each={entries}>
+            {(entry, i) => {
+              if (i() === entries.length - 1) return;
+              return (
+                <>
+                  <Bullet time={entry.time} />
+                  <Range
+                    length={entry.time - entries[i() + 1].time}
+                    label={() => entry.before}
+                    color={() => stringToColor(entry.before || "")}
+                    editCallback={(newLabel: string) =>
+                      updateEntry(entry.id, { before: newLabel })
+                    }
+                    focused={() => focusedIndex() === i()}
+                    focusCallback={() => setFocusedIndex(i())}
+                    unfocusCallack={() => setFocusedIndex(null)}
+                  />
+                </>
+              );
             }}
-          >
-            <EmptyBullet />
-            <Range
-              length={now() - entries[0].time}
-              label={() => "TBD"}
-              color={() => "gray"}
-              editCallback={async (newLabel: string) => {
-                const newEntry = makeEntry();
-                newEntry.before = newLabel;
-                update({
-                  mutate: () => addEntry(newEntry),
-                  expect: () => setEntries([newEntry, ...entries]),
-                });
-              }}
-              focused={() => focusedIndex() === -1}
-              focusCallback={() => setFocusedIndex(-1)}
-              unfocusCallack={() => setFocusedIndex(null)}
-            />
-            <For each={entries}>
-              {(entry, i) => {
-                if (i() === entries.length - 1) return;
-                return (
-                  <>
-                    <Bullet time={entry.time} />
-                    <Range
-                      length={entry.time - entries[i() + 1].time}
-                      label={() => entry.before}
-                      color={() => stringToColor(entry.before || "")}
-                      editCallback={(newLabel: string) => {
-                        const newEntry = {
-                          before: newLabel,
-                          lastModified: now(),
-                        };
-                        update({
-                          mutate: () => updateEntry(entry.id, newEntry),
-                          expect: () => setEntries(i(), newEntry),
-                        });
-                      }}
-                      focused={() => focusedIndex() === i()}
-                      focusCallback={() => setFocusedIndex(i())}
-                      unfocusCallack={() => setFocusedIndex(null)}
-                    />
-                  </>
-                );
-              }}
-            </For>
-            <Bullet time={entries[entries.length - 1].time} />
-          </div>
-        </Show>
+          </For>
+          <Bullet time={entries[entries.length - 1].time} />
+        </div>
       </Show>
     </div>
   );

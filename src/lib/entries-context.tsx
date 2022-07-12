@@ -1,4 +1,5 @@
 import {
+  Accessor,
   createContext,
   createEffect,
   createMemo,
@@ -6,120 +7,139 @@ import {
   createSignal,
   useContext,
 } from "solid-js";
-import { connectDB, getAllEntries } from "./localDB";
+import { Entry, uid, entryEquals, makeEntry } from "./entries";
 import { useNetwork } from "./network-context";
-import { createSyncedStore } from "./solid-ext";
-import { sync, syncDown, syncUp, validate } from "./sync";
-import { wait } from "./util";
+import {
+  connectDB,
+  getAllEntries,
+  putEntryLocal,
+  removeEntryLocal,
+} from "./localDB";
+import { putEntryRemote } from "./remoteDB";
+import { createSyncedStoreArray } from "./solid-ext";
+import { now, wait } from "./util";
 
-const EntriesContext = createContext([""]);
+type EntriesContextType = {
+  entries: Entry[];
+  addEntry: (entry: Partial<Entry>) => void;
+  updateEntry: (id: uid, entry: Partial<Entry>) => void;
+  removeEntry: (id: uid) => void;
+  syncState: any;
+  forceSync: () => void;
+};
+
+const EntriesContext = createContext<EntriesContextType>();
 
 export const EntriesProvider = (props) => {
-  let store = null;
-  let isConnected = useNetwork();
+  const hasNetwork = useNetwork();
 
-  if (props.loggedIn()) {
-    // connect to local database
-    const [connection, _] = createResource(connectDB);
+  const [localDB, _] = createResource(connectDB);
 
-    const [syncingUp, setSyncingUp] = createSignal();
-    const [syncingDown, setSyncingDown] = createSignal();
+  // set up synced SolidJS store with the local database
+  const [
+    entries,
+    { update, initialized, querying, mutating, forceSync: storeForceSync },
+  ] = createSyncedStoreArray<Entry>(localDB, {
+    query: getAllEntries,
+    equals: (entriesA, entriesB) =>
+      entriesA.every((entryA, i) => entryEquals(entryA, entriesB[i])),
+  });
 
-    createEffect(async () => {
-      if (connection() && isConnected()) {
-        setSyncingUp(true);
-        await syncUp();
-        setSyncingUp(false);
+  const [syncingUp, setSyncingUp] = createSignal();
+  const [syncingDown, setSyncingDown] = createSignal();
 
-        setSyncingDown(true);
-        await syncDown();
-        setSyncingDown(false);
-      }
+  const addEntry = async (entry: Partial<Entry> | undefined) => {
+    const newEntry = { ...makeEntry(), ...entry };
+    
+    await update({
+      mutate: () => putEntryLocal(newEntry),
+      expect: (set) => set([newEntry, ...entries]),
     });
-
-    // set up synced store with local database
-    const [
-      entries,
-      { update, setStore: setEntries, initialized, querying, mutating, sync },
-    ] = createSyncedStore(connection, {
-      query: getAllEntries,
-      equals: (entriesA, entriesB) => {
-        return entriesA.every(
-          (entryA, i) =>
-            entryA.id === entriesB[i].id &&
-            entryA.lastModified.getTime() === entriesB[i].lastModified.getTime()
-        );
-      },
-    });
-
-    const syncState = createMemo(() => {
-      // test whether user is connected to the internet
-      let remote: string;
-      if (!isConnected()) {
-        remote = "Offline.";
-      } else if (syncingUp()) {
-        remote = "Syncing up... ";
-      } else if (syncingDown()) {
-        remote = "Syncing down... ";
-      } else {
-        remote = "Synced.";
-      }
-
-      let local: string;
-      if (!connection()) {
-        local = "Connecting to local database.";
-      } else if (querying()) {
-        local = "Querying entries.";
-      } else if (mutating()) {
-        local = "Saving entries locally.";
-      } else {
-        local = "Synced.";
-      }
-      return "Remote: " + remote + "\nLocal: " + local;
-    });
-
-    const customUpdate = async (args) => {
-      await update(args);
-      if (navigator.onLine) {
-        await wait(10);
-        setSyncingUp(true);
-        await syncUp();
-        setSyncingUp(false);
-        if (await validate()) {
-          console.log("ok");
-        } else {
-          console.log("error");
-        }
-      }
-    };
-
-    const _sync = async () => {
-      setSyncingDown(true);
-      await syncDown();
-      setSyncingDown(false);
-
+    if (hasNetwork()) {
       setSyncingUp(true);
-      syncUp();
+      await putEntryRemote(newEntry);
       setSyncingUp(false);
+    }
+  };
 
-      sync()
-    };
+  const removeEntry = async (id: uid) => {
+    await update({
+      mutate: () => removeEntryLocal(id),
+      expect: (set) => set(entries.filter((entry) => entry.id !== id)),
+    });
+    if (hasNetwork()) {
+      setSyncingUp(true);
+      //await putEntryRemote(id, { deleted: true });
+      setSyncingUp(false);
+    }
+  };
 
-    // set up sync between local database and remote database
-    store = {
-      entries,
-      setEntries,
-      update: customUpdate,
-      syncState,
-      sync: _sync
+  const updateEntry = async (id: uid, entry: Partial<Entry>) => {
+    const newEntry = {
+      ...entries.find((e) => e.id === id),
+      ...entry,
+      lastModified: now(),
     };
-  }
+    await update({
+      mutate: () => putEntryLocal(newEntry),
+      expect: (set) => set(entries.map((e) => (e.id === id ? newEntry : e))),
+    });
+    if (hasNetwork()) {
+      setSyncingUp(true);
+      await putEntryRemote(newEntry);
+      setSyncingUp(false);
+    }
+  };
+
+  const forceSync = async () => {
+    storeForceSync();
+  };
+
+  const syncState = {
+    local: { initialized, querying, mutating },
+    remote: { hasNetwork, syncingUp, syncingDown }
+  };
 
   return (
-    <EntriesContext.Provider value={store}>
+    <EntriesContext.Provider
+      value={{
+        entries,
+        addEntry,
+        removeEntry,
+        updateEntry,
+        forceSync,
+        syncState,
+      }}
+    >
       {props.children}
     </EntriesContext.Provider>
   );
 };
 
 export const useEntries = () => useContext(EntriesContext);
+
+// const syncState = createMemo(() => {
+//   // test whether user is connected to the internet
+//   let remote: string;
+//   if (!isConnected()) {
+//     remote = "Offline.";
+//   } else if (syncingUp()) {
+//     remote = "Syncing up... ";
+//   } else if (syncingDown()) {
+//     remote = "Syncing down... ";
+//   } else {
+//     remote = "Synced.";
+//   }
+
+//   let local: string;
+//   if (!connection()) {
+//     local = "Connecting to local database.";
+//   } else if (querying()) {
+//     local = "Querying entries.";
+//   } else if (mutating()) {
+//     local = "Saving entries locally.";
+//   } else {
+//     local = "Synced.";
+//   }
+//   return "Remote: " + remote + "\nLocal: " + local;
+// });

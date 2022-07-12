@@ -1,6 +1,6 @@
 import { delay, now, wait } from "./util";
 import { openDB, IDBPDatabase } from "idb/with-async-ittr";
-import { Entry } from "./entries";
+import { Entry, uid } from "./entries";
 
 let db: undefined | IDBPDatabase;
 
@@ -44,18 +44,16 @@ export async function getAllEntriesModifiedAfter(date: Date) {
   return entries.reverse();
 }
 
-export async function addEntry(entry: Entry) {
+export async function putEntryLocal(entry: Entry) {
   await wait(delay);
 
-  return await db?.add("entries", entry);
+  return await db?.put("entries", entry);
 }
 
-export async function updateEntry(id: number, entry: Partial<Entry>) {
+export async function removeEntryLocal(id: uid) {
   await wait(delay);
 
-  const oldEntry: Entry = await db?.get("entries", id);
-  const newEntry: Partial<Entry> = { ...oldEntry, ...entry };
-  return await db?.put("entries", newEntry);
+  return await db?.delete("entries", id);
 }
 
 export async function updateEntries(entries: Entry[]) {

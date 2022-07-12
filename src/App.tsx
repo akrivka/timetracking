@@ -19,9 +19,8 @@ import {
 } from "solid-app-router";
 import axios from "axios";
 
-import { deleteCredentials, getLocalCredentials } from "./lib/auth";
+import { deleteLocalCredentials, getLocalCredentials } from "./lib/auth";
 import { EntriesProvider, useEntries } from "./lib/entries-context";
-import { NetworkProvider } from "./lib/network-context";
 
 type MyLinkProps = {
   href: string;
@@ -42,7 +41,7 @@ const Navbar: Component = () => {
       <MyLink href="/calendar" label="Calendar" />
       <button
         onClick={() => {
-          deleteCredentials();
+          deleteLocalCredentials();
           location.reload();
         }}
       >
@@ -52,40 +51,49 @@ const Navbar: Component = () => {
   );
 };
 
-const App: Component = () => {
-  const navigate = useNavigate();
-  const [loggedIn, _] = createResource(async () => {
+type User = {
+  username: string | undefined;
+};
+
+export const WithBackButton: Component = () => {
+  return (
+    <>
+      <div class="flex w-full justify-end">
+        <button onClick={() => {}}>Go back</button>
+      </div>
+      <Outlet />
+    </>
+  );
+};
+
+export const Home: Component = () => {
+  return (
+    <div>
+      <Navbar />
+    </div>
+  );
+};
+
+export const App: Component = () => {
+  const [user, _] = createResource<User>(async () => {
     const credentials = getLocalCredentials();
-    if (!credentials) return "no credentials";
-    else return (await axios.get("/api/login", { params: credentials })).data;
-  });
-
-  const { sync } = useEntries();
-
-  createEffect(() => {
-    if (loggedIn() && loggedIn() !== "ok") {
-      if (!useMatch(() => "/signup")()) navigate("/login", { replace: true });
-    } else if (loggedIn() === "ok") {
-      if (useMatch(() => "/login")()) navigate("/track");
-
-      window.addEventListener("focus", () => {
-        sync();
-      });
+    if (!credentials) return { username: undefined };
+    else {
+      const { data } = await axios.post("/api/login", credentials);
+      if (data === "ok") {
+        return { username: credentials.username };
+      } else {
+        deleteLocalCredentials();
+        return { username: undefined };
+      }
     }
   });
 
   return (
     <>
-      <Show when={loggedIn()} fallback={"loading"}>
-        <EntriesProvider loggedIn={loggedIn}>
-          <Show when={loggedIn() === "ok"}>
-            <Navbar />
-          </Show>
-          <Outlet />
-        </EntriesProvider>
-      </Show>
+      <EntriesProvider user={user}>
+        <Outlet />
+      </EntriesProvider>
     </>
   );
 };
-
-export default App;

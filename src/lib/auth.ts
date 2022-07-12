@@ -16,7 +16,7 @@ export function saveCredentials(credentials: Credentials) {
   localStorage.hashedPassword = credentials.hashedPassword;
 }
 
-export function deleteCredentials() {
+export function deleteLocalCredentials() {
     delete localStorage.username;
     delete localStorage.hashedPassword;
 }

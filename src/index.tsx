@@ -3,7 +3,7 @@ import { Route, Router, Routes } from "solid-app-router";
 
 import "./index.css";
 import { Auth, Login, Signup } from "./routes/auth";
-import App from "./App";
+import { App, Home, WithBackButton } from "./App";
 import Track from "./routes/Track";
 import Report from "./routes/report";
 import Calendar from "./routes/Calendar";
@@ -20,12 +20,14 @@ render(
             <Route path="/signup" component={Signup} />
           </Route>
           <Route path="/" component={App}>
-            <Route path="/track" component={Track} />
-            <Route path="/report" component={Report} />
-            <Route path="/calendar" component={Calendar} />
+            <Route path="/" component={Home} />
+            <Route path="/" component={WithBackButton}>
+              <Route path="/track" component={Track} />
+              <Route path="/report" component={Report} />
+              <Route path="/calendar" component={Calendar} />
+            </Route>
           </Route>
           <Route path="/mobile" component={Mobile} />
-          <Route path="/" element={<div>hello</div>} />
         </Routes>
       </Router>
     </NetworkProvider>

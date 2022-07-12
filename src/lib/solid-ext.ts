@@ -1,13 +1,28 @@
-import { createSignal, createMemo, createEffect } from "solid-js";
-import { createStore, Store } from "solid-js/store";
+import { createSignal, createEffect, Accessor } from "solid-js";
+import { createStore, SetStoreFunction, Store } from "solid-js/store";
 
-type CreateSyncProps = {
-  query: () => Promise<any>;
-  equals: (dataA, dataB) => boolean;
+type CreateSyncProps<T> = {
+  query: () => Promise<T[]>;
+  equals: (dataA: T[], dataB: T[]) => boolean;
 };
 
-export function createSyncedStore(source, { query, equals }: CreateSyncProps) {
-  const [store, setStore] = createStore([]);
+export function createSyncedStoreArray<T>(
+  source: Accessor<any>,
+  { query, equals }: CreateSyncProps<T>
+): [
+  Store<T[]>,
+  {
+    update: (arg: {
+      mutate: () => Promise<any>;
+      expect: (setStore: SetStoreFunction<T[]>) => void;
+    }) => void;
+    initialized: Accessor<boolean>;
+    mutating: Accessor<boolean>;
+    querying: Accessor<boolean>;
+    forceSync: () => Promise<any>;
+  }
+] {
+  const [store, setStore] = createStore<T[]>([]);
   const [initialized, setInitialized] = createSignal(false);
   const [mutating, setMutating] = createSignal(false);
   const [querying, setQuerying] = createSignal(false);
@@ -24,7 +39,7 @@ export function createSyncedStore(source, { query, equals }: CreateSyncProps) {
   });
 
   const update = async ({ mutate, expect }) => {
-    expect();
+    expect(setStore);
     // mutate
     setMutating(true);
     await mutate();
@@ -40,9 +55,9 @@ export function createSyncedStore(source, { query, equals }: CreateSyncProps) {
     }
   };
 
-  const sync = async () => {
+  const forceSync = async () => {
     setStore(await query());
   };
 
-  return [store, { update, setStore, initialized, querying, mutating, sync }];
+  return [store, { update, initialized, querying, mutating, forceSync }];
 }

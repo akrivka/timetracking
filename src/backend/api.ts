@@ -4,7 +4,7 @@ import "dotenv/config";
 import postgres from "postgres";
 import { Credentials } from "../lib/auth";
 import { serializeEntries, deserializeEntries } from "../lib/entries";
-import { addEntry } from "../lib/localDB";
+import { addEntryLocal } from "../lib/localDB";
 import { delay, wait } from "../lib/util";
 
 const db_url = process.env.DATABASE_URL;

@@ -1,6 +1,6 @@
-import { createContext, createSignal, useContext } from "solid-js";
+import { Accessor, createContext, createSignal, useContext } from "solid-js";
 
-const NetworkContext = createContext();
+const NetworkContext = createContext<Accessor<boolean>>();
 
 export const NetworkProvider = (props) => {
   let [hasNetwork, setHasNetwork] = createSignal(navigator.onLine);
