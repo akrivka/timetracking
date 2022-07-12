@@ -1,13 +1,22 @@
 import axios from "axios";
 import {
-  createContext, createResource,
+  createComputed,
+  createContext,
+  createEffect,
+  createResource,
   createSignal,
   onMount,
-  useContext
+  useContext,
 } from "solid-js";
 import { getLocalCredentials } from "../lib/auth";
 import {
-  deserializeEntries, Entry, entryEquals, entrySetEquals, makeEntry, serializeEntries, uid
+  deserializeEntries,
+  Entry,
+  entryEquals,
+  entrySetEquals,
+  makeEntry,
+  serializeEntries,
+  uid,
 } from "../lib/entries";
 import {
   connectDB,
@@ -15,7 +24,7 @@ import {
   getAllEntriesModifiedAfter,
   putEntryLocal,
   removeEntryLocal,
-  updateEntriesLocal
+  updateEntriesLocal,
 } from "../lib/localDB";
 import { createSyncedStoreArray } from "../lib/solid-ext";
 import { now } from "../lib/util";
@@ -73,15 +82,6 @@ export async function fullValidate() {
   return entrySetEquals(localEntries, remoteEntries);
 }
 
-export async function fullSync() {
-  delete localStorage.lastPushed;
-  delete localStorage.lastPulled;
-  await pullUpdates();
-  await pushUpdates();
-  localStorage.lastPushed = JSON.stringify(now().getTime());
-  localStorage.lastPulled = JSON.stringify(now().getTime());
-}
-
 type EntriesContextType = {
   entries: Entry[];
   addEntry: (entry: Partial<Entry>) => void;
@@ -112,6 +112,8 @@ export const EntriesProvider = (props) => {
   const [syncingUp, setSyncingUp] = createSignal();
   const [syncingDown, setSyncingDown] = createSignal();
 
+  const loggedIn = () => user() && user().username;
+
   const addEntry = async (entry: Partial<Entry> | undefined) => {
     const newEntry = { ...makeEntry(), ...entry };
 
@@ -119,7 +121,7 @@ export const EntriesProvider = (props) => {
       mutate: () => putEntryLocal(newEntry),
       expect: (set) => set([newEntry, ...entries]),
     });
-    if (hasNetwork()) {
+    if (hasNetwork() && loggedIn()) {
       setSyncingUp(true);
       await pushUpdates();
       setSyncingUp(false);
@@ -131,7 +133,7 @@ export const EntriesProvider = (props) => {
       mutate: () => removeEntryLocal(id),
       expect: (set) => set(entries.filter((entry) => entry.id !== id)),
     });
-    if (hasNetwork()) {
+    if (hasNetwork() && loggedIn()) {
       setSyncingUp(true);
       //await putEntryRemote(id, { deleted: true });
       setSyncingUp(false);
@@ -148,7 +150,7 @@ export const EntriesProvider = (props) => {
       mutate: () => putEntryLocal(newEntry),
       expect: (set) => set(entries.map((e) => (e.id === id ? newEntry : e))),
     });
-    if (hasNetwork()) {
+    if (hasNetwork() && loggedIn()) {
       setSyncingUp(true);
       await pushUpdates();
       setSyncingUp(false);
@@ -157,14 +159,25 @@ export const EntriesProvider = (props) => {
 
   const forceSync = async () => {
     storeForceSync();
+
+    delete localStorage.lastPushed;
+    delete localStorage.lastPulled;
+    setSyncingDown(true);
+    await pullUpdates();
+    setSyncingDown(false);
+    setSyncingUp(true);
+    await pushUpdates();
+    setSyncingUp(false);
+    localStorage.lastPushed = JSON.stringify(now().getTime());
+    localStorage.lastPulled = JSON.stringify(now().getTime());
   };
+
+  createEffect(() => initialized() && forceSync());
 
   const syncState = {
     local: { initialized, querying, mutating },
-    remote: { hasNetwork, syncingUp, syncingDown },
+    remote: { loggedIn, syncingUp, syncingDown },
   };
-
-  onMount(fullSync);
 
   return (
     <EntriesContext.Provider
