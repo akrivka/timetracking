@@ -2,13 +2,13 @@ import { render } from "solid-js/web";
 import { Route, Router, Routes } from "solid-app-router";
 
 import "./assets/index.css";
-import { Auth, Login, Signup } from "./routes/auth";
+import { Auth, Login, Signup } from "./pages/auth";
 import { App, Home, WithBackButton } from "./App";
-import Track from "./routes/Track";
-import Report from "./routes/report";
-import Calendar from "./routes/Calendar";
-import Mobile from "./routes/Mobile";
-import { NetworkProvider } from "./lib/network-context";
+import Track from "./pages/Track";
+import Report from "./pages/report";
+import Calendar from "./pages/Calendar";
+import Mobile from "./pages/Mobile";
+import { NetworkProvider } from "./context/NetworkContext";
 
 render(
   () => (

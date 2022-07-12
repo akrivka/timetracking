@@ -20,7 +20,7 @@ import {
 import axios from "axios";
 
 import { deleteLocalCredentials, getLocalCredentials } from "./lib/auth";
-import { EntriesProvider, useEntries } from "./lib/entries-context";
+import { EntriesProvider, useEntries } from "./context/EntriesContext";
 
 type MyLinkProps = {
   href: string;

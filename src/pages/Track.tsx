@@ -17,15 +17,16 @@ import {
   updateEntry,
 } from "../lib/localDB";
 import {
-  renderTime,
-  renderDuration,
   now,
   stringToColor,
   setDelay,
   delay,
 } from "../lib/util";
+import {   renderTime,
+  renderDuration,
+} from "../lib/formatTime"
 import { Input } from "../components/wrappers";
-import { useEntries } from "../lib/entries-context";
+import { useEntries } from "../context/EntriesContext";
 import { SyncState } from "../components/SyncState";
 
 type BulletProps = {

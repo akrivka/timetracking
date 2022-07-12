@@ -6,9 +6,13 @@ import {
   createEffect,
 } from "solid-js";
 import axios from "axios";
-import { hashPassword } from "../lib/util";
 import { Link, useNavigate, Outlet } from "solid-app-router";
-import { Credentials, getLocalCredentials, saveCredentials } from "../lib/auth";
+import {
+  Credentials,
+  getLocalCredentials,
+  saveLocalCredentials,
+  hashPassword,
+} from "../lib/auth";
 
 type CredentialsFormProps = {
   onSubmit: (username: string, password: string) => void;
@@ -71,7 +75,7 @@ export const Signup: Component = () => {
       params: credentials,
     });
 
-    saveCredentials(credentials);
+    saveLocalCredentials(credentials);
     navigate("/track");
   };
   return (
@@ -108,7 +112,7 @@ export const Login: Component = () => {
     });
 
     if (res.data == "ok") {
-      saveCredentials(credentials);
+      saveLocalCredentials(credentials);
 
       navigate("/track");
     } else if (res.data == "username+password not found") {

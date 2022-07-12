@@ -7,17 +7,17 @@ import {
   createSignal,
   useContext,
 } from "solid-js";
-import { Entry, uid, entryEquals, makeEntry } from "./entries";
-import { useNetwork } from "./network-context";
+import { Entry, uid, entryEquals, makeEntry } from "../lib/entries";
+import { useNetwork } from "./NetworkContext";
 import {
   connectDB,
   getAllEntries,
   putEntryLocal,
   removeEntryLocal,
-} from "./localDB";
-import { putEntryRemote } from "./remoteDB";
-import { createSyncedStoreArray } from "./solid-ext";
-import { now, wait } from "./util";
+} from "../lib/localDB";
+import { putEntryRemote } from "../lib/remoteDB";
+import { createSyncedStoreArray } from "../lib/solid-ext";
+import { now, wait } from "../lib/util";
 
 type EntriesContextType = {
   entries: Entry[];
