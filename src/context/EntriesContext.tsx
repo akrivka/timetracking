@@ -18,6 +18,7 @@ import {
 import { putEntryRemote } from "../lib/remoteDB";
 import { createSyncedStoreArray } from "../lib/solid-ext";
 import { now, wait } from "../lib/util";
+import { useUser } from "./UserContext";
 
 type EntriesContextType = {
   entries: Entry[];
@@ -32,6 +33,7 @@ const EntriesContext = createContext<EntriesContextType>();
 
 export const EntriesProvider = (props) => {
   const hasNetwork = useNetwork();
+  const user = useUser();
 
   const [localDB, _] = createResource(connectDB);
 
@@ -50,7 +52,7 @@ export const EntriesProvider = (props) => {
 
   const addEntry = async (entry: Partial<Entry> | undefined) => {
     const newEntry = { ...makeEntry(), ...entry };
-    
+
     await update({
       mutate: () => putEntryLocal(newEntry),
       expect: (set) => set([newEntry, ...entries]),
@@ -97,7 +99,7 @@ export const EntriesProvider = (props) => {
 
   const syncState = {
     local: { initialized, querying, mutating },
-    remote: { hasNetwork, syncingUp, syncingDown }
+    remote: { hasNetwork, syncingUp, syncingDown },
   };
 
   return (

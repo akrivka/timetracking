@@ -21,6 +21,7 @@ import axios from "axios";
 
 import { deleteLocalCredentials, getLocalCredentials } from "./lib/auth";
 import { EntriesProvider, useEntries } from "./context/EntriesContext";
+import { UserProvider, useUser } from "./context/UserContext";
 
 type MyLinkProps = {
   href: string;
@@ -34,25 +35,32 @@ const MyLink: Component<MyLinkProps> = ({ href, label }) => (
 );
 
 const Navbar: Component = () => {
+  const user = useUser();
+
   return (
     <div class="flex">
       <MyLink href="/track" label="Track" />
       <MyLink href="/report" label="Report" />
       <MyLink href="/calendar" label="Calendar" />
-      <button
-        onClick={() => {
-          deleteLocalCredentials();
-          location.reload();
-        }}
-      >
-        Log out
-      </button>
+      <Switch>
+        <Match when={!user}>Loading</Match>
+        <Match when={!user()?.username}>
+          <MyLink href="/signup" label="Sign up" />
+        </Match>
+        <Match when={true}>
+          <p class="ml-1 text-gray-500">({user()?.username})</p>
+          <button
+            onClick={() => {
+              deleteLocalCredentials();
+              location.reload();
+            }}
+          >
+            Log out
+          </button>
+        </Match>
+      </Switch>
     </div>
   );
-};
-
-type User = {
-  username: string | undefined;
 };
 
 export const WithBackButton: Component = () => {
@@ -70,31 +78,16 @@ export const Home: Component = () => {
   return (
     <div>
       <Navbar />
-      
     </div>
   );
 };
 
 export const App: Component = () => {
-  const [user, _] = createResource<User>(async () => {
-    const credentials = getLocalCredentials();
-    if (!credentials) return { username: undefined };
-    else {
-      const { data } = await axios.post("/api/login", credentials);
-      if (data === "ok") {
-        return { username: credentials.username };
-      } else {
-        deleteLocalCredentials();
-        return { username: undefined };
-      }
-    }
-  });
-
   return (
-    <>
-      <EntriesProvider user={user}>
+    <UserProvider>
+      <EntriesProvider>
         <Outlet />
       </EntriesProvider>
-    </>
+    </UserProvider>
   );
 };
