@@ -24,7 +24,7 @@ import {
   setDelay,
   delay,
 } from "../lib/util";
-import { Input } from "../components/basic";
+import { Input } from "../components/wrappers";
 import { useEntries } from "../lib/entries-context";
 
 type BulletProps = {

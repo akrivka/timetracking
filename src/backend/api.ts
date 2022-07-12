@@ -2,10 +2,10 @@ import express from "express";
 import bodyParser from "body-parser";
 import "dotenv/config";
 import postgres from "postgres";
-import { Credentials } from "./lib/auth";
-import { serializeEntries, deserializeEntries } from "./lib/entries";
-import { addEntry } from "./lib/localDB";
-import { delay, wait } from "./lib/util";
+import { Credentials } from "../lib/auth";
+import { serializeEntries, deserializeEntries } from "../lib/entries";
+import { addEntry } from "../lib/localDB";
+import { delay, wait } from "../lib/util";
 
 const db_url = process.env.DATABASE_URL;
 const runningLocally = db_url == undefined || db_url.search("localhost") > 0;

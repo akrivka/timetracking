@@ -18,15 +18,14 @@ import {
 } from "solid-app-router";
 import axios from "axios";
 
-import Track from "./routes/track";
+import Track from "./routes/Track";
 import Report from "./routes/report";
-import Calendar from "./routes/calendar";
-import Login from "./routes/login";
-import Signup from "./routes/signup";
+import Calendar from "./routes/Calendar";
+import { Login, Signup } from "./routes/auth";
 import { deleteCredentials, getLocalCredentials } from "./lib/auth";
 import { EntriesProvider, useEntries } from "./lib/entries-context";
 import { NetworkProvider } from "./lib/network-context";
-import Mobile from "./routes/mobile";
+import Mobile from "./routes/Mobile";
 
 type MyLinkProps = {
   href: string;
@@ -68,19 +67,13 @@ const App: Component = () => {
   const { sync } = useEntries();
 
   createEffect(() => {
-    console.log(loggedIn());
-
     if (loggedIn() && loggedIn() !== "ok") {
       if (!useMatch(() => "/signup")()) navigate("/login", { replace: true });
     } else if (loggedIn() === "ok") {
-      
       if (useMatch(() => "/login")()) navigate("/track");
-      console.log(sync);
-      
+
       window.addEventListener("focus", () => {
         sync();
-        console.log("lol");
-        
       });
     }
   });
