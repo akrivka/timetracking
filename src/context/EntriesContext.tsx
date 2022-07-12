@@ -5,20 +5,93 @@ import {
   createMemo,
   createResource,
   createSignal,
+  onMount,
   useContext,
 } from "solid-js";
-import { Entry, uid, entryEquals, makeEntry } from "../lib/entries";
+import {
+  Entry,
+  uid,
+  entryEquals,
+  makeEntry,
+  entrySetEquals,
+  deserializeEntries,
+  serializeEntries,
+} from "../lib/entries";
 import { useNetwork } from "./NetworkContext";
 import {
   connectDB,
   getAllEntries,
+  getAllEntriesModifiedAfter,
   putEntryLocal,
   removeEntryLocal,
+  updateEntriesLocal,
 } from "../lib/localDB";
 import { putEntryRemote } from "../lib/remoteDB";
 import { createSyncedStoreArray } from "../lib/solid-ext";
 import { now, wait } from "../lib/util";
 import { useUser } from "./UserContext";
+import axios from "axios";
+import { getLocalCredentials } from "../lib/auth";
+
+export async function pushUpdates() {
+  const lastPushed = new Date(JSON.parse(localStorage.lastPushed || "0"));
+
+  // get all local entries modified after lastPushed
+  const entries = await getAllEntriesModifiedAfter(lastPushed);
+
+  // serialize entries
+  const s = serializeEntries(entries);
+
+  // send to server using axios
+  const credentials = getLocalCredentials();
+  const response = await axios.post(
+    "/api/update",
+    "entries=" + encodeURIComponent(s),
+    { params: credentials }
+  );
+
+  // update lastPushed
+  localStorage.lastPushed = JSON.stringify(now().getTime());
+}
+
+export async function pullUpdates() {
+  const lastPulled = new Date(JSON.parse(localStorage.lastPulled || "0"));
+
+  // pull all entries from the server modified after lastPulled
+  const credentials = getLocalCredentials();
+
+  const response = await axios.get("/api/entries", {
+    params: { ...credentials, after: lastPulled.getTime() },
+  });
+
+  // store entries in localDB
+  const entries = deserializeEntries(decodeURIComponent(response.data));
+
+  updateEntriesLocal(entries);
+
+  // change last pulled
+  localStorage.lastPulled = JSON.stringify(now().getTime());
+}
+
+export async function fullValidate() {
+  const credentials = getLocalCredentials();
+  const response = await axios.get("/api/entries", {
+    params: credentials,
+  });
+  const remoteEntries = deserializeEntries(decodeURIComponent(response.data));
+  const localEntries = await getAllEntries();
+
+  return entrySetEquals(localEntries, remoteEntries);
+}
+
+export async function fullSync() {
+  delete localStorage.lastPushed;
+  delete localStorage.lastPulled;
+  await pullUpdates();
+  await pushUpdates();
+  localStorage.lastPushed = JSON.stringify(now().getTime());
+  localStorage.lastPulled = JSON.stringify(now().getTime());
+}
 
 type EntriesContextType = {
   entries: Entry[];
@@ -59,7 +132,7 @@ export const EntriesProvider = (props) => {
     });
     if (hasNetwork()) {
       setSyncingUp(true);
-      await putEntryRemote(newEntry);
+      await pushUpdates();
       setSyncingUp(false);
     }
   };
@@ -88,7 +161,7 @@ export const EntriesProvider = (props) => {
     });
     if (hasNetwork()) {
       setSyncingUp(true);
-      await putEntryRemote(newEntry);
+      await pushUpdates();
       setSyncingUp(false);
     }
   };
@@ -101,6 +174,8 @@ export const EntriesProvider = (props) => {
     local: { initialized, querying, mutating },
     remote: { hasNetwork, syncingUp, syncingDown },
   };
+
+  onMount(fullSync);
 
   return (
     <EntriesContext.Provider
@@ -119,29 +194,3 @@ export const EntriesProvider = (props) => {
 };
 
 export const useEntries = () => useContext(EntriesContext);
-
-// const syncState = createMemo(() => {
-//   // test whether user is connected to the internet
-//   let remote: string;
-//   if (!isConnected()) {
-//     remote = "Offline.";
-//   } else if (syncingUp()) {
-//     remote = "Syncing up... ";
-//   } else if (syncingDown()) {
-//     remote = "Syncing down... ";
-//   } else {
-//     remote = "Synced.";
-//   }
-
-//   let local: string;
-//   if (!connection()) {
-//     local = "Connecting to local database.";
-//   } else if (querying()) {
-//     local = "Querying entries.";
-//   } else if (mutating()) {
-//     local = "Saving entries locally.";
-//   } else {
-//     local = "Synced.";
-//   }
-//   return "Remote: " + remote + "\nLocal: " + local;
-// });

@@ -8,23 +8,15 @@ import {
   createEffect,
   For,
   createMemo,
+  Accessor,
 } from "solid-js";
 import { Entry, makeEntry } from "../lib/entries";
 import {
-  addEntryLocal,
   connectDB,
   getAllEntries,
-  updateEntry,
 } from "../lib/localDB";
-import {
-  now,
-  stringToColor,
-  setDelay,
-  delay,
-} from "../lib/util";
-import {   renderTime,
-  renderDuration,
-} from "../lib/formatTime"
+import { now, stringToColor, setDelay, delay } from "../lib/util";
+import { renderTime, renderDuration } from "../lib/formatTime";
 import { Input } from "../components/wrappers";
 import { useEntries } from "../context/EntriesContext";
 import { SyncState } from "../components/SyncState";
@@ -58,6 +50,9 @@ type RangeProps = {
   label: () => string;
   editCallback: any;
   color: () => string;
+  focusCallback: () => void;
+  unfocusCallback: () => void;
+  focused: Accessor<boolean>;
 };
 
 const Range: Component<RangeProps> = ({
@@ -66,7 +61,7 @@ const Range: Component<RangeProps> = ({
   color,
   editCallback,
   focusCallback,
-  unfocusCallack,
+  unfocusCallback,
   focused,
 }) => {
   //  console.log("(Re)rendering! " + label());
@@ -91,7 +86,7 @@ const Range: Component<RangeProps> = ({
             class="bg-sky-50"
             onEnter={editCallback}
             autofocus={true}
-            onBlur={unfocusCallack}
+            onBlur={unfocusCallback}
           />
         </div>
       </Show>
@@ -128,13 +123,13 @@ const Track: Component = () => {
         >
           <EmptyBullet />
           <Range
-            length={now() - entries[0].time}
+            length={now().getTime() - entries[0].time.getTime()}
             label={() => "TBD"}
             color={() => "gray"}
             editCallback={(newLabel: string) => addEntry({ before: newLabel })}
             focused={() => focusedIndex() === -1}
             focusCallback={() => setFocusedIndex(-1)}
-            unfocusCallack={() => setFocusedIndex(null)}
+            unfocusCallback={() => setFocusedIndex(null)}
           />
           <For each={entries}>
             {(entry, i) => {
@@ -143,7 +138,9 @@ const Track: Component = () => {
                 <>
                   <Bullet time={entry.time} />
                   <Range
-                    length={entry.time - entries[i() + 1].time}
+                    length={
+                      entry.time.getTime() - entries[i() + 1].time.getTime()
+                    }
                     label={() => entry.before}
                     color={() => stringToColor(entry.before || "")}
                     editCallback={(newLabel: string) =>
@@ -151,7 +148,7 @@ const Track: Component = () => {
                     }
                     focused={() => focusedIndex() === i()}
                     focusCallback={() => setFocusedIndex(i())}
-                    unfocusCallack={() => setFocusedIndex(null)}
+                    unfocusCallback={() => setFocusedIndex(null)}
                   />
                 </>
               );

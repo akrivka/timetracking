@@ -37,6 +37,32 @@ export function entryEquals(a: Entry, b: Entry): boolean {
   );
 }
 
+export function entrySetEquals(xs: Entry[], ys: Entry[]) {
+  function makeMap(entries: Entry[]): Map<uid, Entry> {
+    const result = new Map();
+    for (const entry of entries) {
+      result.set(entry.id, entry);
+    }
+    return result;
+  }
+
+  const xMap: Map<uid, Entry> = makeMap(xs);
+  const yMap: Map<uid, Entry> = makeMap(ys);
+
+  for (const x of xs) {
+    const y = yMap.get(x.id);
+    if (y === undefined) return false;
+    if (!entryEquals(x, y)) return false;
+  }
+  for (const y of ys) {
+    const x = xMap.get(y.id);
+    if (x === undefined) return false;
+    if (!entryEquals(x, y)) return false;
+  }
+
+  return true;
+}
+
 export function serializeEntries(entries: Entry[]): string {
   return JSON.stringify(
     entries.map((x) => ({

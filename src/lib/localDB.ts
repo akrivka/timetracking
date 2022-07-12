@@ -56,7 +56,7 @@ export async function removeEntryLocal(id: uid) {
   return await db?.delete("entries", id);
 }
 
-export async function updateEntries(entries: Entry[]) {
+export async function updateEntriesLocal(entries: Entry[]) {
   await wait(delay);
 
   const tx = db.transaction("entries", "readwrite");
