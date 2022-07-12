@@ -1,7 +1,7 @@
 import { render } from "solid-js/web";
 import { Route, Router, Routes } from "solid-app-router";
 
-import "./index.css";
+import "./assets/index.css";
 import { Auth, Login, Signup } from "./routes/auth";
 import { App, Home, WithBackButton } from "./App";
 import Track from "./routes/Track";
