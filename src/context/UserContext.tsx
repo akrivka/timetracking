@@ -37,6 +37,12 @@ export function deleteLocalUser() {
   localStorage.removeItem("user");
 }
 
+export function saveLocalCredentials(credentials: Credentials) {
+  const user = getLocalUser();
+  user.credentials = credentials;
+  saveLocalUser(user);
+}
+
 const UserContext = createContext<Accessor<User>>();
 
 export const UserProvider = (props) => {

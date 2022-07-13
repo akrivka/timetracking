@@ -4,9 +4,8 @@ import {
   Accessor, Component, createEffect, createSignal,
   Show
 } from "solid-js";
-import {
-  hashPassword, saveLocalCredentials
-} from "../lib/auth";
+import { saveLocalCredentials } from "../context/UserContext";
+import { hashPassword } from "../lib/util";
 
 type CredentialsFormProps = {
   onSubmit: (username: string, password: string) => void;
