@@ -1,26 +1,65 @@
 import axios from "axios";
 import { Accessor, createContext, createResource, useContext } from "solid-js";
-import { deleteLocalCredentials, getLocalCredentials } from "../lib/auth";
+
+export type Credentials = { username: string; hashedPassword: string };
+
+type Profile = {};
+
+type User = {
+  credentials?: Credentials;
+  profile: Profile;
+};
+
+function makeUser(): User {
+  return {
+    credentials: null,
+    profile: {},
+  };
+}
+
+function serializeUser(user: User): string {
+  return JSON.stringify(user);
+}
+
+function deserializeUser(user: string): User {
+  return JSON.parse(user);
+}
+
+function getLocalUser(): User {
+  return deserializeUser(localStorage.getItem("user"));
+}
+
+function saveLocalUser(user: User) {
+  localStorage.setItem("user", serializeUser(user));
+}
+
+export function deleteLocalUser() {
+  localStorage.removeItem("user");
+}
 
 const UserContext = createContext<Accessor<User>>();
 
-type User = {
-  username: string | undefined;
-};
-
 export const UserProvider = (props) => {
   const [user, _] = createResource<User>(async () => {
-    const credentials = getLocalCredentials();
-    if (!credentials) return { username: undefined };
-    else {
-      const { data } = await axios.get("/api/login", { params: credentials });
+    const user = getLocalUser();
+    if (!user) {
+      const newUser = makeUser();
+      saveLocalUser(newUser);
+      return newUser;
+    } else if (user.credentials) {
+      const { data } = await axios.get("/api/login", {
+        params: user.credentials,
+      });
 
       if (data === "ok") {
-        return { username: credentials.username };
+        return user;
       } else {
-        deleteLocalCredentials();
-        return { username: undefined };
+        user.credentials = null;
+        saveLocalUser(user);
+        return user;
       }
+    } else {
+      return user;
     }
   });
 

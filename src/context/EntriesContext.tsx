@@ -212,7 +212,7 @@ export const EntriesProvider = (props) => {
   const [syncingUp, setSyncingUp] = createSignal();
   const [syncingDown, setSyncingDown] = createSignal();
 
-  const loggedIn = () => user() && user().username;
+  const loggedIn = () => user() && user().credentials;
 
   const addEntry = async (entry: Partial<Entry> | undefined) => {
     const newEntry = { ...makeEntry(), ...entry };

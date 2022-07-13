@@ -1,12 +1,8 @@
-import {
-  NavLink, Outlet
-} from "solid-app-router";
-import {
-  Component, Match, Switch
-} from "solid-js";
+import { NavLink, Outlet, useNavigate } from "solid-app-router";
+import { Component, Match, Switch } from "solid-js";
 
 import { EntriesProvider } from "./context/EntriesContext";
-import { UserProvider, useUser } from "./context/UserContext";
+import { deleteLocalUser, UserProvider, useUser } from "./context/UserContext";
 import { deleteLocalCredentials } from "./lib/auth";
 
 type MyLinkProps = {
@@ -22,6 +18,7 @@ const MyLink: Component<MyLinkProps> = ({ href, label }) => (
 
 const Navbar: Component = () => {
   const user = useUser();
+  const navigate = useNavigate();
 
   return (
     <div class="flex">
@@ -30,15 +27,15 @@ const Navbar: Component = () => {
       <MyLink href="/calendar" label="Calendar" />
       <Switch>
         <Match when={!user}>Loading</Match>
-        <Match when={!user()?.username}>
+        <Match when={!user()?.credentials}>
           <MyLink href="/signup" label="Sign up" />
         </Match>
         <Match when={true}>
-          <p class="ml-1 text-gray-500">({user()?.username})</p>
+          <p class="ml-1 text-gray-500">({user()?.credentials.username})</p>
           <button
             onClick={() => {
-              deleteLocalCredentials();
-              location.reload();
+              deleteLocalUser();
+              navigate("/login");
             }}
           >
             Log out
