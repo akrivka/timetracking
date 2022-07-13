@@ -10,7 +10,7 @@ import { SyncState } from "../components/SyncState";
 import { Input } from "../components/wrappers";
 import { useEntries } from "../context/EntriesContext";
 import { useWindow } from "../context/WindowContext";
-import { renderDuration, renderTime } from "../lib/formatTime";
+import { renderDuration, renderTime } from "../lib/format";
 import { now, stringToColor } from "../lib/util";
 
 type BulletProps = {
