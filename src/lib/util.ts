@@ -19,7 +19,7 @@ export function nowTime() {
   // set timeout
   setTimeout(() => setTime(now().getTime()), 1000);
 }
- 
+
 export function stringToColor(str: string) {
   var hash = 0;
   for (var i = 0; i < str.length; i++) {
@@ -32,4 +32,16 @@ export function stringToColor(str: string) {
   }
   color += "1)";
   return color;
+}
+
+export function hash(s: string): number {
+  var hash: number = 0;
+  for (var i = 0; i < s.length; i++) {
+    hash = (hash << 5) - hash + s.charCodeAt(i);
+  }
+  return hash;
+}
+
+export function hashPassword(password: string): string {
+  return hash(password).toString(16);
 }

@@ -8,7 +8,6 @@ import {
   onMount,
   useContext,
 } from "solid-js";
-import { getLocalCredentials } from "../lib/auth";
 import {
   connectDB,
   getAllEntries,
@@ -20,7 +19,7 @@ import {
 import { createSyncedStoreArray } from "../lib/solid-ext";
 import { now } from "../lib/util";
 import { useWindow } from "./WindowContext";
-import { useUser } from "./UserContext";
+import { Credentials, useUser } from "./UserContext";
 
 export type uid = string;
 
@@ -131,7 +130,7 @@ export function deserializeEntries(s: string): Entry[] {
   }
 }
 
-export async function pushUpdates() {
+export async function pushUpdates(credentials: Credentials) {
   const lastPushed = new Date(JSON.parse(localStorage.lastPushed || "0"));
 
   // get all local entries modified after lastPushed
@@ -141,7 +140,6 @@ export async function pushUpdates() {
   const s = serializeEntries(entries);
 
   // send to server using axios
-  const credentials = getLocalCredentials();
   const response = await axios.post(
     "/api/update",
     "entries=" + encodeURIComponent(s),
@@ -152,11 +150,10 @@ export async function pushUpdates() {
   localStorage.lastPushed = JSON.stringify(now().getTime());
 }
 
-export async function pullUpdates() {
+export async function pullUpdates(credentials: Credentials) {
   const lastPulled = new Date(JSON.parse(localStorage.lastPulled || "0"));
 
   // pull all entries from the server modified after lastPulled
-  const credentials = getLocalCredentials();
 
   const response = await axios.get("/api/entries", {
     params: { ...credentials, after: lastPulled.getTime() },
@@ -171,8 +168,7 @@ export async function pullUpdates() {
   localStorage.lastPulled = JSON.stringify(now().getTime());
 }
 
-export async function fullValidate() {
-  const credentials = getLocalCredentials();
+export async function fullValidate(credentials: Credentials) {
   const response = await axios.get("/api/entries", {
     params: credentials,
   });
@@ -194,7 +190,7 @@ type EntriesContextType = {
 const EntriesContext = createContext<EntriesContextType>();
 
 export const EntriesProvider = (props) => {
-  const {hasNetwork} = useWindow();
+  const { hasNetwork } = useWindow();
   const user = useUser();
 
   const [localDB, _] = createResource(connectDB);
@@ -223,7 +219,7 @@ export const EntriesProvider = (props) => {
     });
     if (hasNetwork() && loggedIn()) {
       setSyncingUp(true);
-      await pushUpdates();
+      await pushUpdates(user().credentials);
       setSyncingUp(false);
     }
   };
@@ -252,7 +248,7 @@ export const EntriesProvider = (props) => {
     });
     if (hasNetwork() && loggedIn()) {
       setSyncingUp(true);
-      await pushUpdates();
+      await pushUpdates(user().credentials);
       setSyncingUp(false);
     }
   };
@@ -263,10 +259,10 @@ export const EntriesProvider = (props) => {
     delete localStorage.lastPushed;
     delete localStorage.lastPulled;
     setSyncingDown(true);
-    await pullUpdates();
+    await pullUpdates(user().credentials);
     setSyncingDown(false);
     setSyncingUp(true);
-    await pushUpdates();
+    await pushUpdates(user().credentials);
     setSyncingUp(false);
     localStorage.lastPushed = JSON.stringify(now().getTime());
     localStorage.lastPulled = JSON.stringify(now().getTime());
