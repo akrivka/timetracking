@@ -6,6 +6,7 @@ import {
   createResource,
   createSignal,
   onMount,
+  untrack,
   useContext,
 } from "solid-js";
 import {
@@ -97,7 +98,7 @@ function* namesFrom(label: Label | undefined): Generator<Label> {
 
 //returns labels starting from the most recent
 //TODO: can make faster
-function getDistinctLabels(entries: Entry[]): Label[] {  
+function getDistinctLabels(entries: Entry[]): Label[] {
   const seen: Set<string> = new Set();
   const result: string[] = [];
   function add(s: string) {
@@ -296,6 +297,7 @@ export const EntriesProvider = (props) => {
     setSyncingUp(false);
     localStorage.lastPushed = JSON.stringify(now().getTime());
     localStorage.lastPulled = JSON.stringify(now().getTime());
+    return null;
   };
 
   const [labels, setLabels] = createStore([] as Label[]);
@@ -308,9 +310,9 @@ export const EntriesProvider = (props) => {
   createEffect(() => {
     if (initialized()) {
       if (hasNetwork() && loggedIn()) {
-        forceSync();
+        untrack(forceSync);
       }
-      setLabels(getDistinctLabels(entries));
+      untrack(() => setLabels(getDistinctLabels(entries)));
     }
   });
 

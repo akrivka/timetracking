@@ -3,7 +3,6 @@ import { Component, Match, Switch } from "solid-js";
 
 import { EntriesProvider } from "./context/EntriesContext";
 import { deleteLocalUser, UserProvider, useUser } from "./context/UserContext";
-import { deleteLocalCredentials } from "./lib/auth";
 
 type MyLinkProps = {
   href: string;
@@ -65,7 +64,7 @@ export const Home: Component = () => {
   );
 };
 
-export const App: Component = () => {
+export const App: Component = () => {  
   return (
     <UserProvider>
       <EntriesProvider>
