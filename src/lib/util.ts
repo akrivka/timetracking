@@ -1,3 +1,5 @@
+import { createSignal } from "solid-js";
+
 export let delay: number = 0;
 
 export function setDelay(ms: number) {
@@ -12,6 +14,11 @@ export function now(): Date {
   return new Date();
 }
 
+export function nowTime() {
+  const [time, setTime] = createSignal(now().getTime());
+  // set timeout
+  setTimeout(() => setTime(now().getTime()), 1000);
+}
  
 export function stringToColor(str: string) {
   var hash = 0;

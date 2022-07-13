@@ -1,9 +1,15 @@
 import {
-  Accessor, Component, createSignal, For, Show
+  Accessor,
+  Component,
+  createEffect,
+  createSignal,
+  For,
+  Show,
 } from "solid-js";
 import { SyncState } from "../components/SyncState";
 import { Input } from "../components/wrappers";
 import { useEntries } from "../context/EntriesContext";
+import { useWindow } from "../context/WindowContext";
 import { renderDuration, renderTime } from "../lib/formatTime";
 import { now, stringToColor } from "../lib/util";
 
@@ -32,7 +38,7 @@ const EmptyBullet: Component = () => {
 };
 
 type RangeProps = {
-  length: number;
+  length: Accessor<number>;
   label: () => string;
   editCallback: any;
   color: () => string;
@@ -63,7 +69,7 @@ const Range: Component<RangeProps> = ({
       >
         <div>
           <div class="w-48">{label || "TBD"}</div>
-          <div>{renderDuration(length)}</div>
+          <div>{renderDuration(length())}</div>
         </div>
       </div>
       <Show when={focused()}>
@@ -84,6 +90,8 @@ const Track: Component = () => {
   const { entries, addEntry, updateEntry, syncState } = useEntries();
 
   const [focusedIndex, setFocusedIndex] = createSignal(null);
+
+  const { time } = useWindow();
 
   return (
     <div>
@@ -109,7 +117,7 @@ const Track: Component = () => {
         >
           <EmptyBullet />
           <Range
-            length={now().getTime() - entries[0].time.getTime()}
+            length={() => time() - entries[0].time.getTime()}
             label={() => "TBD"}
             color={() => "gray"}
             editCallback={(newLabel: string) => addEntry({ before: newLabel })}
@@ -124,7 +132,7 @@ const Track: Component = () => {
                 <>
                   <Bullet time={entry.time} />
                   <Range
-                    length={
+                    length={() =>
                       entry.time.getTime() - entries[i() + 1].time.getTime()
                     }
                     label={() => entry.before}

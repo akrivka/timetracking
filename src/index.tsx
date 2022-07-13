@@ -3,7 +3,7 @@ import { render } from "solid-js/web";
 
 import { App, Home, WithBackButton } from "./App";
 import "./assets/index.css";
-import { NetworkProvider } from "./context/NetworkContext";
+import { WindowProvider } from "./context/WindowContext";
 import { Auth, Login, Signup } from "./pages/auth";
 import Calendar from "./pages/Calendar";
 import Mobile from "./pages/Mobile";
@@ -12,7 +12,7 @@ import Track from "./pages/Track";
 
 render(
   () => (
-    <NetworkProvider>
+    <WindowProvider>
       <Router>
         <Routes>
           <Route path="/" component={Auth}>
@@ -30,7 +30,7 @@ render(
           <Route path="/mobile" component={Mobile} />
         </Routes>
       </Router>
-    </NetworkProvider>
+    </WindowProvider>
   ),
   document.getElementById("root") as HTMLElement
 );

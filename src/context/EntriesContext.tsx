@@ -19,7 +19,7 @@ import {
 } from "../lib/localDB";
 import { createSyncedStoreArray } from "../lib/solid-ext";
 import { now } from "../lib/util";
-import { useNetwork } from "./NetworkContext";
+import { useWindow } from "./WindowContext";
 import { useUser } from "./UserContext";
 
 export type uid = string;
@@ -194,7 +194,7 @@ type EntriesContextType = {
 const EntriesContext = createContext<EntriesContextType>();
 
 export const EntriesProvider = (props) => {
-  const hasNetwork = useNetwork();
+  const {hasNetwork} = useWindow();
   const user = useUser();
 
   const [localDB, _] = createResource(connectDB);
