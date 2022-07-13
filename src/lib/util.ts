@@ -45,3 +45,15 @@ export function hash(s: string): number {
 export function hashPassword(password: string): string {
   return hash(password).toString(16);
 }
+
+export function* it<T>(xs: T[]): Generator<T> {
+  for (let i = 0; i < xs.length; i++) {
+    yield xs[i];
+  }
+}
+export function* revit<T>(xs: T[], limit?: number): Generator<T> {
+  const bottom = limit == undefined ? 0 : xs.length - limit;
+  for (let i = xs.length - 1; i >= bottom; i--) {
+    yield xs[i];
+  }
+}

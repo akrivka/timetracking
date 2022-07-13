@@ -7,11 +7,12 @@ import {
   Show,
 } from "solid-js";
 import { SyncState } from "../components/SyncState";
-import { Input } from "../components/wrappers";
+import { InputBox } from "../components/InputBox";
 import { useEntries } from "../context/EntriesContext";
 import { useWindow } from "../context/WindowContext";
 import { renderDuration, renderTime } from "../lib/format";
 import { now, stringToColor } from "../lib/util";
+import { actionRule } from "../lib/parse";
 
 type BulletProps = {
   time: Date;
@@ -40,7 +41,7 @@ const EmptyBullet: Component = () => {
 type RangeProps = {
   length: Accessor<number>;
   label: () => string;
-  editCallback: any;
+  submit: any;
   color: () => string;
   focusCallback: () => void;
   unfocusCallback: () => void;
@@ -51,12 +52,13 @@ const Range: Component<RangeProps> = ({
   length,
   label,
   color,
-  editCallback,
+  submit,
   focusCallback,
   unfocusCallback,
   focused,
 }) => {
   //  console.log("(Re)rendering! " + label());
+  const { labels } = useEntries();
 
   return (
     <div class="flex text-sm">
@@ -74,10 +76,10 @@ const Range: Component<RangeProps> = ({
       </div>
       <Show when={focused()}>
         <div class="flex items-center">
-          <Input
-            class="bg-sky-50"
-            onEnter={editCallback}
-            autofocus={true}
+          <InputBox
+            prefixRule={actionRule}
+            submit={submit}
+            universe={labels}
             onBlur={unfocusCallback}
           />
         </div>
@@ -120,10 +122,12 @@ const Track: Component = () => {
             length={() => time() - entries[0].time.getTime()}
             label={() => "TBD"}
             color={() => "gray"}
-            editCallback={(newLabel: string) => addEntry({ before: newLabel })}
             focused={() => focusedIndex() === -1}
             focusCallback={() => setFocusedIndex(-1)}
             unfocusCallback={() => setFocusedIndex(null)}
+            submit={(x, s) => {
+              console.log(x, s);
+            }}
           />
           <For each={entries}>
             {(entry, i) => {
@@ -137,12 +141,12 @@ const Track: Component = () => {
                     }
                     label={() => entry.before}
                     color={() => stringToColor(entry.before || "")}
-                    editCallback={(newLabel: string) =>
-                      updateEntry(entry.id, { before: newLabel })
-                    }
                     focused={() => focusedIndex() === i()}
                     focusCallback={() => setFocusedIndex(i())}
                     unfocusCallback={() => setFocusedIndex(null)}
+                    submit={(x, s) => {
+                      console.log(x, s);
+                    }}
                   />
                 </>
               );

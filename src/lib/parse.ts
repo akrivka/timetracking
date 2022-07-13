@@ -15,6 +15,14 @@ export function parseString<T>(rule:Rule<T>, s:string): 'fail' | 'prefix' | [T, 
     return [result[0], tokens.slice(0, result[1]).join(''), tokens.slice(result[1]).join('')]
 }
 
+export function splitPrefix<T>(rule: Rule<T>, s:string): [string, string] {
+    const m = parseString(rule, s)
+    if (m == 'fail') return ['', s]
+    if (m == 'prefix') return [s, '']
+    return [m[1], m[2]]
+}
+
+
 // start parsing from token start
 //fail means no match
 //prefix means it may be possible to extend into a match

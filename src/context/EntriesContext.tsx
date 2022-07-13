@@ -17,11 +17,14 @@ import {
   updateEntriesLocal,
 } from "../lib/localDB";
 import { createSyncedStoreArray } from "../lib/solid-ext";
-import { now } from "../lib/util";
+import { now, revit } from "../lib/util";
 import { useWindow } from "./WindowContext";
 import { Credentials, useUser } from "./UserContext";
+import { createStore } from "solid-js/store";
 
 export type uid = string;
+
+export type Label = string;
 
 export interface Entry {
   before?: string; // label of the interval before
@@ -82,6 +85,32 @@ export function entrySetEquals(xs: Entry[], ys: Entry[]) {
   }
 
   return true;
+}
+
+function* namesFrom(label: Label | undefined): Generator<Label> {
+  if (label === undefined) return;
+  const parts = label.split("/");
+  for (let i = 0; i < parts.length; i++) {
+    yield parts.slice(0, i + 1).join("/");
+  }
+}
+
+//returns labels starting from the most recent
+//TODO: can make faster
+function getDistinctLabels(entries: Entry[]): Label[] {  
+  const seen: Set<string> = new Set();
+  const result: string[] = [];
+  function add(s: string) {
+    if (!seen.has(s)) {
+      result.push(s);
+      seen.add(s);
+    }
+  }
+  for (const entry of revit(entries)) {
+    for (const name of namesFrom(entry.before)) add(name);
+    for (const name of namesFrom(entry.after)) add(name);
+  }
+  return result;
 }
 
 export function serializeEntries(entries: Entry[]): string {
@@ -180,6 +209,7 @@ export async function fullValidate(credentials: Credentials) {
 
 type EntriesContextType = {
   entries: Entry[];
+  labels: Label[];
   addEntry: (entry: Partial<Entry>) => void;
   updateEntry: (id: uid, entry: Partial<Entry>) => void;
   removeEntry: (id: uid) => void;
@@ -268,17 +298,27 @@ export const EntriesProvider = (props) => {
     localStorage.lastPulled = JSON.stringify(now().getTime());
   };
 
-  createEffect(() => initialized() && forceSync());
+  const [labels, setLabels] = createStore([] as Label[]);
 
   const syncState = {
     local: { initialized, querying, mutating },
     remote: { loggedIn, syncingUp, syncingDown },
   };
 
+  createEffect(() => {
+    if (initialized()) {
+      if (hasNetwork() && loggedIn()) {
+        forceSync();
+      }
+      setLabels(getDistinctLabels(entries));
+    }
+  });
+
   return (
     <EntriesContext.Provider
       value={{
         entries,
+        labels,
         addEntry,
         removeEntry,
         updateEntry,
