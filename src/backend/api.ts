@@ -3,8 +3,11 @@ import bodyParser from "body-parser";
 import "dotenv/config";
 import postgres from "postgres";
 import { Credentials } from "../lib/auth";
-import { serializeEntries, deserializeEntries } from "../lib/entries";
-import { addEntryLocal } from "../lib/localDB";
+import {
+  serializeEntries,
+  deserializeEntries,
+} from "../context/EntriesContext";
+import { putEntryLocal } from "../lib/localDB";
 import { delay, wait } from "../lib/util";
 
 const db_url = process.env.DATABASE_URL;
@@ -109,9 +112,7 @@ const app = express()
       const success: boolean = await userExists(credentials);
 
       if (success) {
-        let entries = deserializeEntries(
-          decodeURIComponent(req.body.entries)
-        )
+        let entries = deserializeEntries(decodeURIComponent(req.body.entries));
 
         for (const entry of entries) {
           await sql`INSERT INTO entries (username, id, time, before, after, lastmodified, deleted)
