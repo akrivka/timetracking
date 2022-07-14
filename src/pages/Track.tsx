@@ -1,8 +1,4 @@
-import {
-  Component, createSignal,
-  For,
-  Show
-} from "solid-js";
+import { Component, createSignal, For, Show } from "solid-js";
 import { InputBox } from "../components/InputBox";
 import { useEntries } from "../context/EntriesContext";
 import { useWindow } from "../context/WindowContext";
@@ -55,10 +51,12 @@ const Track: Component = () => {
 
   const inputBox = InputBox({
     prefixRule: actionRule,
-    submit: (x, s) => console.log(x, s),
     universe: labels,
     focusSignal: focusedIndex,
     class: "bg-blue-50",
+    submit: (x, s) => {
+      console.log(x, s);
+    },
   });
 
   return (
@@ -85,7 +83,7 @@ const Track: Component = () => {
                       }
                     />
                     <div
-                      class="ml-8 pl-1 flex flex-col justify-center cursor-pointer hover:bg-sky-50 w-48"
+                      class="ml-8 pl-1 flex flex-col justify-center cursor-pointer hover:bg-sky-50 w-56"
                       onClick={() => setFocusedIndex(i())}
                     >
                       <div>{prevEntry?.before || "TBD"}</div>
@@ -98,7 +96,12 @@ const Track: Component = () => {
                     </div>
 
                     <Show when={focusedIndex() === i()}>
-                      <div class="flex items-center">{inputBox}</div>
+                      <div
+                        class="flex items-center"
+                        onfocusout={() => setFocusedIndex(null)}
+                      >
+                        {inputBox}
+                      </div>
                     </Show>
                   </div>
                   <Bullet time={curEntry.time} />

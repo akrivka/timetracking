@@ -71,43 +71,52 @@ export function InputBox<T>({
 
   const [selected, setSelected] = createSignal(-1);
 
-  return (
-    <div
-      class="relative inline-block"
-      onkeydown={(e) => {
-        if (searchPhrase() !== "") {
-          e.stopPropagation();
-          if (e.key === "ArrowUp") {
-            setSelected(Math.max(selected() - 1, -1));
-            e.preventDefault();
-          }
-          if (e.key === "ArrowDown") {
-            setSelected(Math.min(selected() + 1, universe.length - 1));
-            e.preventDefault();
-          }
+  const filteredUniverse = () =>
+    universe.filter((x) => x.includes(searchPhrase()));
+
+  const onkeydown = (e) => {
+    if (searchPhrase() !== "") {
+      e.stopPropagation();
+      if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+        e.preventDefault();
+
+        if (e.key === "ArrowUp") {
+          setSelected(Math.max(selected() - 1, -1));
         }
-      }}
-    >
+        if (e.key === "ArrowDown") {
+          setSelected(Math.min(selected() + 1, universe.length - 1));
+        }
+
+        if (selected() >= 0) {
+          ref.value = filteredUniverse()[selected()];
+        }
+      }
+    }
+  };
+
+  return (
+    <div class="relative inline-block w-48" onkeydown={onkeydown}>
       <input
         type="text"
         onkeydown={(e) => e.key === "Enter" && onEnter(e.currentTarget.value)}
         oninput={(e) => onInput(e.currentTarget.value)}
         ref={ref}
         {...props}
+        class={"w-full " + props.class}
       />
 
       <Show when={searchPhrase() !== ""}>
         <div class="absolute z-10 left-0 right-0 border-x border-gray-200">
-          <For each={universe.filter((x) => x.includes(searchPhrase()))}>
+          <For each={filteredUniverse()}>
             {(m, i) => (
-              <button
+              <div
                 class={
-                  "p-2 w-full border-b border-gray-200 " +
+                  "p-2 w-full cursor-pointer border-b border-gray-200 " +
                   (selected() === i() ? "bg-blue-400" : "")
                 }
               >
                 {m}
-              </button>
+              </div>
             )}
           </For>
         </div>
