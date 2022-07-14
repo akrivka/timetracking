@@ -1,9 +1,12 @@
 import { createMemo } from "solid-js";
+import { useEntries } from "../context/EntriesContext";
 import { useWindow } from "../context/WindowContext";
 import { delay, setDelay } from "../lib/util";
 
-export const SyncState = ({ syncState }) => {
-  const {hasNetwork} = useWindow();
+export const SyncState = () => {
+  const { hasNetwork } = useWindow();
+  const { syncState } = useEntries();
+
   const syncStateString = createMemo(() => {
     if (syncState && syncState.local && syncState.remote) {
       const { local, remote } = syncState;

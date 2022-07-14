@@ -1,5 +1,6 @@
 import { NavLink, Outlet, useNavigate } from "solid-app-router";
 import { Component, Match, Switch } from "solid-js";
+import { SyncState } from "./components/SyncState";
 
 import { EntriesProvider } from "./context/EntriesContext";
 import { deleteLocalUser, UserProvider, useUser } from "./context/UserContext";
@@ -64,10 +65,11 @@ export const Home: Component = () => {
   );
 };
 
-export const App: Component = () => {  
+export const App: Component = () => {
   return (
     <UserProvider>
       <EntriesProvider>
+        <SyncState/>
         <Outlet />
       </EntriesProvider>
     </UserProvider>

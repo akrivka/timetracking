@@ -1,20 +1,14 @@
 import {
-  Accessor,
-  Component,
-  createEffect,
-  createMemo,
-  createSignal,
+  Component, createSignal,
   For,
-  Show,
+  Show
 } from "solid-js";
-import { SyncState } from "../components/SyncState";
 import { InputBox } from "../components/InputBox";
-import { entryEquals, useEntries } from "../context/EntriesContext";
+import { useEntries } from "../context/EntriesContext";
 import { useWindow } from "../context/WindowContext";
 import { renderDuration, renderTime } from "../lib/format";
-import { now, stringToColor } from "../lib/util";
 import { actionRule } from "../lib/parse";
-import { Portal } from "solid-js/web";
+import { stringToColor } from "../lib/util";
 
 const Bullet: Component<{ time: Date }> = ({ time }) => {
   return (
@@ -39,10 +33,7 @@ const EmptyBullet: Component = () => {
 const Line: Component<{ color: string }> = ({ color }) => {
   return (
     <div class="w-4 flex justify-center">
-      <div
-        class="h-20 w-1"
-        style={"background-color: " + stringToColor(color || "") + ";"}
-      />
+      <div class="h-20 w-1" style={`background-color: ${color};`} />
     </div>
   );
 };
@@ -51,6 +42,14 @@ const Track: Component = () => {
   const { entries, labels, addEntry, updateEntry, syncState } = useEntries();
 
   const [focusedIndex, setFocusedIndex] = createSignal(null);
+  const onkeydown = (e) => {
+    if (e.key === "ArrowUp") {
+      setFocusedIndex(Math.max(0, focusedIndex() - 1));
+    }
+    if (e.key === "ArrowDown") {
+      setFocusedIndex(Math.min(entries.length - 1, focusedIndex() + 1));
+    }
+  };
 
   const { time } = useWindow();
 
@@ -64,24 +63,13 @@ const Track: Component = () => {
 
   return (
     <div>
-      <SyncState syncState={syncState} />
       <Show
         when={entries.length > 0}
         fallback={
           <button onClick={() => addEntry(null)}>Create first entry</button>
         }
       >
-        <div
-          class="pl-8 pt-4"
-          onkeydown={(e) => {
-            if (e.key === "ArrowUp") {
-              setFocusedIndex(Math.max(0, focusedIndex() - 1));
-            }
-            if (e.key === "ArrowDown") {
-              setFocusedIndex(Math.min(entries.length - 1, focusedIndex() + 1));
-            }
-          }}
-        >
+        <div class="pl-8 pt-4" onkeydown={onkeydown}>
           <EmptyBullet />
           <For each={entries}>
             {(curEntry, i) => {
@@ -89,7 +77,13 @@ const Track: Component = () => {
               return (
                 <>
                   <div class="flex text-sm">
-                    <Line color={prevEntry?.before || ""} />
+                    <Line
+                      color={
+                        prevEntry
+                          ? stringToColor(prevEntry?.before || "")
+                          : "gray"
+                      }
+                    />
                     <div
                       class="ml-8 pl-1 flex flex-col justify-center cursor-pointer hover:bg-sky-50 w-48"
                       onClick={() => setFocusedIndex(i())}
