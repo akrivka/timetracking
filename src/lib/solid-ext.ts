@@ -1,5 +1,5 @@
 import { createSignal, createEffect, Accessor } from "solid-js";
-import { createStore, SetStoreFunction, Store } from "solid-js/store";
+import { createStore, SetStoreFunction, Store, unwrap } from "solid-js/store";
 
 type CreateSyncProps<T> = {
   query: () => Promise<T[]>;
@@ -49,7 +49,7 @@ export function createSyncedStoreArray<T>(
     const newStore = await query();
     setQuerying(false);
     // equals
-    const eq = equals(newStore, store);
+    const eq = equals(newStore, unwrap(store));
     if (eq !== true) {
       console.log("something went wrong: ");
       

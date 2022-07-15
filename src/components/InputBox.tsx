@@ -8,6 +8,7 @@ import {
   createEffect,
 } from "solid-js";
 import { parseString, Rule, splitPrefix } from "../lib/parse";
+import { wait } from "../lib/util";
 
 // type InputProps = {
 //   onEnter: any;
@@ -98,7 +99,15 @@ export function InputBox<T>({
     <div class="relative inline-block w-48" onkeydown={onkeydown}>
       <input
         type="text"
-        onkeydown={(e) => e.key === "Enter" && onEnter(e.currentTarget.value)}
+        onkeydown={async (e) => {
+          if (e.key === "Enter") {
+            onEnter(e.currentTarget.value);
+            ref.value = "";
+            setSearchPhrase("");
+            await wait(10)
+            ref.focus();
+          }
+        }}
         oninput={(e) => onInput(e.currentTarget.value)}
         ref={ref}
         {...props}

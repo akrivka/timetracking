@@ -1,5 +1,6 @@
 import axios from "axios";
 import {
+  batch,
   createComputed,
   createContext,
   createEffect,
@@ -209,10 +210,8 @@ export async function fullValidate(credentials: Credentials) {
 
 type EntriesContextType = {
   entries: Entry[];
-  labels: Label[];
-  addEntry: (entry: Partial<Entry>) => void;
-  updateEntry: (id: uid, entry: Partial<Entry>) => void;
-  removeEntry: (id: uid) => void;
+  labels: Set<Label>;
+  dispatch: (any) => any;
   syncState: any;
   forceSync: () => void;
 };
@@ -222,6 +221,8 @@ const EntriesContext = createContext<EntriesContextType>();
 export const EntriesProvider = (props) => {
   const { hasNetwork } = useWindow();
   const user = useUser();
+
+  const loggedIn = () => user() && user().credentials;
 
   const [localDB, _] = createResource(connectDB);
 
@@ -244,14 +245,14 @@ export const EntriesProvider = (props) => {
     },
   });
 
+  const labels = new Set([]);
+
+  // remote signals
   const [syncingUp, setSyncingUp] = createSignal();
   const [syncingDown, setSyncingDown] = createSignal();
 
-  const loggedIn = () => user() && user().credentials;
-
   const putEntry = async (entry: Partial<Entry> | undefined) => {
-    const existingIndex = entries.findIndex((e) => e.id === entry.id);
-    const existingEntry = existingIndex >= 0 && entries[existingIndex];
+    const existingEntry = entries.find((e) => e.id === entry.id);
 
     const newEntry = {
       ...(existingEntry || makeEntry()),
@@ -262,16 +263,27 @@ export const EntriesProvider = (props) => {
     await update({
       mutate: () => putEntryLocal(newEntry),
       expect: (set) => {
-        if (existingEntry) {
-          set(entries.map((e) => (e.id === entry.id ? newEntry : e)));
-        } else if (newEntry.deleted) {
-          set(entries.splice(existingIndex, 1));
-        } else {
+        if (!existingEntry) {
+          // add
           set([newEntry, ...entries]);
+        } else if (!newEntry.deleted) {
+          // update
+          set(entries.map((e) => (e.id === entry.id ? newEntry : e)));
+        } else {
+          // remove
+          set(entries.filter((e) => e.id !== entry.id));
         }
       },
     });
 
+    if (!newEntry.deleted) {
+      labels.add(newEntry.before);
+      labels.add(newEntry.after);
+    } else {
+      labels.delete(newEntry.before);
+      labels.delete(newEntry.after);
+    }
+
     if (hasNetwork() && loggedIn()) {
       setSyncingUp(true);
       await pushUpdates(user().credentials);
@@ -279,46 +291,40 @@ export const EntriesProvider = (props) => {
     }
   };
 
-  const addEntry = async (entry: Partial<Entry> | undefined) => {
-    const newEntry = { ...makeEntry(), ...entry };
+  const dispatch = async ([event, info]) => {
+    if (event === "composite") {
+      for (const eventVector of info) dispatch(eventVector);
+    } else {
+      const { start, end, entry, label, rewire = true } = info;
 
-    await update({
-      mutate: () => putEntryLocal(newEntry),
-      expect: (set) => set([newEntry, ...entries]),
-    });
-    if (hasNetwork() && loggedIn()) {
-      setSyncingUp(true);
-      await pushUpdates(user().credentials);
-      setSyncingUp(false);
-    }
-  };
+      switch (event) {
+        case "insert":
+          if (entry.time < start.time || (end && entry.time > end?.time))
+            return false;
 
-  const removeEntry = async (id: uid) => {
-    await update({
-      mutate: () => removeEntryLocal(id),
-      expect: (set) => set(entries.filter((entry) => entry.id !== id)),
-    });
-    if (hasNetwork() && loggedIn()) {
-      setSyncingUp(true);
-      //await putEntryRemote(id, { deleted: true });
-      setSyncingUp(false);
-    }
-  };
+          await putEntry(entry);
 
-  const updateEntry = async (id: uid, entry: Partial<Entry>) => {
-    const newEntry = {
-      ...entries.find((e) => e.id === id),
-      ...entry,
-      lastModified: now(),
-    };
-    await update({
-      mutate: () => putEntryLocal(newEntry),
-      expect: (set) => set(entries.map((e) => (e.id === id ? newEntry : e))),
-    });
-    if (hasNetwork() && loggedIn()) {
-      setSyncingUp(true);
-      await pushUpdates(user().credentials);
-      setSyncingUp(false);
+          if (rewire) {
+            if (entry.before && start)
+              await putEntry({ ...start, after: entry.before });
+            if (entry.after && end)
+              await putEntry({ ...end, before: entry.after });
+          }
+          break;
+        case "move":
+          // info.entry
+          break;
+        case "relabel":
+          end && (await putEntry({ ...end, before: label }));
+          start && (await putEntry({ ...start, after: label }));
+          break;
+        case "delete":
+          putEntry({ ...entry, deleted: true });
+          break;
+        case "bulkRename":
+          // info.oldLabel, info.newLabel
+          break;
+      }
     }
   };
 
@@ -338,8 +344,6 @@ export const EntriesProvider = (props) => {
     return null;
   };
 
-  const [labels, setLabels] = createStore([] as Label[]);
-
   const syncState = {
     local: { initialized, querying, mutating },
     remote: { loggedIn, syncingUp, syncingDown },
@@ -350,47 +354,15 @@ export const EntriesProvider = (props) => {
       if (hasNetwork() && loggedIn()) {
         untrack(forceSync);
       }
-      untrack(() => setLabels(getDistinctLabels(entries)));
+      getDistinctLabels(entries).forEach((label) => labels.add(label));
     }
   });
-
-  const dispatch = async ([event, info]) => {
-    const { start, end, entry, label } = info;
-
-    switch (event) {
-      case "insert":
-        if (entry.time < start.time || (end && entry.time > end?.time))
-          return false;
-
-        await putEntry(entry);
-        if (entry.before) await putEntry({ ...start, after: entry.before });
-        if (entry.after) await putEntry({ ...end, before: entry.after });
-
-        break;
-      case "move":
-        // info.entry
-        break;
-      case "relabel":
-        start && putEntry({ ...start, after: label });
-        end && putEntry({ ...end, before: label });
-        break;
-      case "delete":
-        putEntry({ ...entry, deleted: true });
-        break;
-      case "bulkRename":
-        // info.oldLabel, info.newLabel
-        break;
-    }
-  };
 
   return (
     <EntriesContext.Provider
       value={{
         entries,
         labels,
-        addEntry,
-        removeEntry,
-        updateEntry,
         dispatch,
         forceSync,
         syncState,
