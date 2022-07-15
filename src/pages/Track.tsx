@@ -41,7 +41,7 @@ const Line: Component<{ color: string }> = ({ color }) => {
 
 const Track: Component = () => {
   const { time } = useWindow();
-  const { entries, labels, addEntry, dispatch } = useEntries();
+  const { entries, labels, dispatch } = useEntries();
 
   const [focusedIndex, setFocusedIndex] = createSignal(null);
   const [newEntry, setNewEntry] = createSignal(null);

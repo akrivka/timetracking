@@ -9,6 +9,7 @@ import {
   thisMonday,
 } from "../lib/date";
 import { renderDay } from "../lib/format";
+import { stringToColor } from "../lib/util";
 
 const Calendar: Component = () => {
   const { entries } = useEntries();
@@ -55,10 +56,13 @@ const Calendar: Component = () => {
                         const height =
                           msBetween(start.time, end.time) /
                           (24 * 60 * 60 * 1000);
+                        const color = stringToColor(start.after || "");
                         return (
                           <div
                             class="w-full"
-                            style={`height: ${height * 100}%`}
+                            style={`height: ${
+                              height * 100
+                            }%; background-color: ${color};`}
                           >
                             {start.after}
                           </div>

@@ -64,7 +64,9 @@ export function minutesAfter(a: Date, n: number): Date {
   return result;
 }
 
-export function* listPairsAndEnds<T>(xs: T[]): Generator<[T | null, T | null]> {
+export function* listPairsAndEnds<T>(
+  xs: Generator<T>
+): Generator<[T | null, T | null]> {
   let a: T | null = null;
   let b: T | null = null;
   for (const x of xs) {
@@ -75,7 +77,7 @@ export function* listPairsAndEnds<T>(xs: T[]): Generator<[T | null, T | null]> {
   if (b != null) yield [b, null];
 }
 
-export function* listPairs<T>(xs: T[]): Generator<[T, T]> {
+export function* listPairs<T>(xs: Generator<T>): Generator<[T, T]> {
   for (const [x, y] of listPairsAndEnds(xs)) {
     if (x != null && y != null) yield [x, y];
   }

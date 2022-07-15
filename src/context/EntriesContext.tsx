@@ -100,8 +100,6 @@ export function* entriesIterator(
   }
 }
 
-
-
 function* namesFrom(label: Label | undefined): Generator<Label> {
   if (label === undefined) return;
   const parts = label.split("/");
@@ -114,18 +112,12 @@ function* namesFrom(label: Label | undefined): Generator<Label> {
 //TODO: can make faster
 function getDistinctLabels(entries: Entry[]): Label[] {
   const seen: Set<string> = new Set();
-  const result: string[] = [];
-  function add(s: string) {
-    if (!seen.has(s)) {
-      result.push(s);
-      seen.add(s);
-    }
-  }
+
   for (const entry of revit(entries)) {
-    for (const name of namesFrom(entry.before)) add(name);
-    for (const name of namesFrom(entry.after)) add(name);
+    for (const name of namesFrom(entry.before)) seen.add(name);
+    for (const name of namesFrom(entry.after)) seen.add(name);
   }
-  return result;
+  return [...seen];
 }
 
 export function serializeEntries(entries: Entry[]): string {
