@@ -93,3 +93,6 @@ function twoDigits(n: number): string {
     return `${h}h:${twoDigits(m)}m`;
   }
    
+export function renderDay(d:Date): string {
+    return d.toLocaleDateString("en-US", {day: 'numeric', weekday: 'short', month: 'short'})
+}
