@@ -90,6 +90,18 @@ export function entrySetEquals(xs: Entry[], ys: Entry[]) {
   return true;
 }
 
+export function* entriesIterator(
+  entries: Entry[],
+  { start, end }: { start: Date; end: Date }
+): Generator<Entry> {
+  for (const entry of entries) {
+    if ((!start || entry.time >= start) && (!end || entry.time <= end))
+      yield entry;
+  }
+}
+
+
+
 function* namesFrom(label: Label | undefined): Generator<Label> {
   if (label === undefined) return;
   const parts = label.split("/");

@@ -13,5 +13,9 @@ export function nextWeek(date = new Date()) {
 }
 
 export function daysAfter(date = new Date(), n: number) {
-    return new Date(date.getTime() + n * 24 * 60 * 60 * 1000);
+  return new Date(date.getTime() + n * 24 * 60 * 60 * 1000);
+}
+
+export function msBetween(a: Date, b: Date) {
+  return Math.abs(a.getTime() - b.getTime());
 }
