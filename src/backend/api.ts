@@ -83,7 +83,7 @@ const app = express()
       const success: boolean = await userExists(credentials);
       if (success) {
         const entries = (
-          await sql`SELECT id, time, before, after, lastmodified, deleted from entries WHERE username = ${credentials.username} and lastmodified > ${after}`
+          await sql`SELECT id, time, before, after, lastmodified, deleted from entries WHERE username = ${credentials.username} and lastmodified > ${after} and deleted = false`
         ).map((row: any) => ({
           time: new Date(row.time as number),
           before: (row.before || undefined) as string | undefined,

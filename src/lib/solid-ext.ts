@@ -3,7 +3,7 @@ import { createStore, SetStoreFunction, Store } from "solid-js/store";
 
 type CreateSyncProps<T> = {
   query: () => Promise<T[]>;
-  equals: (dataA: T[], dataB: T[]) => boolean;
+  equals: (dataA: T[], dataB: T[]) => true | [T, T];
 };
 
 export function createSyncedStoreArray<T>(
@@ -49,8 +49,11 @@ export function createSyncedStoreArray<T>(
     const newStore = await query();
     setQuerying(false);
     // equals
-    if (!equals(newStore, store)) {
-      console.log("something went wrong");
+    const eq = equals(newStore, store);
+    if (eq !== true) {
+      console.log("something went wrong: ");
+      
+      console.log(eq);
       setStore(newStore);
     }
   };

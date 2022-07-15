@@ -57,3 +57,9 @@ export function* revit<T>(xs: T[], limit?: number): Generator<T> {
     yield xs[i];
   }
 }
+
+export function minutesAfter(a: Date, n: number): Date {
+  const result = new Date(a);
+  result.setMinutes(result.getMinutes() + n);
+  return result;
+}

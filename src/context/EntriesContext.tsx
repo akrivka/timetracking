@@ -22,6 +22,7 @@ import { now, revit } from "../lib/util";
 import { useWindow } from "./WindowContext";
 import { Credentials, useUser } from "./UserContext";
 import { createStore } from "solid-js/store";
+import { getEntriesRemote } from "../lib/remoteDB";
 
 export type uid = string;
 
@@ -185,12 +186,10 @@ export async function pullUpdates(credentials: Credentials) {
 
   // pull all entries from the server modified after lastPulled
 
-  const response = await axios.get("/api/entries", {
-    params: { ...credentials, after: lastPulled.getTime() },
-  });
-
-  // store entries in localDB
-  const entries = deserializeEntries(decodeURIComponent(response.data));
+  const entries = await getEntriesRemote(
+    { after: lastPulled.getTime() },
+    credentials
+  );
 
   updateEntriesLocal(entries);
 
@@ -232,14 +231,53 @@ export const EntriesProvider = (props) => {
     { update, initialized, querying, mutating, forceSync: storeForceSync },
   ] = createSyncedStoreArray<Entry>(localDB, {
     query: getAllEntries,
-    equals: (entriesA, entriesB) =>
-      entriesA.every((entryA, i) => entryEquals(entryA, entriesB[i])),
+    equals: (entriesA, entriesB) => {
+      const breakingIndex = entriesA.findIndex(
+        (entryA, i) => !entryEquals(entryA, entriesB[i])
+      );
+      if (breakingIndex === -1) return true;
+      else {
+        const a = entriesA[breakingIndex],
+          b = entriesB[breakingIndex];
+        return [a, b];
+      }
+    },
   });
 
   const [syncingUp, setSyncingUp] = createSignal();
   const [syncingDown, setSyncingDown] = createSignal();
 
   const loggedIn = () => user() && user().credentials;
+
+  const putEntry = async (entry: Partial<Entry> | undefined) => {
+    const existingIndex = entries.findIndex((e) => e.id === entry.id);
+    const existingEntry = existingIndex >= 0 && entries[existingIndex];
+
+    const newEntry = {
+      ...(existingEntry || makeEntry()),
+      ...entry,
+      lastModified: now(),
+    };
+
+    await update({
+      mutate: () => putEntryLocal(newEntry),
+      expect: (set) => {
+        if (existingEntry) {
+          set(entries.map((e) => (e.id === entry.id ? newEntry : e)));
+        } else if (newEntry.deleted) {
+          set(entries.splice(existingIndex, 1));
+        } else {
+          set([newEntry, ...entries]);
+        }
+      },
+    });
+
+    if (hasNetwork() && loggedIn()) {
+      setSyncingUp(true);
+      await pushUpdates(user().credentials);
+      setSyncingUp(false);
+    }
+  };
 
   const addEntry = async (entry: Partial<Entry> | undefined) => {
     const newEntry = { ...makeEntry(), ...entry };
@@ -316,6 +354,35 @@ export const EntriesProvider = (props) => {
     }
   });
 
+  const dispatch = async ([event, info]) => {
+    const { start, end, entry, label } = info;
+
+    switch (event) {
+      case "insert":
+        if (entry.time < start.time || (end && entry.time > end?.time))
+          return false;
+
+        await putEntry(entry);
+        if (entry.before) await putEntry({ ...start, after: entry.before });
+        if (entry.after) await putEntry({ ...end, before: entry.after });
+
+        break;
+      case "move":
+        // info.entry
+        break;
+      case "relabel":
+        start && putEntry({ ...start, after: label });
+        end && putEntry({ ...end, before: label });
+        break;
+      case "delete":
+        putEntry({ ...entry, deleted: true });
+        break;
+      case "bulkRename":
+        // info.oldLabel, info.newLabel
+        break;
+    }
+  };
+
   return (
     <EntriesContext.Provider
       value={{
@@ -324,6 +391,7 @@ export const EntriesProvider = (props) => {
         addEntry,
         removeEntry,
         updateEntry,
+        dispatch,
         forceSync,
         syncState,
       }}

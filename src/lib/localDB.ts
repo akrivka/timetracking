@@ -29,7 +29,9 @@ export async function connectDB() {
 export async function getAllEntries() {
   await wait(delay);
 
-  return (await db?.getAllFromIndex("entries", "time")).reverse();
+  return (await db?.getAllFromIndex("entries", "time"))
+    .reverse()
+    .filter((e) => !e.deleted);
 }
 
 export async function getAllEntriesModifiedAfter(date: Date) {
