@@ -5,7 +5,7 @@ import { daysAfter, msBetween } from "../lib/date";
 import { renderDuration } from "../lib/format";
 import { listPairs, listPairsAndEnds, revit } from "../lib/util";
 
-const Block: Component = ({ map }: { map: Map<string, number> }) => {
+const Block: Component<{ map: Map<string, number> }> = ({ map }) => {
   // get top level labels
   const topLabels = [...map.keys()].filter((k) => k.includes("/") === false);
   const [expanded, setExpanded] = createStore(topLabels.map(() => false));
@@ -51,9 +51,6 @@ const Block: Component = ({ map }: { map: Map<string, number> }) => {
   );
 };
 
-//Splits on the first slash
-//Second part is empty if no slash
-//If first symbol is '?', whole thing is prefix
 function coarseLabel(label: string): string {
   const i = label.lastIndexOf("/");
   if (i == -1) return null;
@@ -95,8 +92,6 @@ const Report: Component = () => {
           const labelAbove = coarseLabel(label);
           if (labelAbove) add(labelAbove);
         }
-
-        console.log("label", label);
 
         add(label);
       }

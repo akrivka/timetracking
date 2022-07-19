@@ -1,6 +1,7 @@
-import { Component, createSignal, For } from "solid-js";
+import { Accessor, Component, createEffect, createSignal, For } from "solid-js";
+import { unwrap } from "solid-js/store";
 import { ColorPicker } from "../components/ColorPicker";
-import { entriesIterator, useEntries } from "../context/EntriesContext";
+import { entriesIterator, Entry, useEntries } from "../context/EntriesContext";
 import {
   daysAfter,
   msBetween,
@@ -9,12 +10,50 @@ import {
   thisMonday,
 } from "../lib/date";
 import { renderDay } from "../lib/format";
-import { stringToColor } from "../lib/util";
+import { revit, stringToColor } from "../lib/util";
 
 const Calendar: Component = () => {
   const { entries } = useEntries();
   const [week, setWeek] = createSignal(thisMonday());
-  const [color, setColor] = createSignal("#123456");
+
+  const startDay = week;
+  const endDay = () => daysAfter(week(), 7);
+
+  const intervals: Accessor<[Partial<Entry>, Partial<Entry>][][]> = () => {
+    const result: [Partial<Entry>, Partial<Entry>][][] = [
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+    ];
+
+    let a = null;
+    let b = { time: startDay() };
+
+    let day = -1;
+    let curDay = startDay();
+
+    for (const entry of revit(entries)) {
+      if (entry.time > startDay() && (!a || a.time < endDay())) {
+        a = b;
+        b = entry;
+        if (a.time <= curDay && b.time >= curDay) {
+          day >= 0 && result[day].push([a, { time: curDay }]);
+          day++;
+          day < 7 && result[day].push([{ time: curDay }, entry]);
+          curDay = daysAfter(curDay, 1);
+        } else {
+          result[day].push([a, b]);
+        }
+      }
+    }
+    return result;
+  };
+
+  createEffect(() => console.log(intervals()));
 
   return (
     <div>
@@ -36,23 +75,15 @@ const Calendar: Component = () => {
             </button>
           </div>
           <div class="h-5/6 border rounded-sm inline-flex w-full">
-            <For each={[0, 1, 2, 3, 4, 5, 6]}>
-              {(d) => (
+            <For each={intervals()}>
+              {(dayIntervals, d) => (
                 <div class="grow">
                   <p class="flex justify-center items-center font-bold h-10">
-                    {renderDay(daysAfter(week(), d))}
+                    {renderDay(daysAfter(week(), d()))}
                   </p>
-                  <div class="h-full">
-                    <For
-                      each={[
-                        ...entriesIterator(entries, {
-                          start: daysAfter(week(), d),
-                          end: daysAfter(week(), d + 1),
-                        }),
-                      ].reverse()}
-                    >
-                      {(start, i) => {
-                        const end = entries[i() + 1];
+                  <div class="h-[calc(100%-40px)]">
+                    <For each={dayIntervals}>
+                      {([start, end], i) => {
                         const height =
                           msBetween(start.time, end.time) /
                           (24 * 60 * 60 * 1000);
@@ -63,6 +94,9 @@ const Calendar: Component = () => {
                             style={`height: ${
                               height * 100
                             }%; background-color: ${color};`}
+                            onclick={(e) => {
+                              
+                            }}
                           >
                             {start.after}
                           </div>
