@@ -7,6 +7,7 @@ import {
   createResource,
   createSignal,
   onMount,
+  startTransition,
   untrack,
   useContext,
 } from "solid-js";
@@ -19,7 +20,7 @@ import {
   updateEntriesLocal,
 } from "../lib/localDB";
 import { createSyncedStoreArray } from "../lib/solid-ext";
-import { now, revit } from "../lib/util";
+import { insertIntoSortedDecreasingBy, now, revit } from "../lib/util";
 import { useWindow } from "./WindowContext";
 import { Credentials, useUser } from "./UserContext";
 import { createStore } from "solid-js/store";
@@ -256,7 +257,7 @@ export const EntriesProvider = (props) => {
   const [syncingDown, setSyncingDown] = createSignal();
 
   const putEntry = async (entry: Partial<Entry> | undefined) => {
-    const existingEntry = entries.find((e) => e.id === entry.id);
+    const existingEntry = entries.find((e) => e.id === entry?.id);
 
     const newEntry = {
       ...(existingEntry || makeEntry()),
@@ -264,18 +265,24 @@ export const EntriesProvider = (props) => {
       lastModified: now(),
     };
 
+    console.log(newEntry);
+
     await update({
-      mutate: () => putEntryLocal(newEntry),
+      mutate: async () => putEntryLocal(newEntry),
       expect: (set) => {
-        if (!existingEntry) {
-          // add
-          set([newEntry, ...entries]);
-        } else if (!newEntry.deleted) {
-          // update
-          set(entries.map((e) => (e.id === entry.id ? newEntry : e)));
-        } else {
-          // remove
+        // delete
+        if (newEntry.deleted) {
           set(entries.filter((e) => e.id !== entry.id));
+        }
+        // add / update
+        else {
+          set(
+            insertIntoSortedDecreasingBy(
+              entries.filter((e) => e.id !== entry.id),
+              (e) => e.time.getTime(),
+              newEntry
+            )
+          );
         }
       },
     });
@@ -295,43 +302,45 @@ export const EntriesProvider = (props) => {
     }
   };
 
-  const dispatch = async ([event, info]) => {
-    if (event === "composite") {
-      for (const eventVector of info) dispatch(eventVector);
-    } else {
-      const { start, end, entry, label, rewire = true } = info;
+  const dispatch = ([event, info]) =>
+    createResource(async () => {
+      if (event === "composite") {
+        for (const eventVector of info) dispatch(eventVector);
+      } else {
+        const { start, end, entry, label, time } = info;
 
-      switch (event) {
-        case "insert":
-          if (entry.time < start.time || (end && entry.time > end?.time))
-            return false;
+        switch (event) {
+          case "append":
+            await putEntry(entry);
+            break;
+          case "insert":
+            await Promise.all([
+              putEntry(entry),
+              entry.before &&
+                start &&
+                putEntry({ ...start, after: entry.before }),
+              entry.after && end && putEntry({ ...end, before: entry.after }),
+            ]);
+            break;
+          case "adjustTime":
+            await putEntry({ ...entry, time });
+            break;
+          case "relabel":
+            await Promise.all([
+              end && putEntry({ ...end, before: label }),
+              start && putEntry({ ...start, after: label }),
+            ]);
 
-          await putEntry(entry);
-
-          if (rewire) {
-            if (entry.before && start)
-              await putEntry({ ...start, after: entry.before });
-            if (entry.after && end)
-              await putEntry({ ...end, before: entry.after });
-          }
-          break;
-        case "move":
-          // info.entry
-          break;
-        case "relabel":
-          end && (await putEntry({ ...end, before: label }));
-          start && (await putEntry({ ...start, after: label }));
-          break;
-        case "delete":
-          putEntry({ ...entry, deleted: true });
-          break;
-        case "bulkRename":
-          // info.oldLabel, info.newLabel
-          break;
+            break;
+          case "delete":
+            putEntry({ ...entry, deleted: true });
+            break;
+          case "bulkRename":
+            // info.oldLabel, info.newLabel
+            break;
+        }
       }
-    }
-  };
-
+    });
   const forceSync = async () => {
     storeForceSync();
 

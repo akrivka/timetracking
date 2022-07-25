@@ -1,6 +1,6 @@
 import { createSignal } from "solid-js";
 
-export let delay: number = 0;
+export let delay: number = 500;
 
 export function setDelay(ms: number) {
   delay = ms;
@@ -81,4 +81,14 @@ export function* listPairs<T>(xs: Generator<T>): Generator<[T, T]> {
   for (const [x, y] of listPairsAndEnds(xs)) {
     if (x != null && y != null) yield [x, y];
   }
+}
+
+export function insertIntoSortedDecreasingBy<T>(
+  array: T[],
+  by: (item: T) => number,
+  item: T
+): T[] {
+  const index = array.findIndex((x) => by(item) > by(x));
+  if (index == -1) return [...array, item];
+  return [...array.slice(0, index), item, ...array.slice(index)];
 }

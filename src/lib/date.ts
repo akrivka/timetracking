@@ -1,3 +1,6 @@
+import { DateSpec } from "./parse";
+import { now } from "./util";
+
 export function thisMonday(date = new Date()) {
   const day = date.getDay();
   const diff = (day === 0 ? 6 : day - 1) * 24 * 60 * 60 * 1000;
@@ -18,4 +21,48 @@ export function daysAfter(date = new Date(), n: number) {
 
 export function msBetween(a: Date, b: Date) {
   return Math.abs(a.getTime() - b.getTime());
+}
+
+export function specToDate(
+  spec: DateSpec,
+  anchor: Date,
+  rel: "next" | "previous" | "closest"
+): Date {
+  if (spec == "now") return now();
+  const copiedAnchor = new Date(anchor);
+  copiedAnchor.setMinutes(spec.minutes);
+  let best: Date = new Date(anchor);
+  let bestDiff: number | null = null;
+  const month = spec.month === undefined ? anchor.getMonth() : spec.month;
+  copiedAnchor.setMonth(month);
+  const hours: number = spec.hours == 12 ? 0 : spec.hours;
+  const year: number = spec.year || anchor.getFullYear();
+  const dateCandidates: number[] =
+    spec.day === undefined
+      ? [-1, 0, 1].map((x) => anchor.getDate() + x)
+      : [spec.day + (spec.dayOffset || 0)];
+  const ampmCandidates: ("am" | "pm")[] =
+    spec.ampm === undefined ? ["am", "pm"] : [spec.ampm];
+  const hourCandidates: number[] = ampmCandidates.map((x) =>
+    x == "am" ? hours : (hours + 12) % 24
+  );
+  for (const date of dateCandidates) {
+    for (const hours of hourCandidates) {
+      const candidate = new Date(copiedAnchor);
+      candidate.setDate(date);
+      candidate.setHours(hours);
+      candidate.setFullYear(year);
+      const diff = candidate.getTime() - anchor.getTime();
+      const absDiff = Math.abs(diff);
+      const isValid =
+        rel == "closest" ||
+        (rel == "next" && diff > 0) ||
+        (rel == "previous" && diff < 0);
+      if ((bestDiff == null || absDiff < bestDiff) && isValid) {
+        best = new Date(candidate);
+        bestDiff = absDiff;
+      }
+    }
+  }
+  return best;
 }

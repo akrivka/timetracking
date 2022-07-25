@@ -52,7 +52,7 @@ export function createSyncedStoreArray<T>(
     const eq = equals(newStore, unwrap(store));
     if (eq !== true) {
       console.log("something went wrong: ");
-      
+
       console.log(eq);
       setStore(newStore);
     }

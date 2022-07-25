@@ -8,13 +8,13 @@ export async function connectDB() {
   await wait(delay);
 
   try {
-    db = await openDB("timemarker", 2, {
+    db = await openDB("timemarker", 1, {
       upgrade(db) {
         //db.deleteObjectStore("entries");
         const store = db.createObjectStore("entries", {
           keyPath: "id",
         });
-        store.createIndex("time", "time", { unique: true });
+        store.createIndex("time", "time", { unique: false });
         store.createIndex("lastModified", "lastModified", { unique: false });
         store.createIndex("before", "before", { unique: false });
       },
@@ -49,7 +49,11 @@ export async function getAllEntriesModifiedAfter(date: Date) {
 export async function putEntryLocal(entry: Entry) {
   await wait(delay);
 
-  return await db?.put("entries", entry);
+  try {
+    return await db?.put("entries", entry);
+  } catch (e) {
+    console.error(e);
+  }
 }
 
 export async function removeEntryLocal(id: uid) {
