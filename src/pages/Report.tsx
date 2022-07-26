@@ -17,11 +17,11 @@ const Block: Component<{
   label: Label;
   duration: number;
 }> = ({ subMap, label, duration }) => {
-  // is edit mode
   const edit = isEdit();
-  // get top level labels
+
   const topLabels = [...subMap.keys()].filter((k) => k.includes("/") === false);
 
+  // TODO: make load from user/local storage
   const [expanded, setExpanded] = createSignal(true);
 
   // generate maps of reduced sublabels
@@ -38,7 +38,6 @@ const Block: Component<{
 
   const isLeaf = mapOfMaps.size == 0;
 
-  // for each top level labels, make a block
   return (
     <>
       <div
@@ -46,6 +45,8 @@ const Block: Component<{
         onclick={() => setExpanded(!expanded())}
       >
         [{renderDuration(duration)}] {label} {!isLeaf ? "[+]" : ""}
+        // TODO: add color input element with a callback that writes to local storage
+        // maybe do this FIRST so it's clear what the API for the rest should be?
         {edit() && "hello"}
       </div>
       <Show when={expanded()}>
