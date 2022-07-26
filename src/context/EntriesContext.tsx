@@ -256,44 +256,43 @@ export const EntriesProvider = (props) => {
   const [syncingUp, setSyncingUp] = createSignal();
   const [syncingDown, setSyncingDown] = createSignal();
 
-  const putEntry = async (entry: Partial<Entry> | undefined) => {
-    const existingEntry = entries.find((e) => e.id === entry?.id);
+  const putEntries = async (_entries: (Partial<Entry> | undefined)[]) => {
+    const newEntries = _entries.map((entry) => {
+      const existingEntry = entries.find((e) => e.id === entry?.id);
 
-    const newEntry = {
-      ...(existingEntry || makeEntry()),
-      ...entry,
-      lastModified: now(),
-    };
-
-    console.log(newEntry);
+      return {
+        ...(existingEntry || makeEntry()),
+        ...entry,
+        lastModified: now(),
+      };
+    });
 
     await update({
-      mutate: async () => putEntryLocal(newEntry),
+      mutate: () =>
+        Promise.all(newEntries.map((newEntry) => putEntryLocal(newEntry))),
       expect: (set) => {
-        // delete
-        if (newEntry.deleted) {
-          set(entries.filter((e) => e.id !== entry.id));
-        }
-        // add / update
-        else {
-          set(
-            insertIntoSortedDecreasingBy(
-              entries.filter((e) => e.id !== entry.id),
-              (e) => e.time.getTime(),
-              newEntry
-            )
-          );
-        }
+        set(
+          newEntries.reduce((es, newEntry) => {
+            const fes = es.filter((e) => e.id !== newEntry.id);
+            if (newEntry.deleted) return fes;
+            else
+              return insertIntoSortedDecreasingBy(
+                fes,
+                (e) => e.time.getTime(),
+                newEntry
+              );
+          }, entries)
+        );
       },
     });
 
-    if (!newEntry.deleted) {
-      labels.add(newEntry.before);
-      labels.add(newEntry.after);
-    } else {
-      labels.delete(newEntry.before);
-      labels.delete(newEntry.after);
-    }
+    // if (!newEntry.deleted) {
+    //   labels.add(newEntry.before);
+    //   labels.add(newEntry.after);
+    // } else {
+    //   labels.delete(newEntry.before);
+    //   labels.delete(newEntry.after);
+    // }
 
     if (hasNetwork() && loggedIn()) {
       setSyncingUp(true);
@@ -302,45 +301,48 @@ export const EntriesProvider = (props) => {
     }
   };
 
-  const dispatch = ([event, info]) =>
-    createResource(async () => {
-      if (event === "composite") {
-        for (const eventVector of info) dispatch(eventVector);
-      } else {
-        const { start, end, entry, label, time } = info;
+  const putEntry = (entry: Partial<Entry> | undefined) => putEntries([entry]);
 
-        switch (event) {
-          case "append":
-            await putEntry(entry);
-            break;
-          case "insert":
-            await Promise.all([
-              putEntry(entry),
-              entry.before &&
-                start &&
-                putEntry({ ...start, after: entry.before }),
-              entry.after && end && putEntry({ ...end, before: entry.after }),
-            ]);
-            break;
-          case "adjustTime":
-            await putEntry({ ...entry, time });
-            break;
-          case "relabel":
-            await Promise.all([
-              end && putEntry({ ...end, before: label }),
-              start && putEntry({ ...start, after: label }),
-            ]);
+  const dispatch = async ([event, info]) => {
+    const { start, end, entry, label, time } = info;
 
-            break;
-          case "delete":
-            putEntry({ ...entry, deleted: true });
-            break;
-          case "bulkRename":
-            // info.oldLabel, info.newLabel
-            break;
-        }
-      }
-    });
+    let updatedEntries = [];
+    switch (event) {
+      case "append":
+        updatedEntries.push(entry);
+        break;
+      case "insert":
+        updatedEntries.push(entry);
+        entry.before &&
+          start &&
+          updatedEntries.push({ ...start, after: entry.before });
+        entry.after &&
+          end &&
+          updatedEntries.push({ ...end, before: entry.after });
+        break;
+      case "adjustTime":
+        updatedEntries.push({ ...entry, time });
+        break;
+      case "relabel":
+        end && updatedEntries.push({ ...end, before: label });
+        start && updatedEntries.push({ ...start, after: label });
+        break;
+      case "delete":
+        updatedEntries.push({ ...entry, deleted: true });
+        break;
+      case "deleteRelabel":
+        updatedEntries.push({ ...entry, deleted: true });
+        end && updatedEntries.push({ ...end, before: label });
+        start && updatedEntries.push({ ...start, after: label });
+        break;
+      case "bulkRename":
+        // info.oldLabel, info.newLabel
+        break;
+    }
+
+    await putEntries(updatedEntries);
+  };
+
   const forceSync = async () => {
     storeForceSync();
 

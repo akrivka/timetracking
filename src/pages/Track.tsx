@@ -10,6 +10,7 @@ import {
   stringToColor,
   minutesAfter,
   listPairsAndEnds,
+  wait,
 } from "../lib/util";
 
 const EmptyBullet = () => {
@@ -56,7 +57,7 @@ const Bullet: Component<{ entry: Entry }> = (props) => {
       >
         {renderTime(props.entry.time)}
       </div>
-      <div class="text-sm text-gray-400">{props.entry.id}</div>
+      {/* <div class="text-sm text-gray-400">{props.entry.id}</div> */}
     </div>
   );
 };
@@ -90,7 +91,7 @@ const Track: Component = () => {
     universe: [...labels],
     focusSignal: focusedIndex,
     class: "bg-blue-50",
-    submit: (action, label) => {
+    submit: async (action, label) => {
       // start, end
       const i = focusedIndex();
       const start = entries[i];
@@ -118,8 +119,10 @@ const Track: Component = () => {
         case "continue":
           const middle = start;
           const newStart = entries[i + 1];
-          dispatch(["delete", { entry: middle }]);
-          dispatch(["relabel", { start: newStart, end, label: middle.before }]);
+          dispatch([
+            "deleteRelabel",
+            { entry: middle, start: newStart, end, label: middle.before },
+          ]);
           break;
         case "first":
           insertWrapped({
