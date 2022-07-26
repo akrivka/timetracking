@@ -1,53 +1,67 @@
-import { Component, createEffect, createSignal, For, Show } from "solid-js";
-import { createStore, produce } from "solid-js/store";
+import {
+  Accessor,
+  Component,
+  createContext,
+  createSignal,
+  For,
+  Show,
+  useContext,
+} from "solid-js";
 import { entriesIterator, Label, useEntries } from "../context/EntriesContext";
 import { daysAfter, msBetween } from "../lib/date";
 import { renderDuration } from "../lib/format";
-import { listPairs, listPairsAndEnds, revit } from "../lib/util";
+import { listPairs, revit } from "../lib/util";
 
-const Block: Component<{ map: Map<string, number> }> = ({ map }) => {
+const Block: Component<{
+  subMap: Map<string, number>;
+  label: Label;
+  duration: number;
+}> = ({ subMap, label, duration }) => {
+  // is edit mode
+  const edit = isEdit();
   // get top level labels
-  const topLabels = [...map.keys()].filter((k) => k.includes("/") === false);
-  const [expanded, setExpanded] = createStore(topLabels.map(() => false));
+  const topLabels = [...subMap.keys()].filter((k) => k.includes("/") === false);
+
+  const [expanded, setExpanded] = createSignal(true);
 
   // generate maps of reduced sublabels
   const mapOfMaps = new Map<string, Map<string, number>>();
   for (const topLabel of topLabels) {
     mapOfMaps.set(topLabel, new Map());
   }
-  for (const label of map.keys()) {
+  for (const label of subMap.keys()) {
     const [topLabel, rest] = prefixAndRemainder(label);
     if (rest !== "") {
-      mapOfMaps.get(topLabel).set(rest, map.get(label));
+      mapOfMaps.get(topLabel).set(rest, subMap.get(label));
     }
   }
+
+  const isLeaf = mapOfMaps.size == 0;
+
   // for each top level labels, make a block
   return (
-    <For each={topLabels}>
-      {(topLabel, i) => {
-        const isLeaf = mapOfMaps.get(topLabel).size == 0;
-        return (
-          <div
-            class="flex flex-col"
-            onclick={() =>
-              setExpanded(
-                produce((expanded) => (expanded[i()] = !expanded[i()]))
-              )
-            }
-          >
-            <div class={!isLeaf ? "cursor-pointer" : ""}>
-              [{renderDuration(map.get(topLabel))}] {topLabel}{" "}
-              {!isLeaf ? "[+]" : ""}
-            </div>
-            <Show when={expanded[i()]}>
-              <div class="pl-8">
-                <Block map={mapOfMaps.get(topLabel)} />
-              </div>
-            </Show>
-          </div>
-        );
-      }}
-    </For>
+    <>
+      <div
+        class={!isLeaf ? "cursor-pointer" : ""}
+        onclick={() => setExpanded(!expanded())}
+      >
+        [{renderDuration(duration)}] {label} {!isLeaf ? "[+]" : ""}
+        {edit() && "hello"}
+      </div>
+      <Show when={expanded()}>
+        <div class="pl-8 flex flex-col">
+          <For each={topLabels}>
+            {(topLabel) => (
+              <Block
+                subMap={mapOfMaps.get(topLabel)}
+                label={topLabel}
+                duration={subMap.get(topLabel)}
+              />
+            )}
+          </For>
+        </div>
+      </Show>
+    </>
   );
 };
 
@@ -63,18 +77,21 @@ function prefixAndRemainder(s: string): [string, string] {
   return [s.slice(0, n).trim(), s.slice(n + 1).trim()];
 }
 
+const EditContext = createContext<Accessor<boolean>>(() => false);
+const isEdit = () => useContext(EditContext);
+
 const Report: Component = () => {
   const { entries, syncState } = useEntries();
   const { initialized } = syncState.local;
   const [startDate, setStart] = createSignal(daysAfter(new Date(), -1));
   const [endDate, setEnd] = createSignal(new Date());
+  const [edit, setEdit] = createSignal(false);
+
+  const totalDuration = () => msBetween(startDate(), endDate());
 
   const labelTimeMap = () => {
     if (initialized()) {
       const map: Map<Label, number> = new Map();
-      console.log([
-        ...entriesIterator(entries, { start: startDate(), end: endDate() }),
-      ]);
 
       for (const [start, end] of listPairs(
         revit([
@@ -95,6 +112,7 @@ const Report: Component = () => {
 
         add(label);
       }
+
       return map;
     }
   };
@@ -115,7 +133,11 @@ const Report: Component = () => {
       </div>
       <div class="flex">
         <label class="w-24">Edit</label>
-        <input class="" type="checkbox" />
+        <input
+          class=""
+          type="checkbox"
+          onchange={(e) => setEdit(e.currentTarget.checked)}
+        />
       </div>
       <div class="flex">
         <label class="w-24">Show</label>
@@ -125,9 +147,15 @@ const Report: Component = () => {
         <button>Generate</button>
         <button>Export</button>
       </div>
-      <div>
+      <div class="select-none">
         <Show when={initialized()}>
-          <Block map={labelTimeMap()} />
+          <EditContext.Provider value={edit}>
+            <Block
+              subMap={labelTimeMap()}
+              label="total"
+              duration={totalDuration()}
+            />
+          </EditContext.Provider>
         </Show>
       </div>
     </div>

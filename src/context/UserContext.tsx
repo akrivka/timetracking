@@ -47,7 +47,7 @@ const UserContext = createContext<Accessor<User>>();
 
 export const UserProvider = (props) => {
   const [user, _] = createResource<User>(async () => {
-    const user = getLocalUser();    
+    const user = getLocalUser();
     if (!user) {
       const newUser = makeUser();
       saveLocalUser(newUser);
@@ -57,7 +57,7 @@ export const UserProvider = (props) => {
         params: user.credentials,
       });
 
-      if (data === "ok") {                
+      if (data === "ok") {
         return user;
       } else {
         user.credentials = null;
