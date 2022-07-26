@@ -215,7 +215,7 @@ export async function fullValidate(credentials: Credentials) {
 
 type EntriesContextType = {
   entries: Entry[];
-  labels: Set<Label>;
+  labels: Label[];
   dispatch: (any) => any;
   syncState: any;
   forceSync: () => void;
@@ -250,7 +250,10 @@ export const EntriesProvider = (props) => {
     },
   });
 
-  const labels = new Set([]);
+  const [labels, setLabels] = createStore([]);
+  const updateLabels = () => {
+    setLabels(getDistinctLabels(entries));
+  };
 
   // remote signals
   const [syncingUp, setSyncingUp] = createSignal();
@@ -286,13 +289,7 @@ export const EntriesProvider = (props) => {
       },
     });
 
-    // if (!newEntry.deleted) {
-    //   labels.add(newEntry.before);
-    //   labels.add(newEntry.after);
-    // } else {
-    //   labels.delete(newEntry.before);
-    //   labels.delete(newEntry.after);
-    // }
+    updateLabels();
 
     if (hasNetwork() && loggedIn()) {
       setSyncingUp(true);
@@ -369,7 +366,7 @@ export const EntriesProvider = (props) => {
       if (hasNetwork() && loggedIn()) {
         untrack(forceSync);
       }
-      getDistinctLabels(entries).forEach((label) => labels.add(label));
+      updateLabels();
     }
   });
 

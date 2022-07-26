@@ -73,6 +73,7 @@ const Line: Component<{ color: string }> = ({ color }) => {
 const Track: Component = () => {
   const { time } = useWindow();
   const { entries, labels, dispatch } = useEntries();
+  console.log(labels);
 
   const [focusedIndex, setFocusedIndex] = createSignal(null);
   const [newEntry, setNewEntry] = createSignal(null);
@@ -88,7 +89,7 @@ const Track: Component = () => {
 
   const inputBox = InputBox({
     prefixRule: actionRule,
-    universe: [...labels],
+    universe: labels,
     focusSignal: focusedIndex,
     class: "bg-blue-50",
     submit: async (action, label) => {

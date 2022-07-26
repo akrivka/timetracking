@@ -9,27 +9,6 @@ import {
 } from "solid-js";
 import { parseString, Rule, splitPrefix } from "../lib/parse";
 import { wait } from "../lib/util";
-
-// type InputProps = {
-//   onEnter: any;
-//   autofocus?: boolean;
-//   [x: string | number | symbol]: unknown;
-// };
-
-// export const InputBox: Component<InputProps> = (props) => {
-//   const onEnter = props.onEnter;
-//   delete props.onEnter;
-//   let ref: HTMLInputElement;
-//   onMount(() => props.autofocus && ref.focus());
-//   return (
-//     <input
-//       ref={ref}
-//       {...props}
-//       onkeydown={(e) => e.key === "Enter" && onEnter(e.currentTarget.value)}
-//     />
-//   );
-// };
-
 interface InputBoxProps<T> {
   prefixRule: Rule<T>;
   submit: (x: T, s: string) => void;
@@ -48,6 +27,7 @@ export function InputBox<T>({
   console.log("rendering InputBox");
 
   const [searchPhrase, setSearchPhrase] = createSignal("");
+  const [command, setCommand] = createSignal("");
 
   const onEnter = (s: string) => {
     const m = parseString(prefixRule, s);
@@ -56,13 +36,15 @@ export function InputBox<T>({
     } else {
       submit(m[0], m[2].trim());
     }
+    setSearchPhrase("");
+    setCommand("");
+    setSelected(-1);
   };
 
   const onInput = (s: string) => {
     const [prefix, suffix] = splitPrefix(prefixRule, s);
-
     setSearchPhrase(suffix);
-    //console.log(suffix);
+    setCommand(prefix);
   };
 
   let ref: HTMLInputElement;
@@ -89,7 +71,7 @@ export function InputBox<T>({
         }
 
         if (selected() >= 0) {
-          ref.value = filteredUniverse()[selected()];
+          ref.value = command() + " " + filteredUniverse()[selected()];
         }
       }
     }
@@ -104,7 +86,7 @@ export function InputBox<T>({
             onEnter(e.currentTarget.value);
             ref.value = "";
             setSearchPhrase("");
-            await wait(10)
+            await wait(10);
             ref.focus();
           }
         }}
@@ -121,10 +103,10 @@ export function InputBox<T>({
               <div
                 class={
                   "p-2 w-full cursor-pointer border-b border-gray-200 " +
-                  (selected() === i() ? "bg-blue-400" : "")
+                  (selected() === i() ? "bg-blue-400 text-gray-50" : "")
                 }
               >
-                {m}
+                {command() + " " + m}
               </div>
             )}
           </For>
