@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from "solid-app-router";
-import { Component, Match, Switch } from "solid-js";
+import { Component, Match, onMount, Switch } from "solid-js";
 import { SyncState } from "./components/SyncState";
 
 import { EntriesProvider } from "./context/EntriesContext";
@@ -66,10 +66,21 @@ export const Home: Component = () => {
 };
 
 export const App: Component = () => {
+  const navigate = useNavigate();
+  onMount(() => {
+    document.addEventListener("keydown", (e) => {
+      if (e.altKey) {
+        e.code === "Digit1" && navigate("/track");
+        e.code === "Digit2" && navigate("/report");
+        e.code === "Digit3" && navigate("/calendar");
+        e.code === "Backquote" && navigate("/");
+      }
+    });
+  });
   return (
     <UserProvider>
       <EntriesProvider>
-        <SyncState/>
+        <SyncState />
         <Outlet />
       </EntriesProvider>
     </UserProvider>
