@@ -2,24 +2,53 @@
 import {
   Popover,
   PopoverButton,
-  PopoverPanel
+  PopoverPanel,
+  RadioGroup,
+  RadioGroupLabel,
+  RadioGroupOption,
 } from "solid-headless";
 import {
   Accessor,
   Component,
-  createContext, createMemo,
+  createContext,
+  createEffect,
+  createMemo,
   createSignal,
   For,
   Show,
-  useContext
+  useContext,
 } from "solid-js";
-import { MyButton } from "../components/Button";
+import { MyButton } from "../components/MyButton";
+import { MyTextInput } from "../components/MyTextInput";
 import { entriesIterator, Label, useEntries } from "../context/EntriesContext";
 import { useUser } from "../context/UserContext";
 import { daysAfter, msBetween } from "../lib/date";
 import { renderDuration } from "../lib/format";
 import { usePopper } from "../lib/solid-ext";
 import { listPairs, revit } from "../lib/util";
+
+const second_ms = 1000;
+const minute_ms = 60 * second_ms;
+const hour_ms = 60 * minute_ms;
+const day_ms = 24 * hour_ms;
+const week_ms = 7 * day_ms;
+
+function renderPercentage(x: number): string {
+  return `${Math.round(x * 100)}%`;
+}
+
+function renderReportDuration(time: number, total: number, display: ShowType) {
+  switch (display) {
+    case "total":
+      return renderDuration(time);
+    case "daily":
+      return `${renderDuration((time * day_ms) / total)}/d`;
+    case "weekly":
+      return `${renderDuration((time * week_ms) / total)}/w`;
+    case "percent":
+      return renderPercentage(time / total);
+  }
+}
 
 const Block: Component<{
   subMap: Map<string, number>;
@@ -28,7 +57,7 @@ const Block: Component<{
   editable: boolean;
 }> = (props) => {
   const { label, duration, editable } = props;
-  const { isEdit, edited } = useEdit();
+  const { isEdit, triggerRerender, showType, total } = useReport();
   const { getLabelInfo } = useUser();
   const { dispatch } = useEntries();
 
@@ -51,7 +80,6 @@ const Block: Component<{
     }
     return m;
   };
-
   const isLeaf = () => mapOfMaps().size == 0;
 
   const [anchor, setAnchor] = createSignal<HTMLElement>();
@@ -65,7 +93,8 @@ const Block: Component<{
           class={!isLeaf ? "cursor-pointer" : ""}
           onclick={() => setInfo({ expanded: !info.expanded })}
         >
-          [{renderDuration(duration)}] {label} {!isLeaf ? "[+]" : ""}
+          [{renderReportDuration(duration, total, showType())}] {label}{" "}
+          {!isLeaf() ? "[+]" : ""}
         </div>
         <Show when={editable && isEdit()}>
           <input
@@ -85,7 +114,7 @@ const Block: Component<{
                   { from: label, to: newName(), moveChildren: moveChildren() },
                 ]);
                 setState(false);
-                edited();
+                triggerRerender();
               };
               return (
                 <>
@@ -154,24 +183,29 @@ function prefixAndRemainder(s: string): [string, string] {
   return [s.slice(0, n).trim(), s.slice(n + 1).trim()];
 }
 
-const EditContext = createContext<{ isEdit?: Accessor<boolean>; edited?: () => void }>(
-  {}
-);
-const useEdit = () => useContext(EditContext);
+type ShowType = "total" | "weekly" | "daily" | "percent";
+
+const ReportContext = createContext<{
+  isEdit?: Accessor<boolean>;
+  triggerRerender?: () => void;
+  showType?: Accessor<ShowType>;
+  total?: number;
+}>({});
+const useReport = () => useContext(ReportContext);
 
 const Report: Component = () => {
   const { entries, syncState } = useEntries();
   const { initialized } = syncState.local;
-  const [startDate, setStart] = createSignal(daysAfter(new Date(), -1));
+  const [startDate, setStart] = createSignal(daysAfter(new Date(), -3));
   const [endDate, setEnd] = createSignal(new Date());
   const [isEdit, setIsEdit] = createSignal(false);
-  const [editSignal, setEditSignal] = createSignal(false);
-  const edited = () => setEditSignal(!editSignal());
+  const [rerenderSignal, setRerenderSignal] = createSignal(false);
+  const triggerRerender = () => setRerenderSignal(!rerenderSignal());
 
   const totalDuration = () => msBetween(startDate(), endDate());
 
   const labelTimeMap = createMemo(() => {
-    editSignal();
+    rerenderSignal();
     if (initialized()) {
       const map: Map<Label, number> = new Map();
 
@@ -199,22 +233,26 @@ const Report: Component = () => {
     }
   });
 
+  const showTypes = ["total", "weekly", "daily", "percent"];
+
+  const [showType, setShowType] = createSignal<ShowType>();
+
   return (
-    <div>
+    <div class="space-y-2">
       <div class="flex">
-        <label class="w-24">Start</label>
-        <input class="" type="text" />
+        <label class="w-24">Start:</label>
+        <MyTextInput class="" />
       </div>
       <div class="flex">
-        <label class="w-24">End</label>
-        <input class="" type="text" />
+        <label class="w-24">End:</label>
+        <MyTextInput class="" />
       </div>
       <div class="flex">
-        <label class="w-24">Labels</label>
-        <input class="" type="text" />
+        <label class="w-24">Labels:</label>
+        <MyTextInput class="" />
       </div>
       <div class="flex">
-        <label class="w-24">Edit</label>
+        <label class="w-24">Edit:</label>
         <input
           class=""
           type="checkbox"
@@ -222,23 +260,50 @@ const Report: Component = () => {
         />
       </div>
       <div class="flex">
-        <label class="w-24">Show</label>
-        <input class="" type="radio" />
+        <label class="w-24">Show:</label>
+        <RadioGroup
+          value={showType()}
+          onChange={(v) => setShowType(v.toLowerCase() as ShowType)}
+        >
+          {() => (
+            <div class="flex space-x-1">
+              <For each={showTypes}>
+                {(type) => (
+                  <RadioGroupOption value={type}>
+                    {({ isSelected: checked }) => (
+                      <div class="capitalize">
+                        <input type="radio" checked={checked()} />
+                        {type}
+                      </div>
+                    )}
+                  </RadioGroupOption>
+                )}
+              </For>
+            </div>
+          )}
+        </RadioGroup>
       </div>
       <div class="flex">
-        <MyButton onclick={() => null}>Generate4</MyButton>
+        <MyButton onclick={() => null}>Generate</MyButton>
         <MyButton onclick={() => null}>Export</MyButton>
       </div>
       <div class="select-none">
         <Show when={initialized()}>
-          <EditContext.Provider value={{ isEdit, edited }}>
+          <ReportContext.Provider
+            value={{
+              isEdit,
+              triggerRerender,
+              showType,
+              total: totalDuration(),
+            }}
+          >
             <Block
               subMap={labelTimeMap()}
               label="total"
               duration={totalDuration()}
               editable={false}
             />
-          </EditContext.Provider>
+          </ReportContext.Provider>
         </Show>
       </div>
     </div>
