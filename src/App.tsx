@@ -17,7 +17,7 @@ const MyLink: Component<MyLinkProps> = ({ href, label }) => (
 );
 
 const Navbar: Component = () => {
-  const user = useUser();
+  const {user} = useUser();
   const navigate = useNavigate();
 
   return (
@@ -27,11 +27,11 @@ const Navbar: Component = () => {
       <MyLink href="/calendar" label="Calendar" />
       <Switch>
         <Match when={!user}>Loading</Match>
-        <Match when={!user()?.credentials}>
+        <Match when={!user?.credentials}>
           <MyLink href="/signup" label="Sign up" />
         </Match>
         <Match when={true}>
-          <p class="ml-1 text-gray-500">({user()?.credentials.username})</p>
+          <p class="ml-1 text-gray-500">({user?.credentials.username})</p>
           <button
             onClick={() => {
               deleteLocalUser();

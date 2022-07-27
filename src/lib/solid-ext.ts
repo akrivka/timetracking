@@ -1,5 +1,6 @@
 import { createSignal, createEffect, Accessor } from "solid-js";
 import { createStore, SetStoreFunction, Store, unwrap } from "solid-js/store";
+import { delay, wait } from "./util";
 
 type CreateSyncProps<T> = {
   query: () => Promise<T[]>;
@@ -40,6 +41,7 @@ export function createSyncedStoreArray<T>(
 
   const update = async ({ mutate, expect }) => {
     expect(setStore);
+    await wait(delay);
     // mutate
     setMutating(true);
     await mutate();

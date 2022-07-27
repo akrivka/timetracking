@@ -212,13 +212,13 @@ const Track: Component = () => {
           ]);
           break;
         case "continueFirst":
-          //callback({kind: 'move', entry: start, time: minutesAfter(start.time, a.minutes)})
           dispatch([
             "adjustTime",
             { entry: start, time: minutesAfter(start.time, action.minutes) },
           ]);
           break;
       }
+      setFocusedIndex(i);
     },
   });
 
@@ -255,7 +255,7 @@ const Track: Component = () => {
               () => (end()?.time?.getTime() || time()) - start?.time.getTime()
             );
 
-            console.log("(re)rendering", start?.after, end()?.before);
+            //console.log("(re)rendering", start?.after, end()?.before);
 
             return (
               <>
@@ -276,7 +276,9 @@ const Track: Component = () => {
                   <Show when={focusedIndex() === i()}>
                     <div
                       class="flex items-center"
-                      onfocusout={() => setFocusedIndex(null)}
+                      onfocusout={() => {
+                        setFocusedIndex(null);
+                      }}
                     >
                       {inputBox}
                     </div>

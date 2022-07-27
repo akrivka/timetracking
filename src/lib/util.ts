@@ -20,7 +20,8 @@ export function nowTime() {
   setTimeout(() => setTime(now().getTime()), 1000);
 }
 
-export function stringToColor(str: string) {
+export function stringToColor(_str: string | undefined) {
+  const str = _str || "";
   var hash = 0;
   for (var i = 0; i < str.length; i++) {
     hash = str.charCodeAt(i) + ((hash << 5) - hash);
@@ -92,3 +93,7 @@ export function insertIntoSortedDecreasingBy<T>(
   if (index == -1) return [...array, item];
   return [...array.slice(0, index), item, ...array.slice(index)];
 }
+
+export const isIterable = (value) => {
+  return Symbol.iterator in Object(value);
+};

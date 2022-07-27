@@ -16,9 +16,9 @@ export const SyncState = () => {
         remoteString = "Offline.";
       } else if (!remote.loggedIn()) {
         remoteString = "Not logged in.";
-      } else if (remote.syncingUp()) {
+      } else if (remote.pushingUpdates()) {
         remoteString = "Syncing up... ";
-      } else if (remote.syncingDown()) {
+      } else if (remote.pullingUpdates()) {
         remoteString = "Syncing down... ";
       } else {
         remoteString = "Synced.";

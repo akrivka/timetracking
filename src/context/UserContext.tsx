@@ -1,11 +1,19 @@
 import axios from "axios";
 import { Accessor, createContext, createResource, useContext } from "solid-js";
+import { isIterable } from "../lib/util";
+import { Label } from "./EntriesContext";
 
 export type Credentials = { username: string; hashedPassword: string };
 
-// TODO: use the same profile struct as in Paul's original app
-// and change all the serialization/deserialization to use that.
-type Profile = {};
+type LabelInfo = {
+  color: string;
+  expanded: boolean;
+  lastModified: Date;
+};
+
+type Profile = {
+  labelInfo: Map<Label, LabelInfo>;
+};
 
 type User = {
   credentials?: Credentials;
@@ -15,20 +23,45 @@ type User = {
 function makeUser(): User {
   return {
     credentials: null,
-    profile: {},
+    profile: { labelInfo: new Map<Label, LabelInfo>() },
   };
 }
 
+export function serializeProfile(profile: Profile): string {
+  return JSON.stringify({
+    labelInfo: Array.from(profile.labelInfo.entries()),
+  });
+}
+
+export function deserializeProfile(
+  serializedProfile: string | undefined
+): Profile | null {
+  if (!serializeProfile) return null;
+  const parsed = JSON.parse(serializedProfile);
+  const labelInfo = new Map<Label, LabelInfo>(
+    parsed.labelInfo.map(([label, info]) => [
+      label,
+      { ...info, lastModified: new Date(info.lastModified) },
+    ])
+  );
+
+  return { labelInfo };
+}
+
 function serializeUser(user: User): string {
-  return JSON.stringify(user);
+  return JSON.stringify({ ...user, profile: serializeProfile(user.profile) });
 }
 
-function deserializeUser(user: string): User {
-  return JSON.parse(user);
+export function deserializeUser(user: string): User {
+  const parsed = JSON.parse(user);
+  return { ...parsed, profile: deserializeProfile(parsed.profile) };
 }
 
-function getLocalUser(): User {
-  return deserializeUser(localStorage.getItem("user"));
+function getLocalUser(): User | undefined {
+  const userString = localStorage.getItem("user");
+  const user = userString ? deserializeUser(userString) : makeUser();
+  if (!userString) saveLocalUser(user);
+  return user;
 }
 
 function saveLocalUser(user: User) {
@@ -45,7 +78,32 @@ export function saveLocalCredentials(credentials: Credentials) {
   saveLocalUser(user);
 }
 
-const UserContext = createContext<Accessor<User>>();
+export function mergeProfiles(profileA: Profile, profileB: Profile) {
+  const newLabelInfo = new Map<Label, LabelInfo>();
+  if (profileA.labelInfo && isIterable(profileA.labelInfo)) {
+    for (const [label, info] of profileA.labelInfo) {
+      const otherInfo = profileB.labelInfo.get(label);
+      newLabelInfo.set(
+        label,
+        info.lastModified > otherInfo.lastModified ? info : otherInfo
+      );
+    }
+  }
+  if (profileB.labelInfo && isIterable(profileB.labelInfo)) {
+    for (const [label, info] of profileB.labelInfo) {
+      const otherInfo = profileA.labelInfo.get(label);
+      newLabelInfo.set(
+        label,
+        info.lastModified > otherInfo.lastModified ? info : otherInfo
+      );
+    }
+  }
+  return {
+    labelInfo: newLabelInfo,
+  };
+}
+
+const UserContext = createContext();
 
 // TODO: change to sign out only if online and unauthenticated
 // otherwise just return the local user (or create it if it doesn't exist)
@@ -61,31 +119,69 @@ const UserContext = createContext<Accessor<User>>();
 // implies: LabelInfo { color: string, expanded: boolean, lastModified: Date }
 // makes sense...
 export const UserProvider = (props) => {
-  const [user, _] = createResource<User>(async () => {
-    const user = getLocalUser();
-    if (!user) {
-      const newUser = makeUser();
-      saveLocalUser(newUser);
-      return newUser;
-    } else if (user.credentials) {
-      const { data } = await axios.get("/api/login", {
-        params: user.credentials,
-      });
+  let user = getLocalUser();
 
-      if (data === "ok") {
-        return user;
-      } else {
-        user.credentials = null;
-        saveLocalUser(user);
-        return user;
+  const getLabelColor = (label: Label): string | undefined => {
+    return user.profile.labelInfo.get(label)?.color;
+  };
+
+  const setLabelColor = (label: Label, color: string) => {
+    const prevInfo = user.profile.labelInfo.get(label);
+    user.profile.labelInfo.set(label, {
+      ...prevInfo,
+      color,
+      lastModified: new Date(),
+    });
+    saveLocalUser(user);
+    sync();
+  };
+
+  const sync = async () => {
+    const remoteProfile = deserializeProfile(
+      (
+        await axios.get("/api/profile", {
+          params: user.credentials,
+        })
+      ).data
+    );
+
+    const localProfile = getLocalUser().profile;
+
+    const mergedProfile = remoteProfile
+      ? mergeProfiles(localProfile, remoteProfile)
+      : localProfile;
+
+    const res = await axios.post(
+      "/api/profile",
+      `profile=${encodeURIComponent(serializeProfile(mergedProfile))}`,
+      {
+        params: user.credentials,
       }
-    } else {
-      return user;
-    }
-  });
+    );
+    console.log(res.data);
+  };
+  // const [user, _] = createResource<User>(async () => {
+
+  // } else if (user.credentials) {
+  //   const { data } = await axios.get("/api/login", {
+  //     params: user.credentials,
+  //   });
+
+  //   if (data === "ok") {
+  //     return user;
+  //   } else {
+  //     user.credentials = null;
+  //     saveLocalUser(user);
+  //     return user;
+  //   }
+  // } else {
+  //   return user;
+  // }
 
   return (
-    <UserContext.Provider value={user}>{props.children}</UserContext.Provider>
+    <UserContext.Provider value={{ user, getLabelColor, setLabelColor }}>
+      {props.children}
+    </UserContext.Provider>
   );
 };
 

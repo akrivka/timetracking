@@ -1,30 +1,25 @@
 import axios from "axios";
 import {
-  batch,
-  createComputed,
   createContext,
   createEffect,
   createResource,
   createSignal,
-  onMount,
-  startTransition,
   untrack,
   useContext,
 } from "solid-js";
+import { createStore } from "solid-js/store";
 import {
   connectDB,
   getAllEntries,
   getAllEntriesModifiedAfter,
   putEntryLocal,
-  removeEntryLocal,
   updateEntriesLocal,
 } from "../lib/localDB";
+import { getEntriesRemote } from "../lib/remoteDB";
 import { createSyncedStoreArray } from "../lib/solid-ext";
 import { insertIntoSortedDecreasingBy, now, revit } from "../lib/util";
-import { useWindow } from "./WindowContext";
 import { Credentials, useUser } from "./UserContext";
-import { createStore } from "solid-js/store";
-import { getEntriesRemote } from "../lib/remoteDB";
+import { useWindow } from "./WindowContext";
 
 export type uid = string;
 
@@ -225,9 +220,9 @@ const EntriesContext = createContext<EntriesContextType>();
 
 export const EntriesProvider = (props) => {
   const { hasNetwork } = useWindow();
-  const user = useUser();
+  const {user} = useUser();
 
-  const loggedIn = () => user() && user().credentials;
+  const loggedIn = () => user && user.credentials;
 
   const [localDB, _] = createResource(connectDB);
 
@@ -252,12 +247,12 @@ export const EntriesProvider = (props) => {
 
   const [labels, setLabels] = createStore([]);
   const updateLabels = () => {
-    setLabels(getDistinctLabels(entries));
+    setLabels(getDistinctLabels([...entries]));
   };
 
   // remote signals
-  const [syncingUp, setSyncingUp] = createSignal();
-  const [syncingDown, setSyncingDown] = createSignal();
+  const [pushingUpdates, setPushingUpdates] = createSignal();
+  const [pullingUpdates, setPullingUpdates] = createSignal();
 
   const putEntries = async (_entries: (Partial<Entry> | undefined)[]) => {
     const newEntries = _entries.map((entry) => {
@@ -292,9 +287,9 @@ export const EntriesProvider = (props) => {
     updateLabels();
 
     if (hasNetwork() && loggedIn()) {
-      setSyncingUp(true);
-      await pushUpdates(user().credentials);
-      setSyncingUp(false);
+      setPushingUpdates(true);
+      await pushUpdates(user.credentials);
+      setPushingUpdates(false);
     }
   };
 
@@ -341,24 +336,24 @@ export const EntriesProvider = (props) => {
   };
 
   const forceSync = async () => {
-    storeForceSync();
-
     delete localStorage.lastPushed;
     delete localStorage.lastPulled;
-    setSyncingDown(true);
-    await pullUpdates(user().credentials);
-    setSyncingDown(false);
-    setSyncingUp(true);
-    await pushUpdates(user().credentials);
-    setSyncingUp(false);
+    setPullingUpdates(true);
+    await pullUpdates(user.credentials);
+    setPullingUpdates(false);
+    setPushingUpdates(true);
+    await pushUpdates(user.credentials);
+    setPushingUpdates(false);
     localStorage.lastPushed = JSON.stringify(now().getTime());
     localStorage.lastPulled = JSON.stringify(now().getTime());
+
+    storeForceSync();
     return null;
   };
 
   const syncState = {
     local: { initialized, querying, mutating },
-    remote: { loggedIn, syncingUp, syncingDown },
+    remote: { loggedIn, pushingUpdates, pullingUpdates },
   };
 
   createEffect(() => {
@@ -366,7 +361,7 @@ export const EntriesProvider = (props) => {
       if (hasNetwork() && loggedIn()) {
         untrack(forceSync);
       }
-      updateLabels();
+      untrack(updateLabels);
     }
   });
 

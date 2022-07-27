@@ -1,14 +1,17 @@
-import express from "express";
 import bodyParser from "body-parser";
 import "dotenv/config";
+import express from "express";
 import postgres from "postgres";
 import {
-  serializeEntries,
   deserializeEntries,
+  serializeEntries,
 } from "../context/EntriesContext";
-import { putEntryLocal } from "../lib/localDB";
+import {
+  Credentials,
+  deserializeProfile,
+  serializeProfile,
+} from "../context/UserContext";
 import { delay, wait } from "../lib/util";
-import { Credentials } from "../context/UserContext";
 
 const db_url = process.env.DATABASE_URL;
 const runningLocally = db_url == undefined || db_url.search("localhost") > 0;
@@ -16,6 +19,7 @@ const sql = postgres(
   db_url,
   runningLocally ? {} : { ssl: { rejectUnauthorized: false } }
 );
+console.log("asdfasdf");
 
 async function signup(credentials: Credentials): Promise<void> {
   await sql`INSERT INTO users (name, password_hash)
@@ -71,6 +75,43 @@ const app = express()
       } catch (e) {
         res.send(e);
       }
+    }
+  })
+  .get("/api/profile", async (req: any, res: any) => {
+    const credentials = getCredentialsFromReq(req);
+
+    try {
+      const success: boolean = await userExists(credentials);
+      if (success) {
+        const results = await sql`SELECT profile FROM users
+        WHERE name=${credentials.username}
+        AND password_hash=${credentials.hashedPassword}`;
+
+        res.send(JSON.stringify(results[0].profile));
+      } else {
+        res.send("username+password not found");
+      }
+    } catch (e) {
+      res.send(e);
+    }
+  })
+  .post("/api/profile", async (req: any, res: any) => {
+    const credentials = getCredentialsFromReq(req);
+
+    try {
+      const success: boolean = await userExists(credentials);
+
+      if (success) {
+        const results =
+          await sql`UPDATE users SET profile=${req.body.profile} WHERE name=${credentials.username} AND password_hash=${credentials.hashedPassword}`;
+        console.log(results);
+
+        res.send("ok");
+      } else {
+        res.send("username+password not found");
+      }
+    } catch (e) {
+      res.send(e);
     }
   })
   .get("/api/entries", async (req: any, res: any) => {

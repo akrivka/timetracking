@@ -8,6 +8,7 @@ import {
   useContext,
 } from "solid-js";
 import { entriesIterator, Label, useEntries } from "../context/EntriesContext";
+import { useUser } from "../context/UserContext";
 import { daysAfter, msBetween } from "../lib/date";
 import { renderDuration } from "../lib/format";
 import { listPairs, revit } from "../lib/util";
@@ -18,6 +19,7 @@ const Block: Component<{
   duration: number;
 }> = ({ subMap, label, duration }) => {
   const edit = isEdit();
+  const { setLabelColor, getLabelColor } = useUser();
 
   const topLabels = [...subMap.keys()].filter((k) => k.includes("/") === false);
 
@@ -45,9 +47,19 @@ const Block: Component<{
         onclick={() => setExpanded(!expanded())}
       >
         [{renderDuration(duration)}] {label} {!isLeaf ? "[+]" : ""}
-        // TODO: add color input element with a callback that writes to local storage
-        // maybe do this FIRST so it's clear what the API for the rest should be?
-        {edit() && "hello"}
+        {/* TODO: add color input element with a callback that writes to local
+        storage maybe do this FIRST so it's clear what the API for the rest
+        should be? */}
+        {edit() && (
+          <input
+            type="color"
+            value={getLabelColor(label)}
+            onchange={(e) => {
+              const newColor = e.currentTarget.value;
+              setLabelColor(label, newColor);
+            }}
+          />
+        )}
       </div>
       <Show when={expanded()}>
         <div class="pl-8 flex flex-col">
