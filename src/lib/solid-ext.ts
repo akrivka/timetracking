@@ -1,4 +1,4 @@
-import { createSignal, createEffect, Accessor } from "solid-js";
+import { createSignal, createEffect, Accessor, onCleanup } from "solid-js";
 import { createStore, SetStoreFunction, Store, unwrap } from "solid-js/store";
 import { delay, wait } from "./util";
 
@@ -65,4 +65,57 @@ export function createSyncedStoreArray<T>(
   };
 
   return [store, { update, initialized, querying, mutating, forceSync }];
+}
+
+import { createPopper, Instance, Options } from "@popperjs/core";
+
+export function usePopper<
+  Target extends HTMLElement,
+  Popper extends HTMLElement
+>(
+  targetElement: () => Target | undefined | null,
+  popperElement: () => Popper | undefined | null,
+  options: Partial<Options> = {}
+): () => Instance | undefined {
+  const [current, setCurrent] = createSignal<Instance>();
+
+  createEffect(() => {
+    setCurrent(undefined);
+
+    const target = targetElement();
+    const popper = popperElement();
+
+    if (target && popper) {
+      const instance = createPopper(target, popper, {});
+
+      setCurrent(instance);
+
+      onCleanup(() => {
+        instance.destroy();
+      });
+    }
+  });
+
+  createEffect(() => {
+    const instance = current();
+
+    if (instance) {
+      instance.setOptions({
+        onFirstUpdate: options.onFirstUpdate,
+        placement: options.placement ?? "bottom",
+        modifiers: options.modifiers ?? [],
+        strategy: options.strategy ?? "absolute",
+      });
+    }
+  });
+
+  return () => {
+    const instance = current();
+    if (instance) {
+      return {
+        ...instance,
+      };
+    }
+    return undefined;
+  };
 }

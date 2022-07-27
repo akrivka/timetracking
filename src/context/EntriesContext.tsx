@@ -328,7 +328,28 @@ export const EntriesProvider = (props) => {
         start && updatedEntries.push({ ...start, after: label });
         break;
       case "bulkRename":
-        // info.oldLabel, info.newLabel
+        const { from, to, moveChildren } = info;
+        for (const entry of entries) {
+          const newEntry = { ...entry };
+          // either the whole label matches or a prefix matches
+          const beforeMatches =
+            entry.before &&
+            (entry.before === from ||
+              (moveChildren && entry.before.startsWith(from)));
+          if (beforeMatches) {
+            newEntry.before = to + entry.before.slice(from.length);
+          }
+          // do the same for the after label
+          const afterMatches =
+            entry.after &&
+            (entry.after === from ||
+              (moveChildren && entry.after.startsWith(from)));
+          if (afterMatches) {
+            newEntry.after = to + entry.after.slice(from.length);
+          }
+
+          if (beforeMatches || afterMatches) updatedEntries.push(newEntry);
+        }
         break;
     }
 

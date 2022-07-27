@@ -157,7 +157,9 @@ function unwrapProfile(profile) {
   return { labelInfo: unwrappedLabelInfo };
 }
 
-const UserContext = createContext();
+type WrappedInfo = [LabelInfo, (info: Partial<LabelInfo>) => void];
+
+const UserContext = createContext<{credentials?: Credentials, getLabelInfo?: (label: Label) => WrappedInfo}>({});
 
 export const UserProvider = (props) => {
   let user = getLocalUser();

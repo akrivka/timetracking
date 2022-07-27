@@ -19,7 +19,6 @@ const sql = postgres(
   db_url,
   runningLocally ? {} : { ssl: { rejectUnauthorized: false } }
 );
-console.log("asdfasdf");
 
 async function signup(credentials: Credentials): Promise<void> {
   await sql`INSERT INTO users (name, password_hash)
@@ -104,7 +103,6 @@ const app = express()
       if (success) {
         const results =
           await sql`UPDATE users SET profile=${req.body.profile} WHERE name=${credentials.username} AND password_hash=${credentials.hashedPassword}`;
-        console.log(results);
 
         res.send("ok");
       } else {
