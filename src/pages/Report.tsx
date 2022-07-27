@@ -19,12 +19,11 @@ const Block: Component<{
   duration: number;
 }> = ({ subMap, label, duration }) => {
   const edit = isEdit();
-  const { setLabelColor, getLabelColor } = useUser();
+  const { getLabelInfo } = useUser();
+
+  const [info, setInfo] = getLabelInfo(label);
 
   const topLabels = [...subMap.keys()].filter((k) => k.includes("/") === false);
-
-  // TODO: make load from user/local storage
-  const [expanded, setExpanded] = createSignal(true);
 
   // generate maps of reduced sublabels
   const mapOfMaps = new Map<string, Map<string, number>>();
@@ -44,24 +43,18 @@ const Block: Component<{
     <>
       <div
         class={!isLeaf ? "cursor-pointer" : ""}
-        onclick={() => setExpanded(!expanded())}
+        onclick={() => setInfo({ expanded: !info.expanded })}
       >
         [{renderDuration(duration)}] {label} {!isLeaf ? "[+]" : ""}
-        {/* TODO: add color input element with a callback that writes to local
-        storage maybe do this FIRST so it's clear what the API for the rest
-        should be? */}
         {edit() && (
           <input
             type="color"
-            value={getLabelColor(label)}
-            onchange={(e) => {
-              const newColor = e.currentTarget.value;
-              setLabelColor(label, newColor);
-            }}
+            value={info.color}
+            onchange={(e) => setInfo({ color: e.currentTarget.value })}
           />
         )}
       </div>
-      <Show when={expanded()}>
+      <Show when={info.expanded}>
         <div class="pl-8 flex flex-col">
           <For each={topLabels}>
             {(topLabel) => (

@@ -220,9 +220,9 @@ const EntriesContext = createContext<EntriesContextType>();
 
 export const EntriesProvider = (props) => {
   const { hasNetwork } = useWindow();
-  const {user} = useUser();
+  const { credentials } = useUser();
 
-  const loggedIn = () => user && user.credentials;
+  const loggedIn = () => credentials;
 
   const [localDB, _] = createResource(connectDB);
 
@@ -288,7 +288,7 @@ export const EntriesProvider = (props) => {
 
     if (hasNetwork() && loggedIn()) {
       setPushingUpdates(true);
-      await pushUpdates(user.credentials);
+      await pushUpdates(credentials);
       setPushingUpdates(false);
     }
   };
@@ -339,10 +339,10 @@ export const EntriesProvider = (props) => {
     delete localStorage.lastPushed;
     delete localStorage.lastPulled;
     setPullingUpdates(true);
-    await pullUpdates(user.credentials);
+    await pullUpdates(credentials);
     setPullingUpdates(false);
     setPushingUpdates(true);
-    await pushUpdates(user.credentials);
+    await pushUpdates(credentials);
     setPushingUpdates(false);
     localStorage.lastPushed = JSON.stringify(now().getTime());
     localStorage.lastPulled = JSON.stringify(now().getTime());

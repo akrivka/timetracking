@@ -1,6 +1,17 @@
 import axios from "axios";
-import { Accessor, createContext, createResource, useContext } from "solid-js";
-import { isIterable } from "../lib/util";
+import { syncBuiltinESMExports } from "module";
+import {
+  Accessor,
+  createContext,
+  createResource,
+  createSignal,
+  onMount,
+  Setter,
+  Signal,
+  useContext,
+} from "solid-js";
+import { createStore, unwrap } from "solid-js/store";
+import { isIterable, stringToColor } from "../lib/util";
 import { Label } from "./EntriesContext";
 
 export type Credentials = { username: string; hashedPassword: string };
@@ -48,6 +59,36 @@ export function deserializeProfile(
   return { labelInfo };
 }
 
+// could reuse code better
+export function mergeProfiles(profileA: Profile, profileB: Profile) {
+  const newLabelInfo = new Map<Label, LabelInfo>();
+  if (profileA.labelInfo && isIterable(profileA.labelInfo)) {
+    for (const [label, info] of profileA.labelInfo) {
+      const otherInfo = profileB.labelInfo.get(label);
+      newLabelInfo.set(
+        label,
+        !otherInfo || info.lastModified > otherInfo.lastModified
+          ? info
+          : otherInfo
+      );
+    }
+  }
+  if (profileB.labelInfo && isIterable(profileB.labelInfo)) {
+    for (const [label, info] of profileB.labelInfo) {
+      const otherInfo = profileA.labelInfo.get(label);
+      newLabelInfo.set(
+        label,
+        !otherInfo || info.lastModified > otherInfo.lastModified
+          ? info
+          : otherInfo
+      );
+    }
+  }
+  return {
+    labelInfo: newLabelInfo,
+  };
+}
+
 function serializeUser(user: User): string {
   return JSON.stringify({ ...user, profile: serializeProfile(user.profile) });
 }
@@ -78,65 +119,70 @@ export function saveLocalCredentials(credentials: Credentials) {
   saveLocalUser(user);
 }
 
-export function mergeProfiles(profileA: Profile, profileB: Profile) {
-  const newLabelInfo = new Map<Label, LabelInfo>();
-  if (profileA.labelInfo && isIterable(profileA.labelInfo)) {
-    for (const [label, info] of profileA.labelInfo) {
-      const otherInfo = profileB.labelInfo.get(label);
-      newLabelInfo.set(
-        label,
-        info.lastModified > otherInfo.lastModified ? info : otherInfo
-      );
-    }
-  }
-  if (profileB.labelInfo && isIterable(profileB.labelInfo)) {
-    for (const [label, info] of profileB.labelInfo) {
-      const otherInfo = profileA.labelInfo.get(label);
-      newLabelInfo.set(
-        label,
-        info.lastModified > otherInfo.lastModified ? info : otherInfo
-      );
-    }
-  }
-  return {
-    labelInfo: newLabelInfo,
+function wrapInfo(
+  info: LabelInfo,
+  pushProfile
+): [LabelInfo, (info: LabelInfo) => void] {
+  const [_info, _setInfo] = createStore<LabelInfo>({
+    color: info.color,
+    expanded: info.expanded,
+    lastModified: info.lastModified,
+  });
+  const setInfo = (_info: LabelInfo) => {
+    _setInfo({
+      ..._info,
+      lastModified: new Date(),
+    });
+    pushProfile();
   };
+  return [_info, setInfo];
+}
+
+function wrapProfile(profile: Profile, pushProfile) {
+  const wrappedLabelInfo = new Map<
+    Label,
+    [LabelInfo, (newInfo: LabelInfo) => void]
+  >();
+  for (const [label, info] of profile.labelInfo) {
+    wrappedLabelInfo.set(label, wrapInfo(info, pushProfile));
+  }
+  return { labelInfo: wrappedLabelInfo };
+}
+
+function unwrapProfile(profile) {
+  const unwrappedLabelInfo = new Map<Label, LabelInfo>();
+  for (const [label, [info, _setInfo]] of profile.labelInfo) {
+    unwrappedLabelInfo.set(label, unwrap(info));
+  }
+  return { labelInfo: unwrappedLabelInfo };
 }
 
 const UserContext = createContext();
 
-// TODO: change to sign out only if online and unauthenticated
-// otherwise just return the local user (or create it if it doesn't exist)
-
-// TODO: add functions to manipulate the labels<->colors map
-// tradeoff: keep the `labels` and `expanded` Map/Sets separate
-// or put them into one map `labelInfo` with an object with keys `color`
-// and `expanded` in them (would probably have to wrap this in a solid store)
-//
-// should trigger a push to remote
-// question: what should the merge process be?
-// for each label take the info object which was modified later?
-// implies: LabelInfo { color: string, expanded: boolean, lastModified: Date }
-// makes sense...
 export const UserProvider = (props) => {
   let user = getLocalUser();
 
-  const getLabelColor = (label: Label): string | undefined => {
-    return user.profile.labelInfo.get(label)?.color;
-  };
+  const [profile, setProfile] = createSignal(
+    wrapProfile(user.profile, () => pushProfile())
+  );
 
-  const setLabelColor = (label: Label, color: string) => {
-    const prevInfo = user.profile.labelInfo.get(label);
-    user.profile.labelInfo.set(label, {
-      ...prevInfo,
-      color,
-      lastModified: new Date(),
-    });
-    saveLocalUser(user);
-    sync();
-  };
+  onMount(async () => {
+    const remoteProfile = deserializeProfile(
+      (
+        await axios.get("/api/profile", {
+          params: user.credentials,
+        })
+      ).data
+    );
+    const localProfile = user.profile;
+    const mergedProfile = remoteProfile
+      ? mergeProfiles(localProfile, remoteProfile)
+      : localProfile;
 
-  const sync = async () => {
+    setProfile(wrapProfile(mergedProfile, () => pushProfile()));
+  });
+
+  const pushProfile = async () => {
     const remoteProfile = deserializeProfile(
       (
         await axios.get("/api/profile", {
@@ -145,41 +191,49 @@ export const UserProvider = (props) => {
       ).data
     );
 
-    const localProfile = getLocalUser().profile;
+    const localProfile = unwrapProfile(profile());
 
     const mergedProfile = remoteProfile
       ? mergeProfiles(localProfile, remoteProfile)
       : localProfile;
 
-    const res = await axios.post(
+    user.profile = mergedProfile;
+    saveLocalUser(user);
+    await axios.post(
       "/api/profile",
       `profile=${encodeURIComponent(serializeProfile(mergedProfile))}`,
       {
         params: user.credentials,
       }
     );
-    console.log(res.data);
   };
-  // const [user, _] = createResource<User>(async () => {
 
-  // } else if (user.credentials) {
-  //   const { data } = await axios.get("/api/login", {
-  //     params: user.credentials,
-  //   });
+  const getLabelInfo = (label: Label) => {
+    let info = profile().labelInfo.get(label);
+    if (!info) {
+      const newInfo = wrapInfo(
+        {
+          color: stringToColor(label),
+          expanded: false,
+          lastModified: new Date(),
+        },
+        pushProfile
+      );
+      profile().labelInfo.set(label, newInfo);
+      info = newInfo;
 
-  //   if (data === "ok") {
-  //     return user;
-  //   } else {
-  //     user.credentials = null;
-  //     saveLocalUser(user);
-  //     return user;
-  //   }
-  // } else {
-  //   return user;
-  // }
+      pushProfile();
+    }
+    return info;
+  };
 
   return (
-    <UserContext.Provider value={{ user, getLabelColor, setLabelColor }}>
+    <UserContext.Provider
+      value={{
+        credentials: user.credentials,
+        getLabelInfo,
+      }}
+    >
       {props.children}
     </UserContext.Provider>
   );
