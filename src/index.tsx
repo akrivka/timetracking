@@ -7,7 +7,7 @@ import { WindowProvider } from "./context/WindowContext";
 import { Auth, Login, Signup } from "./pages/Auth";
 import Calendar from "./pages/Calendar";
 import Mobile from "./pages/Mobile";
-import Report from "./pages/report";
+import Report from "./pages/Report";
 import Track from "./pages/Track";
 
 render(
