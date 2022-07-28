@@ -250,12 +250,42 @@ function yesterday() {
   return { month: d.getMonth(), day: d.getDate(), year: d.getFullYear() };
 }
 
+function startOfDay(d: DaySpec): DateSpec {
+  return {
+    hours: 12,
+    minutes: 0,
+    ampm: "am",
+    month: d.month,
+    day: d.day,
+    year: d.year,
+  };
+}
+
+function endOfDay(d: DaySpec): DateSpec {
+  return {
+    hours: 12,
+    minutes: 0,
+    ampm: "am",
+    month: d.month,
+    day: d.day,
+    year: d.year,
+    dayOffset: 1,
+  };
+}
+
 type lessThan7 = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
 function lastDayOfWeek(n: lessThan7, weeksAgo: number = 0): DaySpec {
   const d = new Date();
   while (d.getDay() != n) d.setDate(d.getDate() - 1);
   d.setDate(d.getDate() - 7 * weeksAgo);
+  return { month: d.getMonth(), day: d.getDate(), year: d.getFullYear() };
+}
+
+function lastDayOfMonth(n: number, monthsAgo: number = 0): DaySpec {
+  const d = new Date();
+  while (d.getDate() != n) d.setDate(d.getDate() - 1);
+  d.setMonth(d.getMonth() - monthsAgo);
   return { month: d.getMonth(), day: d.getDate(), year: d.getFullYear() };
 }
 
@@ -413,5 +443,42 @@ export const actionRule: Rule<Action> = any<Action>([
   seq([after, raw("first"), duration], (xs) => ({
     kind: "afterFirstMinutes",
     minutes: xs[2],
+  })),
+]);
+
+export type DateRange = {
+  start: DateSpec;
+  end: DateSpec;
+};
+
+export const dateRangeRule = any<DateRange>([
+  seq([dateRule, raw("to"), dateRule], ([start, _, end]) => ({ start, end })),
+  seq([dateRule, raw("until"), dateRule], ([start, _, end]) => ({
+    start,
+    end,
+  })),
+  map(raw("today"), () => ({
+    start: startOfDay(today()),
+    end: endOfDay(today()),
+  })),
+  map(raw("yesterday"), () => ({
+    start: startOfDay(yesterday()),
+    end: endOfDay(yesterday()),
+  })),
+  seq([raw("this"), raw("week")], () => ({
+    start: startOfDay(lastDayOfWeek(0, 0)),
+    end: startOfDay(lastDayOfWeek(0, -1)),
+  })),
+  seq([raw("last"), raw("week")], () => ({
+    start: startOfDay(lastDayOfWeek(0, 1)),
+    end: startOfDay(lastDayOfWeek(0, 0)),
+  })),
+  seq([raw("this"), raw("month")], () => ({
+    start: startOfDay(lastDayOfMonth(1, 0)),
+    end: startOfDay(lastDayOfMonth(1, -1)),
+  })),
+  seq([raw("last"), raw("month")], () => ({
+    start: startOfDay(lastDayOfMonth(1, 1)),
+    end: startOfDay(lastDayOfMonth(1, 0)),
   })),
 ]);

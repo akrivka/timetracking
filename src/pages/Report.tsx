@@ -13,6 +13,7 @@ import {
   createContext,
   createEffect,
   createMemo,
+  createRenderEffect,
   createSignal,
   For,
   Show,
@@ -22,10 +23,11 @@ import { MyButton } from "../components/MyButton";
 import { MyTextInput } from "../components/MyTextInput";
 import { entriesIterator, Label, useEntries } from "../context/EntriesContext";
 import { useUser } from "../context/UserContext";
-import { daysAfter, msBetween } from "../lib/date";
-import { renderDuration } from "../lib/format";
+import { daysAfter, msBetween, specToDate } from "../lib/date";
+import { renderDuration, renderTime } from "../lib/format";
+import { DateRange, dateRangeRule, parseString } from "../lib/parse";
 import { usePopper } from "../lib/solid-ext";
-import { listPairs, revit } from "../lib/util";
+import { listPairs, now, revit } from "../lib/util";
 
 const second_ms = 1000;
 const minute_ms = 60 * second_ms;
@@ -198,9 +200,25 @@ const useReport = () => useContext(ReportContext);
 const Report: Component = () => {
   const { entries, syncState } = useEntries();
   const { initialized } = syncState.local;
-  const [startDate, setStart] = createSignal(daysAfter(new Date(), -3));
-  const [endDate, setEnd] = createSignal(new Date());
+
+  const [rangeString, setRangeString] = createSignal("today");
+  const [dateRange, setDateRange] = createSignal<DateRange>();
+  const [error, setError] = createSignal(false);
+  createRenderEffect(() => {
+    const m = parseString(dateRangeRule, rangeString());
+    if (m == "prefix" || m == "fail") {
+      console.log("error", m);
+      setError(true);
+    } else {
+      setDateRange(m[0]);
+      setError(false);
+    }
+  });
+  const startDate = () => specToDate(dateRange()?.start, now(), "closest");
+  const endDate = () => specToDate(dateRange()?.end, now(), "closest");
+
   const [isEdit, setIsEdit] = createSignal(false);
+
   const [rerenderSignal, setRerenderSignal] = createSignal(false);
   const triggerRerender = () => setRerenderSignal(!rerenderSignal());
 
@@ -242,12 +260,23 @@ const Report: Component = () => {
   return (
     <div class="space-y-2 ml-4">
       <div class="flex">
-        <label class="w-16">Start:</label>
-        <MyTextInput class="" />
-      </div>
-      <div class="flex">
-        <label class="w-16">End:</label>
-        <MyTextInput class="" />
+        <label class="w-16">Range:</label>
+        <div>
+          <div class="flex">
+            <MyTextInput
+              class="w-96"
+              value={rangeString()}
+              onchange={(e) => setRangeString(e.currentTarget.value.trim())}
+              onEnter={(val) => setRangeString(val.trim())}
+            />
+            <Show when={error()}>
+              <div class="ml-2 text-red-400">Parsing error.</div>
+            </Show>
+          </div>
+          <div class="text-[10px] text-gray-500">
+            {renderTime(startDate())} — {renderTime(endDate())}
+          </div>
+        </div>
       </div>
       <div class="flex">
         <label class="w-16">Labels:</label>
