@@ -54,16 +54,15 @@ function renderReportDuration(time: number, total: number, display: ShowType) {
 
 const Block: Component<{
   subMap: Map<string, number>;
-  label: Label;
+  label?: Label;
   duration: number;
-  editable: boolean;
 }> = (props) => {
-  const { label, duration, editable } = props;
+  const { label, duration } = props;
   const { isEdit, triggerRerender, showType, total } = useReport();
   const { getLabelInfo } = useUser();
   const { dispatch } = useEntries();
 
-  const [info, setInfo] = getLabelInfo(label);
+  const [info, setInfo] = label ? getLabelInfo(label) : [null, null];
 
   const topLabels = () =>
     [...props.subMap.keys()].filter((k) => k.includes("/") === false);
@@ -90,84 +89,89 @@ const Block: Component<{
 
   return (
     <>
-      <div class="flex">
-        <div
-          class={!isLeaf ? "cursor-pointer" : ""}
-          onclick={() => setInfo({ expanded: !info.expanded })}
-        >
-          [{renderReportDuration(duration, total, showType())}] {label}{" "}
-          {!isLeaf() ? "[+]" : ""}
-        </div>
-        <Show when={editable && isEdit()}>
-          <div class="w-2" />
-          <input
-            class="w-6 h-6"
-            type="color"
-            value={info.color}
-            onchange={(e) => setInfo({ color: e.currentTarget.value })}
-          />
-          <div class="w-3" />
-          <Popover class="relative" defaultOpen={false}>
-            {({ isOpen, setState }) => {
-              const [newName, setNewName] = createSignal("");
-              const [moveChildren, setMoveChildren] = createSignal(true);
+      <Show when={label}>
+        <div class="flex">
+          <div
+            class={!isLeaf() ? "cursor-pointer" : ""}
+            onclick={() => setInfo({ expanded: !info.expanded })}
+          >
+            [{renderReportDuration(duration, total, showType())}]{" "}
+            {leafLabel(label)} {!isLeaf() ? "[+]" : ""}
+          </div>
+          <Show when={isEdit()}>
+            <div class="w-2" />
+            <input
+              class="w-6 h-6"
+              type="color"
+              value={info.color}
+              onchange={(e) => setInfo({ color: e.currentTarget.value })}
+            />
+            <div class="w-3" />
+            <Popover class="relative" defaultOpen={false}>
+              {({ isOpen, setState }) => {
+                const [newName, setNewName] = createSignal("");
+                const [moveChildren, setMoveChildren] = createSignal(true);
 
-              const onSubmit = () => {
-                dispatch([
-                  "bulkRename",
-                  { from: label, to: newName(), moveChildren: moveChildren() },
-                ]);
-                setState(false);
-                triggerRerender();
-              };
-              return (
-                <>
-                  <PopoverButton ref={setAnchor} class="text-gray-400">
-                    [rename]
-                  </PopoverButton>
-                  <Show when={isOpen()}>
-                    <PopoverPanel ref={setPopper} unmount={false}>
-                      <div class="w-96 border-2 rounded px-4 py-3 bg-white z-50 space-y-1">
-                        <div class="flex">
-                          <label class="w-28">Label:</label>
-                          {label}
+                const onSubmit = () => {
+                  dispatch([
+                    "bulkRename",
+                    {
+                      from: label,
+                      to: newName(),
+                      moveChildren: moveChildren(),
+                    },
+                  ]);
+                  setState(false);
+                  triggerRerender();
+                };
+                return (
+                  <>
+                    <PopoverButton ref={setAnchor} class="text-gray-400">
+                      [rename]
+                    </PopoverButton>
+                    <Show when={isOpen()}>
+                      <PopoverPanel ref={setPopper} unmount={false}>
+                        <div class="w-96 border-2 rounded px-4 py-3 bg-white z-50 space-y-1">
+                          <div class="flex">
+                            <label class="w-28">Label:</label>
+                            {label}
+                          </div>
+                          <div class="flex">
+                            <label class="w-28">Rename to:</label>
+                            <MyTextInput
+                              oninput={(e) => setNewName(e.currentTarget.value)}
+                              onEnter={onSubmit}
+                            />
+                          </div>
+                          <div class="flex">
+                            <label class="w-28">Move children:</label>
+                            <input
+                              type="checkbox"
+                              checked
+                              onchange={(e) =>
+                                setMoveChildren(e.currentTarget.checked)
+                              }
+                            />
+                          </div>
+                          <MyButton onclick={onSubmit}>Done</MyButton>
                         </div>
-                        <div class="flex">
-                          <label class="w-28">Rename to:</label>
-                          <MyTextInput
-                            oninput={(e) => setNewName(e.currentTarget.value)}
-                            onEnter={onSubmit}
-                          />
-                        </div>
-                        <div class="flex">
-                          <label class="w-28">Move children:</label>
-                          <input
-                            type="checkbox"
-                            checked
-                            onchange={(e) =>
-                              setMoveChildren(e.currentTarget.checked)
-                            }
-                          />
-                        </div>
-                        <MyButton onclick={onSubmit}>Done</MyButton>
-                      </div>
-                    </PopoverPanel>
-                  </Show>
-                </>
-              );
-            }}
-          </Popover>
-        </Show>
-      </div>
-      <Show when={info.expanded}>
+                      </PopoverPanel>
+                    </Show>
+                  </>
+                );
+              }}
+            </Popover>
+          </Show>
+        </div>
+      </Show>
+      <Show when={info?.expanded || !label}>
         <div class="pl-8 flex flex-col">
           <For each={topLabels()}>
             {(topLabel) => (
               <Block
                 subMap={mapOfMaps().get(topLabel)}
-                label={topLabel}
+                label={label ? label + " / " + topLabel : topLabel}
                 duration={props.subMap.get(topLabel)}
-                editable={true}
               />
             )}
           </For>
@@ -181,6 +185,12 @@ function coarseLabel(label: string): string {
   const i = label.lastIndexOf("/");
   if (i == -1) return null;
   else return label.slice(0, i).trim();
+}
+
+function leafLabel(label: string): string {
+  const i = label.lastIndexOf("/");
+  if (i == -1) return label;
+  else return label.slice(i + 1).trim();
 }
 
 function prefixAndRemainder(s: string): [string, string] {
@@ -353,6 +363,7 @@ const Report: Component = () => {
       <div class="h-2" />
       <div class="select-none">
         <Show when={initialized()}>
+          [{renderDuration(totalDuration())}] total
           <ReportContext.Provider
             value={{
               isEdit,
@@ -361,12 +372,7 @@ const Report: Component = () => {
               total: totalDuration(),
             }}
           >
-            <Block
-              subMap={labelTimeMap()}
-              label="total"
-              duration={totalDuration()}
-              editable={false}
-            />
+            <Block subMap={labelTimeMap()} duration={totalDuration()} />
           </ReportContext.Provider>
         </Show>
       </div>
