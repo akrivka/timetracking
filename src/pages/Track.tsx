@@ -1,17 +1,13 @@
 import { Component, createMemo, createSignal, For, Show } from "solid-js";
 import { InputBox } from "../components/InputBox";
 import { Entry, entryEquals, useEntries } from "../context/EntriesContext";
+import { useUser } from "../context/UserContext";
 import { useWindow } from "../context/WindowContext";
+import { stringToColor } from "../lib/colors";
 import { specToDate } from "../lib/date";
 import { renderDuration, renderTime } from "../lib/format";
 import { actionRule, dateRule, parseString } from "../lib/parse";
-import {
-  now,
-  stringToColor,
-  minutesAfter,
-  listPairsAndEnds,
-  wait,
-} from "../lib/util";
+import { now, minutesAfter, listPairsAndEnds, wait } from "../lib/util";
 
 const EmptyBullet = () => {
   return (
@@ -73,10 +69,9 @@ const Line: Component<{ color: string }> = ({ color }) => {
 const Track: Component = () => {
   const { time } = useWindow();
   const { entries, labels, dispatch } = useEntries();
-  console.log(labels);
+  const { getLabelInfo } = useUser();
 
   const [focusedIndex, setFocusedIndex] = createSignal(null);
-  const [newEntry, setNewEntry] = createSignal(null);
 
   const onkeydown = (e) => {
     if (e.key === "ArrowUp") {
@@ -251,6 +246,8 @@ const Track: Component = () => {
                 : `?conflict-${start.after}-${end()?.before}`
             );
 
+            const color = createMemo(() => getLabelInfo(label())[0].color);
+
             const duration = createMemo(
               () => (end()?.time?.getTime() || time()) - start?.time.getTime()
             );
@@ -260,7 +257,7 @@ const Track: Component = () => {
             return (
               <>
                 <div class="flex text-sm">
-                  <Line color={end() ? stringToColor(label()) : "gray"} />
+                  <Line color={end() ? color() : "gray"} />
                   <div
                     class="ml-8 pl-1 flex flex-col justify-center cursor-pointer hover:bg-sky-50 w-56"
                     onClick={() => setFocusedIndex(i())}
@@ -274,14 +271,7 @@ const Track: Component = () => {
                   </div>
 
                   <Show when={focusedIndex() === i()}>
-                    <div
-                      class="flex items-center"
-                      onfocusout={() => {
-                        setFocusedIndex(null);
-                      }}
-                    >
-                      {inputBox}
-                    </div>
+                    <div class="flex items-center">{inputBox}</div>
                   </Show>
                 </div>
                 <Bullet entry={start} />

@@ -97,7 +97,9 @@ const Block: Component<{
           {!isLeaf() ? "[+]" : ""}
         </div>
         <Show when={editable && isEdit()}>
+          <div class="w-2" />
           <input
+            class="w-6 h-6"
             type="color"
             value={info.color}
             onchange={(e) => setInfo({ color: e.currentTarget.value })}
@@ -235,24 +237,24 @@ const Report: Component = () => {
 
   const showTypes = ["total", "weekly", "daily", "percent"];
 
-  const [showType, setShowType] = createSignal<ShowType>();
+  const [showType, setShowType] = createSignal<ShowType>("total");
 
   return (
-    <div class="space-y-2">
+    <div class="space-y-2 ml-4">
       <div class="flex">
-        <label class="w-24">Start:</label>
+        <label class="w-16">Start:</label>
         <MyTextInput class="" />
       </div>
       <div class="flex">
-        <label class="w-24">End:</label>
+        <label class="w-16">End:</label>
         <MyTextInput class="" />
       </div>
       <div class="flex">
-        <label class="w-24">Labels:</label>
+        <label class="w-16">Labels:</label>
         <MyTextInput class="" />
       </div>
       <div class="flex">
-        <label class="w-24">Edit:</label>
+        <label class="w-16">Edit:</label>
         <input
           class=""
           type="checkbox"
@@ -260,21 +262,27 @@ const Report: Component = () => {
         />
       </div>
       <div class="flex">
-        <label class="w-24">Show:</label>
+        <label class="w-16">Show:</label>
         <RadioGroup
           value={showType()}
           onChange={(v) => setShowType(v.toLowerCase() as ShowType)}
         >
           {() => (
-            <div class="flex space-x-1">
+            <div class="flex space-x-2 items-center">
               <For each={showTypes}>
                 {(type) => (
                   <RadioGroupOption value={type}>
                     {({ isSelected: checked }) => (
-                      <div class="capitalize">
-                        <input type="radio" checked={checked()} />
+                      <button
+                        class={
+                          "capitalize rounded px-1 py-0.5 " +
+                          (checked()
+                            ? "bg-gray-200 outline-1 outline outline-gray-300"
+                            : "hover:bg-gray-100")
+                        }
+                      >
                         {type}
-                      </div>
+                      </button>
                     )}
                   </RadioGroupOption>
                 )}
@@ -283,10 +291,11 @@ const Report: Component = () => {
           )}
         </RadioGroup>
       </div>
-      <div class="flex">
+      <div class="flex space-x-2">
         <MyButton onclick={() => null}>Generate</MyButton>
         <MyButton onclick={() => null}>Export</MyButton>
       </div>
+      <div class="h-2" />
       <div class="select-none">
         <Show when={initialized()}>
           <ReportContext.Provider
