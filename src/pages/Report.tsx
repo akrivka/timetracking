@@ -3,27 +3,23 @@ import {
   Popover,
   PopoverButton,
   PopoverPanel,
-  RadioGroup,
-  RadioGroupLabel,
-  RadioGroupOption,
+  RadioGroup, RadioGroupOption
 } from "solid-headless";
 import {
   Accessor,
   Component,
-  createContext,
-  createEffect,
-  createMemo,
+  createContext, createMemo,
   createRenderEffect,
   createSignal,
   For,
   Show,
-  useContext,
+  useContext
 } from "solid-js";
 import { MyButton } from "../components/MyButton";
 import { MyTextInput } from "../components/MyTextInput";
 import { entriesIterator, Label, useEntries } from "../context/EntriesContext";
 import { useUser } from "../context/UserContext";
-import { daysAfter, msBetween, specToDate } from "../lib/date";
+import { msBetween, specToDate } from "../lib/date";
 import { renderDuration, renderTime, renderTimeFull } from "../lib/format";
 import { DateRange, dateRangeRule, parseString } from "../lib/parse";
 import { usePopper } from "../lib/solid-ext";
@@ -277,7 +273,7 @@ const Report: Component = () => {
   const [showType, setShowType] = createSignal<ShowType>("total");
 
   return (
-    <div class="space-y-2 ml-4">
+    <div class="space-y-2 ml-4 mt-4">
       <div class="flex">
         <label class="w-16">Range:</label>
         <div class="w-96">

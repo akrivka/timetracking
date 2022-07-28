@@ -102,7 +102,15 @@ const Track: Component = () => {
         case undefined:
         case null:
           if (!end) {
-            dispatch(["insert", { entry: { before: label, time: now() } }]);
+            dispatch([
+              "insert",
+              {
+                entry: {
+                  before: !label || label == "" ? start.after : label,
+                  time: now(),
+                },
+              },
+            ]);
           } else {
             dispatch(["relabel", { start, end, label }]);
           }

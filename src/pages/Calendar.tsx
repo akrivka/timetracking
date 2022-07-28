@@ -85,7 +85,7 @@ const Calendar: Component = () => {
       ...entry,
       before: entry.before ? coarseLabel(entry.before, depth()) : null,
     }));
-    const result = [];
+    const result: Partial<Entry>[] = [];
     for (let i = 0; i < es.length - 1; i++) {
       const entry = es[i];
       const nextEntry = es[i + 1];
@@ -110,17 +110,20 @@ const Calendar: Component = () => {
     const result: Interval[][] = [...Array(7)].map((_) => []);
 
     let a = null;
-    let b = { time: startDay() };
+    let b: Partial<Entry> = { time: startDay() };
 
     let day = 0;
 
-    for (const entry of [...coalescedEntries(), { time: endDay() }]) {
+    for (const entry of [
+      ...coalescedEntries(),
+      { time: endDay(), before: null },
+    ]) {
       a = b;
       b = entry;
 
       let nm = nextMidnight(a.time);
       while (nm < b.time) {
-        let newB = { time: nm, before: a.after, after: a.after };
+        let newB = { time: nm, before: b?.before, after: b?.before };
         result[day].push([a, newB]);
         day++;
         a = newB;
@@ -202,7 +205,7 @@ const Calendar: Component = () => {
   const [depth, setDepth] = createSignal(maxDepth());
 
   return (
-    <div>
+    <div class="mt-4">
       <div class="flex justify-center">
         <div class="mx-16 w-full h-screen">
           <div class="flex justify-between">
@@ -263,8 +266,8 @@ const Calendar: Component = () => {
               </div>
             </div>
           </div>
-          <div class="h-5/6 border rounded-sm inline-flex w-full">
-            <div class="flex flex-col grow">
+          <div class="h-[90%] border rounded-sm inline-flex w-full">
+            <div class="flex flex-col grow w-48">
               <div class="h-10" />
               <div class="h-4" />
               <div class="relative h-full">
@@ -278,7 +281,7 @@ const Calendar: Component = () => {
                       msInADay();
                     return (
                       <div
-                        class="text-[8px] flex items-center text-gray-400 absolute h-4 -translate-y-2"
+                        class="text-[8px] flex items-center text-gray-400 absolute h-4 -translate-y-2 w-full justify-end pr-0.5"
                         style={`top: ${top * 100}%`}
                       >
                         {twoDigits(mark.hours) + ":" + twoDigits(mark.minutes)}
@@ -291,14 +294,14 @@ const Calendar: Component = () => {
             </div>
             <For each={dayInfos()}>
               {({ hiddenBefore, hiddenAfter, visibleIntervals }, d) => (
-                <div class="grow">
+                <div class="flex flex-col grow w-full">
                   <p class="flex justify-center items-center font-bold h-10">
                     {renderDay(daysAfter(week(), d()))}
                   </p>
                   <div class="h-4 text-gray-400 text-[8px]">
                     {hiddenBefore.join(", ")}
                   </div>
-                  <div class="h-[calc(100%-40px)]">
+                  <div class="h-full border">
                     <For each={visibleIntervals}>
                       {([start, end], i) => {
                         const height =
@@ -310,7 +313,7 @@ const Calendar: Component = () => {
 
                         return (
                           <div
-                            class="w-full text-[6px]"
+                            class="w-full text-[8px] text-white font-semibold"
                             style={`height: ${
                               height * 100
                             }%; background-color: ${info.color};`}

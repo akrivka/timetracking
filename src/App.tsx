@@ -1,9 +1,10 @@
 import { NavLink, Outlet, useNavigate } from "solid-app-router";
-import { Component, Match, onMount, Switch } from "solid-js";
+import { Component, Match, onMount, Show, Switch } from "solid-js";
 import { SyncState } from "./components/SyncState";
 
 import { EntriesProvider } from "./context/EntriesContext";
 import { deleteLocalUser, UserProvider, useUser } from "./context/UserContext";
+import { debug } from "./lib/util";
 
 type MyLinkProps = {
   href: string;
@@ -48,9 +49,9 @@ const Navbar: Component = () => {
 export const WithBackButton: Component = () => {
   return (
     <>
-      <div class="flex w-full justify-end">
+      {/* <div class="flex w-full justify-end">
         <NavLink href="/">Go back</NavLink>
-      </div>
+      </div> */}
       <Outlet />
     </>
   );
@@ -79,7 +80,9 @@ export const App: Component = () => {
   return (
     <UserProvider>
       <EntriesProvider>
-        <SyncState />
+        <Show when={debug}>
+          <SyncState />
+        </Show>
         <Outlet />
       </EntriesProvider>
     </UserProvider>

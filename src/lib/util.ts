@@ -1,6 +1,7 @@
 import { createSignal } from "solid-js";
 
-export let delay: number = 500;
+export let debug = false;
+export let delay: number = 0;
 
 export function setDelay(ms: number) {
   delay = ms;
