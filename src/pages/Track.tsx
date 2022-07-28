@@ -28,7 +28,7 @@ const Bullet: Component<{ entry: Entry }> = (props) => {
       <div class="w-2" />
       <div
         contenteditable={true}
-        class="text-sm font-bold"
+        class="text-sm font-bold px-1"
         onkeydown={(e) => {
           if (e.key === "Enter") {
             e.preventDefault();
@@ -86,7 +86,7 @@ const Track: Component = () => {
     prefixRule: actionRule,
     universe: labels,
     focusSignal: focusedIndex,
-    class: "bg-blue-50",
+    class: "bg-gray-50",
     submit: async (action, label) => {
       // start, end
       const i = focusedIndex();
