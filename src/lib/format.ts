@@ -72,6 +72,23 @@ function twoDigits(n: number): string {
       return renderAMPM(myDate);
     else return renderTime(myDate);
   }
+
+  export function renderTimeFull(date: Date): string {
+    const myDate = convertDate(date);
+    function renderTime(d: MyDate) {
+      return `${d.hour}:${twoDigits(d.minute)}`;
+    }
+    function renderAMPM(d: MyDate) {
+      return `${renderTime(d)} ${d.ampm == "am" ? "AM" : "PM"}`;
+    }
+    function renderDay(d: MyDate, prefix: string) {
+      return `${prefix || renderAMPM(d) + ","} ${d.month} ${d.day}`;
+    }
+    function renderYear(d: MyDate, prefix: string) {
+      return `${renderDay(d, prefix)}, ${d.year}`;
+    }
+    return renderYear(myDate, renderAMPM(myDate) + ",");
+  }
   
   export function renderDuration(ms: number): string {
     if (ms < 0) {

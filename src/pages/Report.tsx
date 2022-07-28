@@ -24,7 +24,7 @@ import { MyTextInput } from "../components/MyTextInput";
 import { entriesIterator, Label, useEntries } from "../context/EntriesContext";
 import { useUser } from "../context/UserContext";
 import { daysAfter, msBetween, specToDate } from "../lib/date";
-import { renderDuration, renderTime } from "../lib/format";
+import { renderDuration, renderTime, renderTimeFull } from "../lib/format";
 import { DateRange, dateRangeRule, parseString } from "../lib/parse";
 import { usePopper } from "../lib/solid-ext";
 import { listPairs, now, revit } from "../lib/util";
@@ -127,18 +127,20 @@ const Block: Component<{
                   </PopoverButton>
                   <Show when={isOpen()}>
                     <PopoverPanel ref={setPopper} unmount={false}>
-                      <div class="w-96 border-2 rounded px-4 py-3 bg-white z-50">
-                        <div>Label: {label}</div>
+                      <div class="w-96 border-2 rounded px-4 py-3 bg-white z-50 space-y-1">
                         <div class="flex">
-                          Rename to:{" "}
-                          <input
-                            type="text"
+                          <label class="w-28">Label:</label>
+                          {label}
+                        </div>
+                        <div class="flex">
+                          <label class="w-28">Rename to:</label>
+                          <MyTextInput
                             oninput={(e) => setNewName(e.currentTarget.value)}
-                            onkeydown={(e) => e.key == "Enter" && onSubmit()}
+                            onEnter={onSubmit}
                           />
                         </div>
-                        <div>
-                          Move children:{" "}
+                        <div class="flex">
+                          <label class="w-28">Move children:</label>
                           <input
                             type="checkbox"
                             checked
@@ -217,6 +219,13 @@ const Report: Component = () => {
   const startDate = () => specToDate(dateRange()?.start, now(), "closest");
   const endDate = () => specToDate(dateRange()?.end, now(), "closest");
 
+  const shift = (dir: 1 | -1) => {
+    const dur = totalDuration();
+    const newStart = new Date(startDate().getTime() + dir * dur);
+    const newEnd = new Date(endDate().getTime() + dir * dur);
+    setRangeString(`${renderTimeFull(newStart)} to ${renderTimeFull(newEnd)}`);
+  };
+
   const [isEdit, setIsEdit] = createSignal(false);
 
   const [rerenderSignal, setRerenderSignal] = createSignal(false);
@@ -261,7 +270,7 @@ const Report: Component = () => {
     <div class="space-y-2 ml-4">
       <div class="flex">
         <label class="w-16">Range:</label>
-        <div>
+        <div class="w-96">
           <div class="flex">
             <MyTextInput
               class="w-96"
@@ -269,14 +278,31 @@ const Report: Component = () => {
               onchange={(e) => setRangeString(e.currentTarget.value.trim())}
               onEnter={(val) => setRangeString(val.trim())}
             />
-            <Show when={error()}>
-              <div class="ml-2 text-red-400">Parsing error.</div>
-            </Show>
           </div>
-          <div class="text-[10px] text-gray-500">
-            {renderTime(startDate())} — {renderTime(endDate())}
+          <div class="h-0.5" />
+          <div class="flex justify-between">
+            <div class="text-[10px] text-gray-500">
+              {renderTime(startDate())} — {renderTime(endDate())}
+            </div>
+            <div class="flex border rounded">
+              <button
+                class="w-4 h-4 flex items-center justify-center border-r hover:bg-gray-50"
+                onclick={() => shift(-1)}
+              >
+                {"«"}
+              </button>
+              <button
+                class="w-4 h-4 flex items-center justify-center border-l hover:bg-gray-50"
+                onclick={() => shift(1)}
+              >
+                {"»"}
+              </button>
+            </div>
           </div>
         </div>
+        <Show when={error()}>
+          <div class="ml-2 text-red-400">Parsing error.</div>
+        </Show>
       </div>
       <div class="flex">
         <label class="w-16">Labels:</label>
@@ -304,7 +330,7 @@ const Report: Component = () => {
                     {({ isSelected: checked }) => (
                       <button
                         class={
-                          "capitalize rounded px-1 py-0.5 " +
+                          "capitalize rounded px-1 " +
                           (checked()
                             ? "bg-gray-200 outline-1 outline outline-gray-300"
                             : "hover:bg-gray-100")

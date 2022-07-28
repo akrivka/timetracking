@@ -16,7 +16,7 @@ export const MyButton: Component<ButtonProps> = ({
     <button
       {...props}
       onClick={onclick}
-      class={"px-2 py-1 border rounded " + props.class}
+      class={"px-2 py-1 border rounded hover:bg-gray-50 " + props.class}
     >
       {children}
     </button>
