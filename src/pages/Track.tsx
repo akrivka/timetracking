@@ -33,11 +33,7 @@ const Bullet: Component<{ entry: Entry }> = (props) => {
           if (e.key === "Enter") {
             e.preventDefault();
             const result = parseString(dateRule, e.currentTarget?.innerText);
-            if (
-              result == "fail" ||
-              result == "prefix" ||
-              result[2].length > 0
-            ) {
+            if (result == "fail" || result == "prefix") {
               console.log("Error parsing date", result);
             } else {
               dispatch([
