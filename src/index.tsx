@@ -4,7 +4,7 @@ import { render } from "solid-js/web";
 import { App, Home, WithBackButton } from "./App";
 import "./assets/index.css";
 import { WindowProvider } from "./context/WindowContext";
-import { Auth, Login, Signup } from "./pages/auth";
+import { Auth, Login, Signup } from "./pages/Auth";
 import Calendar from "./pages/Calendar";
 import Mobile from "./pages/Mobile";
 import Report from "./pages/report";
