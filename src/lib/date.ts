@@ -4,7 +4,12 @@ import { now } from "./util";
 export function thisMonday(date = new Date()) {
   const day = date.getDay();
   const diff = (day === 0 ? 6 : day - 1) * 24 * 60 * 60 * 1000;
-  return new Date(date.getTime() - diff);
+  const newDate = new Date(date.getTime() - diff)
+  newDate.setHours(0)
+  newDate.setMinutes(0)
+  newDate.setSeconds(0)
+  newDate.setMilliseconds(0)
+  return newDate;
 }
 
 export function prevWeek(date = new Date()) {
@@ -17,6 +22,15 @@ export function nextWeek(date = new Date()) {
 
 export function daysAfter(date = new Date(), n: number) {
   return new Date(date.getTime() + n * 24 * 60 * 60 * 1000);
+}
+
+export function nextMidnight(date = new Date()) {
+  const newDate = daysAfter(date, 1);
+  newDate.setHours(0);
+  newDate.setMinutes(0);
+  newDate.setSeconds(0);
+  newDate.setMilliseconds(0)
+  return newDate;
 }
 
 export function msBetween(a: Date, b: Date) {

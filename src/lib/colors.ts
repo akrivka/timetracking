@@ -95,11 +95,16 @@ function hexToRgb(hex: string): RgbColor {
   return { r, g, b };
 }
 
+function pad(s: string): string {
+  if (s.length == 1) return "0" + s;
+  return s;
+}
+
 function rgbToHex(rgb: RgbColor): string {
   const r = Math.round(rgb.r);
   const g = Math.round(rgb.g);
   const b = Math.round(rgb.b);
-  return `#${r.toString(16)}${g.toString(16)}${b.toString(16)}`;
+  return `#${pad(r.toString(16))}${pad(g.toString(16))}${pad(b.toString(16))}`;
 }
 
 export function hexToHsl(hex: string): HslColor {

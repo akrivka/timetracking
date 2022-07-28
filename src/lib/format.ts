@@ -1,5 +1,5 @@
 
-function twoDigits(n: number): string {
+export function twoDigits(n: number): string {
     const s = `${n}`;
     if (s.length == 1) {
       return "0" + s;

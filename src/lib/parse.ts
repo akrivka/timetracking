@@ -332,6 +332,49 @@ const ampmTimeRule: Rule<DateSpec> = any([
   map(raw("noon"), () => ({ hours: 12, minutes: 0, ampm: "pm" })),
 ]);
 
+export type DayTimeSpec = {
+  hours: number;
+  minutes: number;
+};
+
+export const timeRule: Rule<DayTimeSpec> = any([
+  map(colonTime, (x) => ({
+    hours: x[0] as number,
+    minutes: x[1] as number,
+  })),
+  seq([colonTime, ampm], (xs) => ({
+    hours: xs[0][0] + xs == "pm" ? 12 : 0,
+    minutes: xs[0][1],
+  })),
+  seq([number, ampm], (xs) => ({
+    hours: xs[0] + xs == "pm" ? 12 : 0,
+    minutes: 0,
+  })),
+]);
+
+export const dateToDayTimeSpec = (d: Date): DayTimeSpec => ({
+  hours: d.getHours(),
+  minutes: d.getMinutes(),
+});
+
+export const isBeforeDayTime = (a: DayTimeSpec, b: DayTimeSpec) => {
+  if (a.hours < b.hours) return true;
+  if (a.hours > b.hours) return false;
+  if (a.minutes < b.minutes) return true;
+  if (a.minutes > b.minutes) return false;
+  return null;
+};
+
+export const minutesAfterDayTime = (d: DayTimeSpec, minutes: number) => {
+  return {
+    hours: d.hours + Math.floor(minutes / 60),
+    minutes: d.minutes + (minutes % 60),
+  };
+};
+
+export const dayTimeSpecToMinutes = (d: DayTimeSpec): number =>
+  d.hours * 60 + d.minutes;
+
 const startOrEnd = any([raw("start"), raw("end")]);
 
 export const dateRule: Rule<DateSpec> = any<DateSpec>([
