@@ -11,7 +11,8 @@ import {
   useContext,
 } from "solid-js";
 import { createStore, unwrap } from "solid-js/store";
-import { isIterable, stringToColor } from "../lib/util";
+import { stringToColor } from "../lib/colors";
+import { isIterable } from "../lib/util";
 import { Label } from "./EntriesContext";
 
 export type Credentials = { username: string; hashedPassword: string };
@@ -159,7 +160,10 @@ function unwrapProfile(profile) {
 
 type WrappedInfo = [LabelInfo, (info: Partial<LabelInfo>) => void];
 
-const UserContext = createContext<{credentials?: Credentials, getLabelInfo?: (label: Label) => WrappedInfo}>({});
+const UserContext = createContext<{
+  credentials?: Credentials;
+  getLabelInfo?: (label: Label) => WrappedInfo;
+}>({});
 
 export const UserProvider = (props) => {
   let user = getLocalUser();

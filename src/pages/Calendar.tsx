@@ -2,6 +2,7 @@ import { Accessor, Component, createEffect, createSignal, For } from "solid-js";
 import { unwrap } from "solid-js/store";
 import { ColorPicker } from "../components/ColorPicker";
 import { entriesIterator, Entry, useEntries } from "../context/EntriesContext";
+import { stringToColor } from "../lib/colors";
 import {
   daysAfter,
   msBetween,
@@ -10,7 +11,7 @@ import {
   thisMonday,
 } from "../lib/date";
 import { renderDay } from "../lib/format";
-import { revit, stringToColor } from "../lib/util";
+import { revit } from "../lib/util";
 
 const Calendar: Component = () => {
   const { entries } = useEntries();
@@ -94,9 +95,7 @@ const Calendar: Component = () => {
                             style={`height: ${
                               height * 100
                             }%; background-color: ${color};`}
-                            onclick={(e) => {
-                              
-                            }}
+                            onclick={(e) => {}}
                           >
                             {start.after}
                           </div>

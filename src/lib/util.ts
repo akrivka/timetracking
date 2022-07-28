@@ -20,21 +20,6 @@ export function nowTime() {
   setTimeout(() => setTime(now().getTime()), 1000);
 }
 
-export function stringToColor(_str: string | undefined) {
-  const str = _str || "";
-  var hash = 0;
-  for (var i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  var color = "rgba(";
-  for (var i = 0; i < 3; i++) {
-    var value = (hash >> (i * 8)) & 0xff;
-    color += value.toString() + ",";
-  }
-  color += "1)";
-  return color;
-}
-
 export function hash(s: string): number {
   var hash: number = 0;
   for (var i = 0; i < s.length; i++) {
