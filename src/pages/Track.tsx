@@ -238,7 +238,9 @@ const Track: Component = () => {
             const conflict = createMemo(
               () =>
                 end() &&
-                start.after !== "" &&
+                start?.after &&
+                start?.after !== "" &&
+                end()?.before &&
                 end()?.before !== "" &&
                 start.after !== end()?.before
             );
