@@ -245,10 +245,8 @@ const Track: Component = () => {
                 start.after !== end()?.before
             );
             const label = createMemo(() =>
-              !end()
-                ? start.after || "TBD"
-                : !conflict()
-                ? end().before
+              !conflict()
+                ? start.after || end()?.before || "TBD"
                 : `?conflict-${start.after}-${end()?.before}`
             );
 
