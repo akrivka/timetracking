@@ -1,15 +1,18 @@
-import {
-  Accessor,
-  createContext,
-  createSignal,
-  useContext,
-} from "solid-js";
+import { Accessor, createContext, createSignal, useContext } from "solid-js";
 import { now } from "../lib/util";
 
 type WindowContextType = {
   hasNetwork: Accessor<boolean>;
   time: Accessor<number>;
 };
+
+declare global {
+  interface Window {
+    timemarker: any;
+  }
+}
+
+window.timemarker = window.timemarker || {};
 
 const WindowContext = createContext<WindowContextType>();
 
