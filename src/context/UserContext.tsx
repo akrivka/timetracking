@@ -14,6 +14,7 @@ import { createStore, unwrap } from "solid-js/store";
 import { stringToColor } from "../lib/colors";
 import { isIterable } from "../lib/util";
 import { Label } from "./EntriesContext";
+import { useWindow } from "./WindowContext";
 
 export type Credentials = { username: string; hashedPassword: string };
 
@@ -158,6 +159,16 @@ function unwrapProfile(profile) {
   return { labelInfo: unwrappedLabelInfo };
 }
 
+async function getRemoteProfile() {
+  return deserializeProfile(
+    (
+      await axios.get("/api/profile", {
+        params: user.credentials,
+      })
+    ).data
+  );
+}
+
 type WrappedInfo = [LabelInfo, (info: Partial<LabelInfo>) => void];
 
 const UserContext = createContext<{
@@ -167,51 +178,45 @@ const UserContext = createContext<{
 
 export const UserProvider = (props) => {
   let user = getLocalUser();
+  const { hasNetwork } = useWindow();
 
   const [profile, setProfile] = createSignal(
-    wrapProfile(user.profile, () => pushProfile())
+    wrapProfile(user.profile, () => syncProfile())
   );
 
   onMount(async () => {
-    const remoteProfile = deserializeProfile(
-      (
-        await axios.get("/api/profile", {
-          params: user.credentials,
-        })
-      ).data
-    );
-    const localProfile = user.profile;
-    const mergedProfile = remoteProfile
-      ? mergeProfiles(localProfile, remoteProfile)
-      : localProfile;
+    if (hasNetwork() && user.credentials) {
+      const remoteProfile = await getRemoteProfile();
+      const localProfile = user.profile;
+      const mergedProfile = remoteProfile
+        ? mergeProfiles(localProfile, remoteProfile)
+        : localProfile;
 
-    setProfile(wrapProfile(mergedProfile, () => pushProfile()));
+      setProfile(wrapProfile(mergedProfile, () => syncProfile()));
+    }
   });
 
-  const pushProfile = async () => {
-    const remoteProfile = deserializeProfile(
-      (
-        await axios.get("/api/profile", {
-          params: user.credentials,
-        })
-      ).data
-    );
-
+  const syncProfile = async () => {
+    let remoteProfile;
+    if (hasNetwork() && user.credentials) {
+      remoteProfile = await getRemoteProfile();
+    }
     const localProfile = unwrapProfile(profile());
-
     const mergedProfile = remoteProfile
       ? mergeProfiles(localProfile, remoteProfile)
       : localProfile;
 
     user.profile = mergedProfile;
     saveLocalUser(user);
-    await axios.post(
-      "/api/profile",
-      `profile=${encodeURIComponent(serializeProfile(mergedProfile))}`,
-      {
-        params: user.credentials,
-      }
-    );
+    if (hasNetwork() && user.credentials) {
+      await axios.post(
+        "/api/profile",
+        `profile=${encodeURIComponent(serializeProfile(mergedProfile))}`,
+        {
+          params: user.credentials,
+        }
+      );
+    }
   };
 
   const getLabelInfo = (label: Label) => {
@@ -223,12 +228,12 @@ export const UserProvider = (props) => {
           expanded: false,
           lastModified: new Date(),
         },
-        pushProfile
+        syncProfile
       );
       profile().labelInfo.set(label, newInfo);
       info = newInfo;
 
-      pushProfile();
+      syncProfile();
     }
     return info;
   };
@@ -236,7 +241,7 @@ export const UserProvider = (props) => {
   return (
     <UserContext.Provider
       value={{
-        credentials: user.credentials,
+        credentials: user?.credentials,
         getLabelInfo,
       }}
     >
