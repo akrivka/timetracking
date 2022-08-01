@@ -1,6 +1,11 @@
 import { Component, createMemo, createSignal, For, Show } from "solid-js";
 import { InputBox } from "../components/InputBox";
-import { Entry, entryEquals, useEntries } from "../context/EntriesContext";
+import {
+  Entry,
+  entryEquals,
+  labelFrom,
+  useEntries,
+} from "../context/EntriesContext";
 import { useUser } from "../context/UserContext";
 import { useWindow } from "../context/WindowContext";
 import { stringToColor } from "../lib/colors";
@@ -244,11 +249,7 @@ const Track: Component = () => {
                 end()?.before !== "" &&
                 start.after !== end()?.before
             );
-            const label = createMemo(() =>
-              !conflict()
-                ? start.after || end()?.before || "TBD"
-                : `?conflict-${start.after}-${end()?.before}`
-            );
+            const label = createMemo(() => labelFrom(start, end()));
 
             const color = createMemo(() => getLabelInfo(label())[0].color);
 

@@ -97,6 +97,18 @@ export function* entriesIterator(
   }
 }
 
+export function labelFrom(a: Entry, b: Entry): string {
+  if (a.after === undefined && b.before === undefined) return "?unlabeled";
+  if (a.after === undefined) {
+    if (b.before === undefined) return "?unlabeled";
+    return b.before;
+  } else {
+    if (b.before === undefined) return a.after;
+    if (b.before !== a.after) return `?conflict-${a.after}-${b.before}`;
+    return a.after;
+  }
+}
+
 function* namesFrom(label: Label | undefined): Generator<Label> {
   if (label === undefined) return;
   const parts = label.split("/");

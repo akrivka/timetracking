@@ -9,7 +9,12 @@ import {
 import { unwrap } from "solid-js/store";
 import { ColorPicker } from "../components/ColorPicker";
 import { MyTextInput } from "../components/MyTextInput";
-import { entriesIterator, Entry, useEntries } from "../context/EntriesContext";
+import {
+  entriesIterator,
+  Entry,
+  labelFrom,
+  useEntries,
+} from "../context/EntriesContext";
 import { useUser } from "../context/UserContext";
 import { stringToColor } from "../lib/colors";
 import {
@@ -311,6 +316,8 @@ const Calendar: Component = () => {
                           ? getLabelInfo(end.before)
                           : [{ color: "white" }, null];
 
+                        const label = () => labelFrom(start, end);
+
                         return (
                           <div
                             class="w-full text-[8px] text-white font-semibold"
@@ -319,7 +326,7 @@ const Calendar: Component = () => {
                             }%; background-color: ${info.color};`}
                             onclick={(e) => {}}
                           >
-                            {end.before}
+                            {label()}
                           </div>
                         );
                       }}

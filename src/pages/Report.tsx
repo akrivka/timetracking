@@ -19,7 +19,12 @@ import {
 } from "solid-js";
 import { MyButton } from "../components/MyButton";
 import { MyTextInput } from "../components/MyTextInput";
-import { entriesIterator, Label, useEntries } from "../context/EntriesContext";
+import {
+  entriesIterator,
+  Label,
+  labelFrom,
+  useEntries,
+} from "../context/EntriesContext";
 import { useUser } from "../context/UserContext";
 import { msBetween, specToDate } from "../lib/date";
 import { renderDuration, renderTime, renderTimeFull } from "../lib/format";
@@ -257,7 +262,7 @@ const Report: Component = () => {
         ])
       )) {
         const time = msBetween(start.time, end.time);
-        const label = end.before || "";
+        const label = labelFrom(start, end);
 
         function add(label: string) {
           map.set(label, (map.get(label) || 0) + time);
