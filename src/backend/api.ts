@@ -44,7 +44,7 @@ function getCredentialsFromReq(req: any): Credentials {
 
 // BACKEND
 const app = express()
-  .use(bodyParser.urlencoded({ extended: false }))
+  .use(bodyParser.urlencoded({ limit: "200mb", extended: false }))
   .get("/api/test", async (_, res) => res.send("Hello, world!"))
   .get("/api/login", async (req: any, res: any) => {
     const credentials = getCredentialsFromReq(req);
