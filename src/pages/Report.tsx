@@ -3,17 +3,19 @@ import {
   Popover,
   PopoverButton,
   PopoverPanel,
-  RadioGroup, RadioGroupOption
+  RadioGroup,
+  RadioGroupOption,
 } from "solid-headless";
 import {
   Accessor,
   Component,
-  createContext, createMemo,
+  createContext,
+  createMemo,
   createRenderEffect,
   createSignal,
   For,
   Show,
-  useContext
+  useContext,
 } from "solid-js";
 import { MyButton } from "../components/MyButton";
 import { MyTextInput } from "../components/MyTextInput";
@@ -61,7 +63,9 @@ const Block: Component<{
   const [info, setInfo] = label ? getLabelInfo(label) : [null, null];
 
   const topLabels = () =>
-    [...props.subMap.keys()].filter((k) => k.includes("/") === false);
+    [...props.subMap.keys()]
+      .filter((k) => k.includes("/") === false)
+      .sort((a, b) => props.subMap.get(b) - props.subMap.get(a));
 
   // generate maps of reduced sublabels
   const mapOfMaps = () => {
