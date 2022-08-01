@@ -312,11 +312,10 @@ const Calendar: Component = () => {
                         const height =
                           msBetween(start.time, end.time) / msInADay();
 
-                        const [info, _] = end.before
-                          ? getLabelInfo(end.before)
-                          : [{ color: "white" }, null];
-
                         const label = () => labelFrom(start, end);
+                        const [info, _] = label()
+                          ? getLabelInfo(label())
+                          : [{ color: "white" }, null];
 
                         return (
                           <div

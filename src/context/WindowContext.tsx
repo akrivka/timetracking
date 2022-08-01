@@ -12,8 +12,6 @@ declare global {
   }
 }
 
-window.timemarker = window.timemarker || {};
-
 const WindowContext = createContext<WindowContextType>();
 
 export const WindowProvider = (props) => {
@@ -21,6 +19,7 @@ export const WindowProvider = (props) => {
 
   window.addEventListener("offline", () => sethasNetwork(false));
   window.addEventListener("online", () => sethasNetwork(true));
+  window.timemarker = window.timemarker || {};
 
   const [time, setTime] = createSignal(now().getTime());
   setInterval(() => setTime(now().getTime()), 1000);

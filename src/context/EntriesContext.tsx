@@ -97,15 +97,27 @@ export function* entriesIterator(
   }
 }
 
-export function labelFrom(a: Entry, b: Entry): string {
-  if (a.after === undefined && b.before === undefined) return "?unlabeled";
-  if (a.after === undefined) {
-    if (b.before === undefined) return "?unlabeled";
-    return b.before;
+export function* entriesIteratorWithEnds(
+  entries: Entry[],
+  { start, end }: { start: Date; end: Date }
+): Generator<Partial<Entry>> {
+  yield { time: end };
+  for (const entry of entries) {
+    if ((!start || entry.time >= start) && (!end || entry.time <= end))
+      yield entry;
+  }
+  yield { time: start };
+}
+
+export function labelFrom(a: Partial<Entry>, b: Partial<Entry>): string {
+  if (!a?.after && !b?.before) return "?unlabeled";
+  if (!a?.after) {
+    if (!b?.before) return "?unlabeled";
+    return b?.before;
   } else {
-    if (b.before === undefined) return a.after;
-    if (b.before !== a.after) return `?conflict-${a.after}-${b.before}`;
-    return a.after;
+    if (!b?.before) return a.after;
+    if (b?.before !== a?.after) return `?conflict-${a?.after}-${b?.before}`;
+    return a?.after;
   }
 }
 

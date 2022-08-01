@@ -21,6 +21,7 @@ import { MyButton } from "../components/MyButton";
 import { MyTextInput } from "../components/MyTextInput";
 import {
   entriesIterator,
+  entriesIteratorWithEnds,
   Label,
   labelFrom,
   useEntries,
@@ -255,7 +256,7 @@ const Report: Component = () => {
 
       for (const [start, end] of listPairs(
         revit([
-          ...entriesIterator(entries, {
+          ...entriesIteratorWithEnds(entries, {
             start: startDate(),
             end: endDate(),
           }),
