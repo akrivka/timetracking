@@ -4,6 +4,7 @@ import {
   createEffect,
   createResource,
   createSignal,
+  onMount,
   untrack,
   useContext,
 } from "solid-js";
@@ -294,6 +295,20 @@ export const EntriesProvider = (props) => {
   };
 
   const putEntry = (entry: Partial<Entry> | undefined) => putEntries([entry]);
+
+  const pushEntriesFromConsole = async (serializedEntries) => {
+    const entries = deserializeEntries(serializedEntries);
+    try {
+      await putEntries(entries);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  onMount(() => {
+    window.timemarker = {};
+    window.timemarker.pushEntriesFromConsole = pushEntriesFromConsole;
+  });
 
   const dispatch = async ([event, info]) => {
     const { start, end, entry, label, time } = info;

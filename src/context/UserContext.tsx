@@ -159,14 +159,14 @@ function unwrapProfile(profile) {
   return { labelInfo: unwrappedLabelInfo };
 }
 
-async function getRemoteProfile() {
-  return deserializeProfile(
-    (
-      await axios.get("/api/profile", {
-        params: user.credentials,
-      })
-    ).data
-  );
+async function getRemoteProfile(credentials) {
+  const serializedProfile = (
+    await axios.get("/api/profile", {
+      params: credentials,
+    })
+  ).data;
+
+  return serializedProfile && deserializeProfile(serializedProfile);
 }
 
 type WrappedInfo = [LabelInfo, (info: Partial<LabelInfo>) => void];
@@ -186,7 +186,7 @@ export const UserProvider = (props) => {
 
   onMount(async () => {
     if (hasNetwork() && user.credentials) {
-      const remoteProfile = await getRemoteProfile();
+      const remoteProfile = await getRemoteProfile(user.credentials);
       const localProfile = user.profile;
       const mergedProfile = remoteProfile
         ? mergeProfiles(localProfile, remoteProfile)
@@ -199,7 +199,7 @@ export const UserProvider = (props) => {
   const syncProfile = async () => {
     let remoteProfile;
     if (hasNetwork() && user.credentials) {
-      remoteProfile = await getRemoteProfile();
+      remoteProfile = await getRemoteProfile(user.credentials);
     }
     const localProfile = unwrapProfile(profile());
     const mergedProfile = remoteProfile
