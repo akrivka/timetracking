@@ -4,11 +4,11 @@ import { delay, wait } from "./util";
 
 let db: undefined | IDBPDatabase;
 
-export async function connectDB() {
+export async function connectDB(username: string) {
   await wait(delay);
 
   try {
-    db = await openDB("timemarker", 1, {
+    db = await openDB((username || "_local") + "-timemarker", 1, {
       upgrade(db) {
         //db.deleteObjectStore("entries");
         const store = db.createObjectStore("entries", {

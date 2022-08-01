@@ -224,7 +224,7 @@ export const EntriesProvider = (props) => {
 
   const loggedIn = () => credentials;
 
-  const [localDB, _] = createResource(connectDB);
+  const [localDB, _] = createResource(() => connectDB(credentials?.username));
 
   // set up synced SolidJS store with the local database
   const [
