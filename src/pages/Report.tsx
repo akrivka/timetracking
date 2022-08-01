@@ -61,12 +61,13 @@ const Block: Component<{
   label?: Label;
   duration: number;
 }> = (props) => {
-  const { label, duration } = props;
   const { isEdit, triggerRerender, showType, total } = useReport();
   const { getLabelInfo } = useUser();
   const { dispatch } = useEntries();
 
-  const [info, setInfo] = label ? getLabelInfo(label) : [null, null];
+  const [info, setInfo] = props.label
+    ? getLabelInfo(props.label)
+    : [null, null];
 
   const topLabels = () =>
     [...props.subMap.keys()]
@@ -95,14 +96,14 @@ const Block: Component<{
 
   return (
     <>
-      <Show when={label}>
+      <Show when={props.label}>
         <div class="flex">
           <div
             class={!isLeaf() ? "cursor-pointer" : ""}
             onclick={() => setInfo({ expanded: !info.expanded })}
           >
-            [{renderReportDuration(duration, total, showType())}]{" "}
-            {leafLabel(label)} {!isLeaf() ? "[+]" : ""}
+            [{renderReportDuration(props.duration, total, showType())}]{" "}
+            {leafLabel(props.label)} {!isLeaf() ? "[+]" : ""}
           </div>
           <Show when={isEdit()}>
             <div class="w-2" />
@@ -122,7 +123,7 @@ const Block: Component<{
                   dispatch([
                     "bulkRename",
                     {
-                      from: label,
+                      from: props.label,
                       to: newName(),
                       moveChildren: moveChildren(),
                     },
@@ -140,7 +141,7 @@ const Block: Component<{
                         <div class="w-96 border-2 rounded px-4 py-3 bg-white z-50 space-y-1">
                           <div class="flex">
                             <label class="w-28">Label:</label>
-                            {label}
+                            {props.label}
                           </div>
                           <div class="flex">
                             <label class="w-28">Rename to:</label>
@@ -170,13 +171,13 @@ const Block: Component<{
           </Show>
         </div>
       </Show>
-      <Show when={info?.expanded || !label}>
+      <Show when={info?.expanded || !props.label}>
         <div class="pl-8 flex flex-col">
           <For each={topLabels()}>
             {(topLabel) => (
               <Block
                 subMap={mapOfMaps().get(topLabel)}
-                label={label ? label + " / " + topLabel : topLabel}
+                label={props.label ? props.label + " / " + topLabel : topLabel}
                 duration={props.subMap.get(topLabel)}
               />
             )}
@@ -240,6 +241,7 @@ const Report: Component = () => {
     const newStart = new Date(startDate().getTime() + dir * dur);
     const newEnd = new Date(endDate().getTime() + dir * dur);
     setRangeString(`${renderTimeFull(newStart)} to ${renderTimeFull(newEnd)}`);
+    triggerRerender();
   };
 
   const [isEdit, setIsEdit] = createSignal(false);
