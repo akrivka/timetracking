@@ -28,6 +28,7 @@ import {
 import { MyTextInput } from "../components/MyTextInput";
 import { Icon } from "solid-heroicons";
 import { chevronDown, chevronUp, x } from "solid-heroicons/solid";
+import { coarseLabel, leafLabel } from "../lib/labels";
 
 const EmptyBullet = () => {
   return (
@@ -426,7 +427,10 @@ const Track: Component = () => {
                     onClick={() => setFocusedIndex(i)}
                   >
                     <div class={conflict() ? "text-red-600" : ""}>
-                      {label()}
+                      <div>{leafLabel(label())}</div>
+                      <div class="text-xs text-gray-400 -translate-y-0.5">
+                        {coarseLabel(label())}
+                      </div>
                     </div>
                     <div>
                       {duration() >= 1000 && renderDuration(duration())}

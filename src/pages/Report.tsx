@@ -29,6 +29,7 @@ import {
 import { useUser } from "../context/UserContext";
 import { msBetween, specToDate } from "../lib/date";
 import { renderDuration, renderTime, renderTimeFull } from "../lib/format";
+import { coarseLabel, leafLabel } from "../lib/labels";
 import { DateRange, dateRangeRule, parseString } from "../lib/parse";
 import { usePopper } from "../lib/solid-ext";
 import { listPairs, now, revit } from "../lib/util";
@@ -187,18 +188,6 @@ const Block: Component<{
     </>
   );
 };
-
-function coarseLabel(label: string): string {
-  const i = label.lastIndexOf("/");
-  if (i == -1) return null;
-  else return label.slice(0, i).trim();
-}
-
-function leafLabel(label: string): string {
-  const i = label.lastIndexOf("/");
-  if (i == -1) return label;
-  else return label.slice(i + 1).trim();
-}
 
 function prefixAndRemainder(s: string): [string, string] {
   const n = s.indexOf("/");
