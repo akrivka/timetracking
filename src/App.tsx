@@ -2,7 +2,7 @@ import { NavLink, Outlet, useNavigate } from "solid-app-router";
 import { Component, Match, onMount, Show, Switch } from "solid-js";
 import { SyncState } from "./components/SyncState";
 
-import { EntriesProvider } from "./context/EntriesContext";
+import { EntriesProvider, useEntries } from "./context/EntriesContext";
 import { deleteLocalUser, UserProvider, useUser } from "./context/UserContext";
 import { debug } from "./lib/util";
 
@@ -83,8 +83,17 @@ export const App: Component = () => {
         <Show when={debug}>
           <SyncState />
         </Show>
-        <Outlet />
+        <WithProviders />
       </EntriesProvider>
     </UserProvider>
+  );
+};
+
+const WithProviders: Component = () => {
+  const { syncState } = useEntries();
+  return (
+    <Show when={syncState.local.initialized()} fallback="Loading...">
+      <Outlet />
+    </Show>
   );
 };

@@ -6,6 +6,7 @@ import {
   onMount,
   Show,
   createEffect,
+  createRenderEffect,
 } from "solid-js";
 import { parseString, Rule, splitPrefix } from "../lib/parse";
 import { wait } from "../lib/util";
@@ -14,6 +15,7 @@ interface InputBoxProps<T> {
   submit: (x: T, s: string) => void;
   universe: string[];
   focusSignal: Accessor<any>;
+  clearAndRefocus?: boolean;
   [x: string | number | symbol]: unknown;
 }
 
@@ -22,6 +24,7 @@ export function InputBox<T>({
   submit,
   universe,
   focusSignal,
+  clearAndRefocus = false,
   ...props
 }: InputBoxProps<T>) {
   console.log("rendering InputBox");
@@ -58,7 +61,7 @@ export function InputBox<T>({
     universe.filter((x) => x.includes(searchPhrase()));
 
   const onkeydown = (e) => {
-    if (searchPhrase() !== "") {
+    if (searchPhrase() !== "" && e.key !== "Escape") {
       e.stopPropagation();
       if (e.key === "ArrowUp" || e.key === "ArrowDown") {
         e.preventDefault();
@@ -71,23 +74,26 @@ export function InputBox<T>({
         }
 
         if (selected() >= 0) {
-          ref.value = command() + " " + filteredUniverse()[selected()];
+          ref.value =
+            (command() && command() + " ") + filteredUniverse()[selected()];
         }
       }
     }
   };
 
   return (
-    <div class="relative inline-block w-48" onkeydown={onkeydown}>
+    <div class="relative inline-block" onkeydown={onkeydown}>
       <input
+        autofocus
         type="text"
         onkeydown={async (e) => {
           if (e.key === "Enter") {
             onEnter(e.currentTarget.value);
-            ref.value = "";
-            setSearchPhrase("");
-            await wait(10);
-            ref.focus();
+            if (clearAndRefocus) {
+              ref.value = "";
+              await wait(10);
+              ref.focus();
+            }
           }
         }}
         oninput={(e) => onInput(e.currentTarget.value)}

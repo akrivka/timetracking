@@ -2,7 +2,7 @@ import { Component, JSXElement } from "solid-js";
 
 type ButtonProps = {
   children: JSXElement;
-  onclick: () => void;
+  onclick?: () => void;
   class?: string;
   [other: string]: any;
 };

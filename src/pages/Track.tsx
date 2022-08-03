@@ -1,4 +1,12 @@
-import { Component, createMemo, createSignal, For, Show } from "solid-js";
+import {
+  Component,
+  createEffect,
+  createMemo,
+  createSignal,
+  For,
+  onMount,
+  Show,
+} from "solid-js";
 import { InputBox } from "../components/InputBox";
 import {
   Entry,
@@ -11,8 +19,15 @@ import { useWindow } from "../context/WindowContext";
 import { stringToColor } from "../lib/colors";
 import { specToDate } from "../lib/date";
 import { renderDuration, renderTime } from "../lib/format";
-import { actionRule, dateRule, parseString } from "../lib/parse";
+import { actionRule, dateRule, emptyRule, parseString } from "../lib/parse";
 import { now, minutesAfter, listPairsAndEnds, wait } from "../lib/util";
+import {
+  createVirtualizer,
+  createWindowVirtualizer,
+} from "@tanstack/solid-virtual";
+import { MyTextInput } from "../components/MyTextInput";
+import { Icon } from "solid-heroicons";
+import { chevronDown, chevronUp, x } from "solid-heroicons/solid";
 
 const EmptyBullet = () => {
   return (
@@ -75,6 +90,9 @@ const Track: Component = () => {
   const [focusedIndex, setFocusedIndex] = createSignal(null);
 
   const onkeydown = (e) => {
+    if (e.key === "Escape") {
+      setFocusedIndex(-1);
+    }
     if (e.key === "ArrowUp") {
       setFocusedIndex(Math.max(0, focusedIndex() - 1));
     }
@@ -87,6 +105,7 @@ const Track: Component = () => {
     prefixRule: actionRule,
     universe: labels,
     focusSignal: focusedIndex,
+    clearAndRefocus: true,
     class: "bg-gray-50",
     submit: async (action, label) => {
       // start, end
@@ -226,6 +245,85 @@ const Track: Component = () => {
     },
   });
 
+  let scrollRef;
+  const virtualizer = createVirtualizer({
+    count: entries.length,
+    getScrollElement: () => scrollRef,
+    estimateSize: () => 100,
+    paddingStart: 16,
+    overscan: 30,
+    enableSmoothScroll: true,
+  });
+
+  const [showSearch, setShowSearch] = createSignal(false);
+  const [searchText, setSearchText] = createSignal("");
+
+  const jumpIndices = () => {
+    const search = searchText();
+    if (!search) {
+      return [];
+    }
+    const searchLower = search.toLowerCase();
+    return entries.reduce((acc, start, i) => {
+      const end = i > 0 && entries[i - 1];
+      if (labelFrom(start, end).toLowerCase().includes(searchLower)) {
+        acc.push(i);
+      }
+      return acc;
+    }, [] as number[]);
+  };
+
+  const [currentJump, setCurrentJump] = createSignal(0);
+
+  createEffect(() => {
+    const i = jumpIndices()[currentJump()];
+    virtualizer.scrollToIndex(i, { align: "start" });
+    //await wait(10);
+    setFocusedIndex(i);
+  });
+
+  const [focusSearchSignal, setFocusSearchSignal] = createSignal(false);
+  const focusSearch = () => setFocusSearchSignal(!focusSearchSignal());
+
+  const jumpDown = () => {
+    setCurrentJump(Math.min(currentJump() + 1, jumpIndices().length - 1));
+  };
+
+  const jumpUp = () => {
+    setCurrentJump(Math.max(currentJump() - 1, 0));
+  };
+
+  const closeSearch = () => {
+    setSearchText("");
+    setShowSearch(false);
+  };
+
+  onMount(() => {
+    document.addEventListener("keydown", (e) => {
+      // if cmd/ctrl+enter pressed
+      if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+        setFocusedIndex(0);
+      }
+      // if cmd/ctrl+f pressed
+      if (e.key === "f" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setShowSearch(true);
+        setSearchText("");
+        focusSearch();
+      }
+      // if ctrl+n pressed
+      if (e.key === "n" && e.ctrlKey) {
+        e.preventDefault();
+        jumpDown();
+      }
+      // if ctrl+p pressed
+      if (e.key === "p" && e.ctrlKey) {
+        e.preventDefault();
+        jumpUp();
+      }
+    });
+  });
+
   return (
     <Show
       when={entries.length > 0}
@@ -235,11 +333,62 @@ const Track: Component = () => {
         </button>
       }
     >
-      <div class="pl-8 pt-4" onkeydown={onkeydown}>
-        <EmptyBullet />
-        <For each={entries}>
-          {(start, i) => {
-            const end = createMemo(() => (i() > 0 ? entries[i() - 1] : null));
+      <Show when={showSearch()}>
+        <div class="z-50 fixed -top-1 right-2 bg-gray-200 px-2 pb-1 rounded">
+          <div class="h-2" />
+          <div class="flex items-center space-x-">
+            <div
+              class="relative"
+              onkeydown={(e) => e.key == "Escape" && closeSearch()}
+            >
+              <InputBox
+                class="w-64"
+                prefixRule={emptyRule}
+                universe={labels}
+                focusSignal={focusSearchSignal}
+                submit={async (_, label) => {
+                  setSearchText(label);
+                }}
+                placeholder="Search..."
+                value=""
+              />
+              <Show when={searchText() !== ""}>
+                <div class="absolute top-1 right-1 pointer-events-none text-xs text-gray-400">
+                  {currentJump() + 1}/{jumpIndices().length}
+                </div>
+              </Show>
+            </div>
+            <button
+              class="w-5 h-5 p-0.5 hover:bg-gray-100 rounded text-gray-500"
+              onclick={jumpUp}
+            >
+              <Icon path={chevronUp} />
+            </button>
+            <button
+              class="w-5 h-5 p-0.5 hover:bg-gray-100 rounded text-gray-500"
+              onclick={jumpDown}
+            >
+              <Icon path={chevronDown} />
+            </button>
+            <button
+              class="w-5 h-5 p-0.5 hover:bg-gray-100 rounded text-gray-500"
+              onclick={closeSearch}
+            >
+              <Icon path={x} />
+            </button>
+          </div>
+        </div>
+      </Show>
+      <div class="pl-8 pt-4">
+        <div
+          ref={scrollRef}
+          class="h-screen w-full overflow-auto relative no-scrollbar"
+        >
+          <EmptyBullet />
+          {virtualizer.getVirtualItems().map((virtualItem) => {
+            const i = virtualItem.index;
+            const start = entries[i];
+            const end = createMemo(() => (i > 0 ? entries[i - 1] : null));
             const conflict = createMemo(
               () =>
                 end() &&
@@ -260,12 +409,21 @@ const Track: Component = () => {
             //console.log("(re)rendering", start?.after, end()?.before);
 
             return (
-              <>
-                <div class="flex text-sm">
+              <div
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  height: `${virtualItem.size}px`,
+                  transform: `translateY(${virtualItem.start}px)`,
+                }}
+              >
+                <div class="flex text-sm" data-label={label()}>
                   <Line color={end() ? color() : "gray"} />
                   <div
                     class="ml-8 pl-1 flex flex-col justify-center cursor-pointer hover:bg-sky-50 w-56"
-                    onClick={() => setFocusedIndex(i())}
+                    onClick={() => setFocusedIndex(i)}
                   >
                     <div class={conflict() ? "text-red-600" : ""}>
                       {label()}
@@ -275,15 +433,25 @@ const Track: Component = () => {
                     </div>
                   </div>
 
-                  <Show when={focusedIndex() === i()}>
-                    <div class="flex items-center">{inputBox}</div>
+                  <Show when={focusedIndex() === i}>
+                    <div
+                      class="flex items-center"
+                      onkeydown={onkeydown}
+                      onfocusout={(e) => {
+                        if (focusedIndex() === i) {
+                          setFocusedIndex(-1);
+                        }
+                      }}
+                    >
+                      {inputBox}
+                    </div>
                   </Show>
                 </div>
                 <Bullet entry={start} />
-              </>
+              </div>
             );
-          }}
-        </For>
+          })}
+        </div>
       </div>
     </Show>
   );
