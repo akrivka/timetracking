@@ -253,7 +253,7 @@ const Track: Component = () => {
     estimateSize: () => 100,
     paddingStart: 16,
     overscan: 30,
-    enableSmoothScroll: true,
+    enableSmoothScroll: false,
   });
 
   const [showSearch, setShowSearch] = createSignal(false);
@@ -274,12 +274,21 @@ const Track: Component = () => {
     }, [] as number[]);
   };
 
+  createEffect(() => {
+    const indices = jumpIndices();
+    for (const i of indices) {
+      console.log(labelFrom(entries[i], entries[i - 1]));
+    }
+  });
+
   const [currentJump, setCurrentJump] = createSignal(0);
 
-  createEffect(() => {
+  createEffect(async () => {
     const i = jumpIndices()[currentJump()];
-    virtualizer.scrollToIndex(i, { align: "start" });
-    //await wait(10);
+    for (let n = 0; n < 3; n++) {
+      virtualizer.scrollToIndex(i - 1, { align: "start" });
+      await wait(10);
+    }
     setFocusedIndex(i);
   });
 
@@ -390,6 +399,7 @@ const Track: Component = () => {
             const i = virtualItem.index;
             const start = entries[i];
             const end = createMemo(() => (i > 0 ? entries[i - 1] : null));
+            console.log("rerendering", labelFrom(start, end));
             const conflict = createMemo(
               () =>
                 end() &&
