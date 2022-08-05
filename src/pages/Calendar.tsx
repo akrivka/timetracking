@@ -1,10 +1,16 @@
+import * as R from "remeda";
 import {
   Accessor,
   Component,
   createEffect,
+  createMemo,
   createRenderEffect,
   createSignal,
   For,
+  Match,
+  onMount,
+  Show,
+  Switch,
 } from "solid-js";
 import { unwrap } from "solid-js/store";
 import { useUIState } from "../App";
@@ -36,13 +42,8 @@ import {
   dayTimeSpecToMinutes,
   minutesAfterDayTime,
 } from "../lib/parse";
-import { minutesAfter, nthIndex, revit } from "../lib/util";
-
-function coarseLabel(label: string, depth: number): string {
-  const i = nthIndex(label, "/", depth);
-  if (i == -1) return label;
-  else return label.slice(0, i).trim();
-}
+import { listPairs, it, minutesAfter, nthIndex, revit } from "../lib/util";
+import { coarseLabel } from "../lib/labels";
 
 export const defaultCalendarState = {
   week: thisMonday(),
@@ -64,7 +65,7 @@ const Calendar: Component = () => {
     "endTimeString"
   );
 
-  const startDay = week;
+  const startDay = () => week();
   const endDay = () => daysAfter(week(), 7);
 
   const [startTime, setStartTime] = createSignal<DayTimeSpec>();
@@ -92,30 +93,47 @@ const Calendar: Component = () => {
     60 *
     1000;
 
-  const entriesInWeek = () => {
-    return entries
-      .filter((entry) => entry.time > startDay() && entry.time < endDay())
-      .reverse();
+  const entriesInWeek = createMemo(() => {
+    const es = [...entries];
+    const start = es.find((entry) => entry.time < startDay());
+    const end = R.reverse(es).find((entry) => entry.time > endDay());
+    return [
+      { ...start, time: startDay() },
+      ...es
+        .filter((entry) => entry.time > startDay() && entry.time < endDay())
+        .reverse(),
+      { ...end, time: endDay() },
+    ];
+  });
+
+  // helper function
+  const getVisibleLabel = (label: string | null) => {
+    if (!label) return null;
+    let visibleLabel = label;
+    let coarser = label;
+    while ((coarser = coarseLabel(coarser))) {
+      const [info, _] = getLabelInfo(coarser);
+      if (!info.expanded) visibleLabel = coarser;
+    }
+    return visibleLabel;
   };
 
-  const coalescedEntries = () => {
-    const es = entriesInWeek().map((entry) => ({
-      ...entry,
-      before: entry.before ? coarseLabel(entry.before, depth()) : null,
-    }));
-    const result: Partial<Entry>[] = [];
-    for (let i = 0; i < es.length - 1; i++) {
-      const entry = es[i];
-      const nextEntry = es[i + 1];
-      if (nextEntry.before === entry.before) {
-        continue;
+  const intervalsInWeek = createMemo(() => {
+    return [...listPairs(it(entriesInWeek()))].reduce((acc, [start, end]) => {
+      if (acc.length == 0)
+        return [[{ ...start, after: labelFrom(start, end) }, end]];
+
+      const visibleLabel = getVisibleLabel(labelFrom(start, end));
+      const prevVisibleLabel = getVisibleLabel(acc[acc.length - 1][0].after);
+
+      if (prevVisibleLabel == visibleLabel) {
+        acc[acc.length - 1][1] = end;
+        return acc;
       } else {
-        result.push(entry);
+        return [...acc, [{ ...start, after: labelFrom(start, end) }, end]];
       }
-    }
-    es.length > 0 && result.push(es[es.length - 1]);
-    return result;
-  };
+    }, []);
+  });
 
   type Interval = [Partial<Entry>, Partial<Entry>];
   type DayInfo = {
@@ -124,35 +142,27 @@ const Calendar: Component = () => {
     dayIntervals: Interval[];
   };
 
-  const dayIntervals = () => {
+  const dayIntervals = createMemo(() => {
     const result: Interval[][] = [...Array(7)].map((_) => []);
-
-    let a = null;
-    let b: Partial<Entry> = { time: startDay() };
-
     let day = 0;
 
-    for (const entry of [
-      ...coalescedEntries(),
-      { time: endDay(), before: null },
-    ]) {
-      a = b;
-      b = entry;
-
-      let nm = nextMidnight(a.time);
-      while (nm < b.time) {
-        let newB = { time: nm, before: b?.before, after: b?.before };
+    for (const [start, end] of intervalsInWeek()) {
+      let a = start;
+      let b = end;
+      let nm = nextMidnight(start.time);
+      while (nm < end.time && day < 7) {
+        let newB = { time: nm, before: end.before, after: end.before };
         result[day].push([a, newB]);
         day++;
         a = newB;
         nm = nextMidnight(nm);
       }
-      result[day].push([a, b]);
+      day < 7 && result[day].push([a, b]);
     }
     return result;
-  };
+  });
 
-  const dayInfos = () => {
+  const dayInfos = createMemo(() => {
     return dayIntervals().map((intervals) => {
       const hiddenBefore = [];
       const hiddenAfter = [];
@@ -193,9 +203,9 @@ const Calendar: Component = () => {
       }
       return { hiddenBefore, hiddenAfter, visibleIntervals };
     });
-  };
+  });
 
-  const timeTicks = () => {
+  const timeTicks = createMemo(() => {
     const ticks: DayTimeSpec[] = [];
     let time = startTime();
     while (isBeforeDayTime(time, endTime())) {
@@ -204,23 +214,20 @@ const Calendar: Component = () => {
     }
     ticks.push(endTime());
     return ticks;
-  };
+  });
 
-  const maxDepth = () => {
-    let max = 1;
-    for (const entry of entriesInWeek()) {
-      if (!entry.before) continue;
-      const depth = (entry.before.match(/ \/ /g) || []).length + 1;
-      if (depth > max) {
-        max = depth;
+  onMount(() => {
+    document.addEventListener("keydown", (e) => {
+      // if cmd/ctrl+left
+      if (e.key === "ArrowLeft") {
+        setWeek(prevWeek);
       }
-    }
-    return max;
-  };
-
-  const depths = () => [...Array(maxDepth()).keys()].map((i) => i + 1);
-
-  const [depth, setDepth] = createSignal(maxDepth());
+      // if cmd/ctrl+right
+      if (e.key === "ArrowRight") {
+        setWeek(nextWeek);
+      }
+    });
+  });
 
   return (
     <div class="mt-4">
@@ -244,42 +251,21 @@ const Calendar: Component = () => {
             </div>
             <div class="flex">
               <div class="flex space-x-2">
-                <div>
+                <div class="space-x-1">
                   <label class="w-16">Start time:</label>
                   <MyTextInput
-                    class="w-14"
+                    class="w-14 text-center"
                     value={startTimeString()}
                     onEnter={setStartTimeString}
                   />
                 </div>
-                <div>
+                <div class="space-x-1">
                   <label class="w-16">End time:</label>
                   <MyTextInput
-                    class="w-14"
+                    class="w-14 text-center"
                     value={endTimeString()}
                     onEnter={setEndTimeString}
                   />
-                </div>
-              </div>
-              <div class="w-4" />
-              <div class="flex items-center">
-                <label class="w-14">Depth:</label>
-                <div class="flex space-x-1">
-                  <For each={depths()}>
-                    {(dep) => {
-                      return (
-                        <button
-                          class={
-                            "w-6 h-6 rounded flex items-center justify-center " +
-                            (dep === depth() ? "bg-gray-100 font-semibold" : "")
-                          }
-                          onClick={() => setDepth(dep)}
-                        >
-                          {dep}
-                        </button>
-                      );
-                    }}
-                  </For>
                 </div>
               </div>
             </div>
@@ -325,20 +311,78 @@ const Calendar: Component = () => {
                         const height =
                           msBetween(start.time, end.time) / msInADay();
 
-                        const label = () => labelFrom(start, end);
-                        const [info, _] = label()
-                          ? getLabelInfo(label())
+                        const visibleLabel = () =>
+                          labelFrom(
+                            { after: getVisibleLabel(start?.after) },
+                            { before: getVisibleLabel(end?.before) }
+                          );
+                        const [info, setInfo] = visibleLabel()
+                          ? getLabelInfo(visibleLabel())
                           : [{ color: "white" }, null];
 
+                        const [rightHover, setRightHover] = createSignal(false);
+                        const [leftHover, setLeftHover] = createSignal(false);
                         return (
                           <div
-                            class="w-full text-[8px] text-white font-semibold"
+                            class="w-full text-[10px] text-white font-semibold relative"
                             style={`height: ${
                               height * 100
                             }%; background-color: ${info.color};`}
                             onclick={(e) => {}}
                           >
-                            {label()}
+                            <span class="absolute left-0.5 -top-0.5">
+                              <Switch>
+                                <Match when={rightHover()}>
+                                  {() => {
+                                    let next = start.after;
+
+                                    while (true) {
+                                      const nextnext = coarseLabel(next);
+                                      if (nextnext == visibleLabel()) break;
+                                      else next = nextnext;
+                                    }
+                                    return next + "";
+                                  }}
+                                </Match>
+                                <Match when={leftHover()}>
+                                  {coarseLabel(visibleLabel())} / ...
+                                </Match>
+                                <Match
+                                  when={
+                                    start?.after &&
+                                    start.after != visibleLabel()
+                                  }
+                                >
+                                  {visibleLabel()} / ...
+                                </Match>
+                                <Match when={true}>{visibleLabel()}</Match>
+                              </Switch>
+                            </span>
+                            <Show when={coarseLabel(visibleLabel())}>
+                              <div
+                                class="w-1/4 h-full left-0 top-0 absolute hover:bg-gray-800 opacity-20 cursor-pointer"
+                                onmouseenter={() => setLeftHover(true)}
+                                onmouseleave={() => setLeftHover(false)}
+                                onClick={() => {
+                                  const [_, setInfo2] = getLabelInfo(
+                                    coarseLabel(visibleLabel())
+                                  );
+                                  setInfo2({ expanded: false });
+                                }}
+                              />
+                            </Show>
+                            <Show
+                              when={
+                                start?.after && start.after != visibleLabel()
+                              }
+                            >
+                              <div
+                                class="w-1/4 h-full right-0 top-0 absolute hover:bg-gray-800 opacity-20 cursor-pointer"
+                                onmouseenter={() => setRightHover(true)}
+                                onmouseleave={() => setRightHover(false)}
+                                onClick={() => setInfo({ expanded: true })}
+                              />
+                            </Show>
                           </div>
                         );
                       }}

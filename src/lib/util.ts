@@ -93,3 +93,5 @@ export function nthIndex(str, pat, n) {
   }
   return i;
 }
+
+export function 

@@ -30,7 +30,7 @@ import {
 import { useUser } from "../context/UserContext";
 import { msBetween, specToDate } from "../lib/date";
 import { renderDuration, renderTime, renderTimeFull } from "../lib/format";
-import { coarseLabel, leafLabel } from "../lib/labels";
+import { coarseLabel, leafLabel, prefixAndRemainder } from "../lib/labels";
 import { DateRange, dateRangeRule, parseString } from "../lib/parse";
 import { usePopper } from "../lib/solid-ext";
 import { listPairs, now, revit } from "../lib/util";
@@ -193,12 +193,6 @@ const Block: Component<{
     </>
   );
 };
-
-function prefixAndRemainder(s: string): [string, string] {
-  const n = s.indexOf("/");
-  if (n < 0 || s[0] == "?") return [s, ""];
-  return [s.slice(0, n).trim(), s.slice(n + 1).trim()];
-}
 
 type ShowType = "total" | "weekly" | "daily" | "percent";
 const showTypes = ["total", "weekly", "daily", "percent"];
