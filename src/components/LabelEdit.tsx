@@ -3,6 +3,7 @@ import { createStore } from "solid-js/store";
 import { Portal } from "solid-js/web";
 import { useUser } from "../context/UserContext";
 import { usePopper } from "../lib/solid-ext";
+import { openBulkRenameDialog } from "./BulkRename";
 
 const [state, setState] = createStore(null);
 
@@ -24,7 +25,13 @@ const LabelEdit = () => {
           onchange={(e) => setInfo({ color: e.currentTarget.value })}
         />
       </div>
-      <div>Bulk rename</div>
+      <button
+        onclick={() => {
+          openBulkRenameDialog({ label: state.label });
+        }}
+      >
+        Bulk rename
+      </button>
       <div>Jump to Track</div>
     </div>
   );

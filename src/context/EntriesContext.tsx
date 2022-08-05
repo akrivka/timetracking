@@ -132,7 +132,7 @@ function* namesFrom(label: Label | undefined): Generator<Label> {
 
 //returns labels starting from the most recent
 //TODO: can make faster
-function getDistinctLabels(entries: Entry[]): Label[] {
+export function getDistinctLabels(entries: Entry[]): Label[] {
   const seen: Set<string> = new Set();
 
   for (const entry of revit(entries)) {

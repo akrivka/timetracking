@@ -6,9 +6,11 @@ export const MyTextInput: Component<{
 }> = (props) => {
   return (
     <input
-      onkeydown={(e) => e.key === "Enter" && props.onEnter(e.currentTarget.value)}
+      onkeydown={(e) =>
+        e.key === "Enter" && props.onEnter(e.currentTarget.value)
+      }
       type="text"
-      value={props.value}
+      value={props.value || ""}
       class={"px-1 border rounded " + props.class}
       {...props}
     />

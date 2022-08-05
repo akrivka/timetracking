@@ -19,15 +19,16 @@ interface InputBoxProps<T> {
   [x: string | number | symbol]: unknown;
 }
 
-export function InputBox<T>({
-  prefixRule,
-  submit,
-  universe,
-  focusSignal,
-  clearAndRefocus = false,
-  ...props
-}: InputBoxProps<T>) {
+export function InputBox<T>(props: InputBoxProps<T>) {
   console.log("rendering InputBox");
+  const {
+    prefixRule,
+    submit,
+    focusSignal,
+    clearAndRefocus = false,
+    universe: _,
+    ...otherProps
+  } = props;
 
   const [searchPhrase, setSearchPhrase] = createSignal("");
   const [command, setCommand] = createSignal("");
@@ -60,7 +61,7 @@ export function InputBox<T>({
   const [selected, setSelected] = createSignal(-1);
 
   const filteredUniverse = () =>
-    universe.filter((x) => x.includes(searchPhrase()));
+    props.universe.filter((x) => x.includes(searchPhrase()));
 
   const onkeydown = (e) => {
     if (searchPhrase() !== "" && e.key !== "Escape") {
@@ -72,7 +73,7 @@ export function InputBox<T>({
           setSelected(Math.max(selected() - 1, -1));
         }
         if (e.key === "ArrowDown") {
-          setSelected(Math.min(selected() + 1, universe.length - 1));
+          setSelected(Math.min(selected() + 1, props.universe.length - 1));
         }
 
         if (selected() >= 0) {
@@ -99,7 +100,7 @@ export function InputBox<T>({
         }}
         oninput={(e) => onInput(e.currentTarget.value)}
         ref={ref}
-        {...props}
+        {...otherProps}
         class={"w-full px-1 border rounded " + props.class}
       />
 
@@ -110,7 +111,9 @@ export function InputBox<T>({
               <div
                 class={
                   "p-2 w-full cursor-pointer border-b border-gray-200 " +
-                  (selected() === i() ? "bg-blue-400 text-gray-50" : "")
+                  (selected() === i()
+                    ? "bg-blue-400 text-gray-50"
+                    : "bg-white text-gray-900")
                 }
               >
                 {command() + " " + m}

@@ -25,6 +25,7 @@ import { MyTextInput } from "../components/MyTextInput";
 import {
   entriesIterator,
   entriesIteratorWithEnds,
+  getDistinctLabels,
   Label,
   labelFrom,
   useEntries,
@@ -38,6 +39,8 @@ import { usePopper } from "../lib/solid-ext";
 import { listPairs, now, removeIndex, revit } from "../lib/util";
 import { Icon } from "solid-heroicons";
 import { x } from "solid-heroicons/solid";
+import { openBulkRenameDialog } from "../components/BulkRename";
+import { openLabelEdit } from "../components/LabelEdit";
 
 const second_ms = 1000;
 const minute_ms = 60 * second_ms;
@@ -129,78 +132,19 @@ const Block: Component<{
   return (
     <>
       <Show when={props.label}>
-        <div class="flex">
-          <div
-            class={!isLeaf() ? "cursor-pointer" : ""}
-            onclick={() => setInfo({ expanded: !info.expanded })}
-          >
-            [{renderReportDuration(props.duration, total, showType())}]{" "}
-            {leafLabel(props.label)} {!isLeaf() ? "[+]" : ""}
-          </div>
-          <Show when={isEdit()}>
-            <div class="w-2" />
-            <input
-              class="w-6 h-6"
-              type="color"
-              value={info.color}
-              onchange={(e) => setInfo({ color: e.currentTarget.value })}
-            />
-            <div class="w-3" />
-            <Popover class="relative" defaultOpen={false}>
-              {({ isOpen, setState }) => {
-                const [newName, setNewName] = createSignal("");
-                const [moveChildren, setMoveChildren] = createSignal(true);
-
-                const onSubmit = () => {
-                  dispatch([
-                    "bulkRename",
-                    {
-                      from: props.label,
-                      to: newName(),
-                      moveChildren: moveChildren(),
-                    },
-                  ]);
-                  setState(false);
-                  triggerRerender();
-                };
-                return (
-                  <>
-                    <PopoverButton ref={setAnchor} class="text-gray-400">
-                      [rename]
-                    </PopoverButton>
-                    <Show when={isOpen()}>
-                      <PopoverPanel ref={setPopper} unmount={false}>
-                        <div class="w-96 border-2 rounded px-4 py-3 bg-white z-50 space-y-1">
-                          <div class="flex">
-                            <label class="w-28">Label:</label>
-                            {props.label}
-                          </div>
-                          <div class="flex">
-                            <label class="w-28">Rename to:</label>
-                            <MyTextInput
-                              oninput={(e) => setNewName(e.currentTarget.value)}
-                              onEnter={onSubmit}
-                            />
-                          </div>
-                          <div class="flex">
-                            <label class="w-28">Move children:</label>
-                            <input
-                              type="checkbox"
-                              checked
-                              onchange={(e) =>
-                                setMoveChildren(e.currentTarget.checked)
-                              }
-                            />
-                          </div>
-                          <MyButton onclick={onSubmit}>Done</MyButton>
-                        </div>
-                      </PopoverPanel>
-                    </Show>
-                  </>
-                );
-              }}
-            </Popover>
-          </Show>
+        <div
+          class={!isLeaf() ? "cursor-pointer" : ""}
+          onclick={() => setInfo({ expanded: !info.expanded })}
+          oncontextmenu={(e) => {
+            e.preventDefault();
+            openLabelEdit({
+              coord: [e.clientX, e.clientY],
+              label: props.label,
+            });
+          }}
+        >
+          [{renderReportDuration(props.duration, total, showType())}]{" "}
+          {leafLabel(props.label)} {!isLeaf() ? "[+]" : ""}
         </div>
       </Show>
       <Show when={info?.expanded || !props.label}>
@@ -232,7 +176,6 @@ const useReport = () => useContext(ReportContext);
 export const defaultReportState = {
   rangeString: "today",
   showType: "total",
-  isEdit: false,
   showLabels: [],
 };
 
@@ -244,7 +187,6 @@ const Report: Component = () => {
     "rangeString"
   );
   const [showType, setShowType] = useUIState<ShowType>("report", "showType");
-  const [isEdit, setIsEdit] = useUIState<boolean>("report", "isEdit");
   const [showLabels, setShowLabels] = useUIState<string[]>(
     "report",
     "showLabels"
@@ -278,6 +220,14 @@ const Report: Component = () => {
 
   const totalDuration = () => msBetween(startDate(), endDate());
 
+  const entriesInRange = () => {
+    return [
+      ...entriesIterator(entries, { start: startDate(), end: endDate() }),
+    ];
+  };
+
+  const labelsInWeek = createMemo(() => getDistinctLabels(entriesInRange()));
+
   const labelTimeMap = createMemo(() => {
     rerenderSignal();
     const map: Map<Label, number> = new Map();
@@ -306,116 +256,124 @@ const Report: Component = () => {
   });
 
   return (
-    <div class="space-y-2 ml-4 mt-4">
-      <div class="flex">
-        <label class="w-16">Range:</label>
-        <div class="w-96">
+    <div class="ml-4 mt-4">
+      <div class="space-y-4 h-56">
+        <div class="flex">
+          <label class="w-16">Range:</label>
+          <div class="w-96">
+            <div class="flex">
+              <MyTextInput
+                class="w-96"
+                value={rangeString()}
+                onchange={(e) => setRangeString(e.currentTarget.value.trim())}
+                onEnter={(val) => setRangeString(val.trim())}
+              />
+            </div>
+            <div class="h-0.5" />
+            <div class="flex justify-between">
+              <div class="text-[10px] text-gray-500">
+                {renderTime(startDate())} — {renderTime(endDate())}
+              </div>
+              <div class="flex border rounded">
+                <button
+                  class="w-4 h-4 flex items-center justify-center border-r hover:bg-gray-50"
+                  onclick={() => shift(-1)}
+                >
+                  {"«"}
+                </button>
+                <button
+                  class="w-4 h-4 flex items-center justify-center border-l hover:bg-gray-50"
+                  onclick={() => shift(1)}
+                >
+                  {"»"}
+                </button>
+              </div>
+            </div>
+          </div>
+          <Show when={error()}>
+            <div class="ml-2 text-red-400">Parsing error.</div>
+          </Show>
+        </div>
+        <div class="space-y-1">
           <div class="flex">
-            <MyTextInput
-              class="w-96"
-              value={rangeString()}
-              onchange={(e) => setRangeString(e.currentTarget.value.trim())}
-              onEnter={(val) => setRangeString(val.trim())}
+            <label class="w-16">Labels:</label>
+            <InputBox
+              class="bg-gray-50"
+              prefixRule={emptyRule}
+              universe={labelsInWeek()}
+              submit={async (_, label) => {
+                setShowLabels([...showLabels(), label]);
+              }}
+              clearAndRefocus={true}
             />
           </div>
-          <div class="h-0.5" />
-          <div class="flex justify-between">
-            <div class="text-[10px] text-gray-500">
-              {renderTime(startDate())} — {renderTime(endDate())}
-            </div>
-            <div class="flex border rounded">
-              <button
-                class="w-4 h-4 flex items-center justify-center border-r hover:bg-gray-50"
-                onclick={() => shift(-1)}
-              >
-                {"«"}
-              </button>
-              <button
-                class="w-4 h-4 flex items-center justify-center border-l hover:bg-gray-50"
-                onclick={() => shift(1)}
-              >
-                {"»"}
-              </button>
-            </div>
-          </div>
-        </div>
-        <Show when={error()}>
-          <div class="ml-2 text-red-400">Parsing error.</div>
-        </Show>
-      </div>
-      <div>
-        <div class="flex">
-          <label class="w-16">Labels:</label>
-          <InputBox
-            prefixRule={emptyRule}
-            universe={labels}
-            submit={async (_, label) => {
-              setShowLabels([...showLabels(), label]);
-            }}
-            clearAndRefocus={true}
-          />
-        </div>
-        <div class="flex space-x-1">
-          <For each={showLabels()}>
-            {(label, i) => {
-              return (
-                <div
-                  class="px-1 space-x-1 bg-gray-200 hover:bg-gray-300 rounded flex items-center group cursor-pointer"
-                  onclick={() => {
-                    setShowLabels(removeIndex(showLabels(), i()));
-                  }}
+          <Show when={showLabels().length > 0}>
+            <div class="flex">
+              <div class="w-16 flex justify-end pr-1">
+                <button
+                  class="text-gray-500 hover:underline text-xs"
+                  onclick={() => setShowLabels([])}
                 >
-                  <div>{label}</div>
-                  <div class="w-2 h-2 rounded-full bg-gray-100">
-                    <Icon path={x} class="hidden group-hover:block" />
-                  </div>
-                </div>
-              );
-            }}
-          </For>
-        </div>
-      </div>
-      <div class="flex">
-        <label class="w-16">Edit:</label>
-        <input
-          class=""
-          type="checkbox"
-          checked={isEdit()}
-          onchange={(e) => setIsEdit(e.currentTarget.checked)}
-        />
-      </div>
-      <div class="flex">
-        <label class="w-16">Show:</label>
-        <RadioGroup
-          value={showType()}
-          onChange={(v) => setShowType(v.toLowerCase() as ShowType)}
-        >
-          {() => (
-            <div class="flex space-x-2 items-center">
-              <For each={showTypes}>
-                {(type) => (
-                  <RadioGroupOption value={type}>
-                    {({ isSelected: checked }) => (
-                      <button
-                        class={
-                          "capitalize rounded px-1 " +
-                          (checked()
-                            ? "bg-gray-200 outline-1 outline outline-gray-300"
-                            : "hover:bg-gray-100")
-                        }
+                  Clear all
+                </button>
+              </div>
+              <div class="flex flex-wrap space-x-1 w-56">
+                <For each={showLabels()}>
+                  {(label, i) => {
+                    return (
+                      <div
+                        class="px-1 space-x-1 bg-gray-200 hover:bg-gray-300 rounded flex items-center group cursor-pointer"
+                        onclick={() => {
+                          setShowLabels(removeIndex(showLabels(), i()));
+                        }}
                       >
-                        {type}
-                      </button>
-                    )}
-                  </RadioGroupOption>
-                )}
-              </For>
+                        <div>{label}</div>
+                        <div class="w-2 h-2 rounded-full bg-gray-100">
+                          <Icon path={x} class="hidden group-hover:block" />
+                        </div>
+                      </div>
+                    );
+                  }}
+                </For>
+              </div>
             </div>
-          )}
-        </RadioGroup>
-      </div>
-      <div class="flex space-x-2">
-        <MyButton onclick={() => null}>Export</MyButton>
+          </Show>
+        </div>
+        <div class="flex">
+          <label class="w-16">Show:</label>
+          <RadioGroup
+            value={showType()}
+            onChange={(v) => setShowType(v.toLowerCase() as ShowType)}
+          >
+            {() => (
+              <div class="flex space-x-2 items-center">
+                <For each={showTypes}>
+                  {(type) => (
+                    <RadioGroupOption value={type}>
+                      {({ isSelected: checked }) => (
+                        <button
+                          class={
+                            "capitalize rounded px-1 " +
+                            (checked()
+                              ? "bg-gray-200 outline-1 outline outline-gray-300"
+                              : "hover:bg-gray-100")
+                          }
+                        >
+                          {type}
+                        </button>
+                      )}
+                    </RadioGroupOption>
+                  )}
+                </For>
+              </div>
+            )}
+          </RadioGroup>
+        </div>
+        <div class="flex space-x-2">
+          <MyButton onclick={() => openBulkRenameDialog({ label: "label" })}>
+            Export
+          </MyButton>
+        </div>
       </div>
       <div class="h-2" />
       <div class="select-none">

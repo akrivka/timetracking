@@ -12,6 +12,7 @@ import {
   useContext,
 } from "solid-js";
 import { createStore, SetStoreFunction, StoreSetter } from "solid-js/store";
+import { BulkRename } from "./components/BulkRename";
 import { LabelEditContextMenu } from "./components/LabelEdit";
 import { SyncState } from "./components/SyncState";
 
@@ -122,6 +123,7 @@ export const App: Component = () => {
           </Show>
           <Outlet />
           <LabelEditContextMenu />
+          <BulkRename />
         </UIStateContext.Provider>
       </EntriesProvider>
     </UserProvider>
