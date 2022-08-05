@@ -93,3 +93,7 @@ export function nthIndex(str, pat, n) {
   }
   return i;
 }
+
+export function removeIndex(arr, i) {
+  return [...arr.slice(0, i), ...arr.slice(i + 1)];
+}

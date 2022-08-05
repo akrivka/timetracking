@@ -14,7 +14,7 @@ interface InputBoxProps<T> {
   prefixRule: Rule<T>;
   submit: (x: T, s: string) => void;
   universe: string[];
-  focusSignal: Accessor<any>;
+  focusSignal?: Accessor<any>;
   clearAndRefocus?: boolean;
   [x: string | number | symbol]: unknown;
 }
@@ -51,9 +51,11 @@ export function InputBox<T>({
   };
 
   let ref: HTMLInputElement;
-  createEffect(() => {
-    if (focusSignal() != null) ref.focus();
-  });
+  if (focusSignal) {
+    createEffect(() => {
+      if (focusSignal() != null) ref.focus();
+    });
+  }
 
   const [selected, setSelected] = createSignal(-1);
 
@@ -84,7 +86,6 @@ export function InputBox<T>({
   return (
     <div class="relative inline-block" onkeydown={onkeydown}>
       <input
-        
         type="text"
         onkeydown={async (e) => {
           if (e.key === "Enter") {

@@ -1,4 +1,5 @@
 /* @refresh reload */
+import * as R from "remeda";
 import {
   Popover,
   PopoverButton,
@@ -18,6 +19,7 @@ import {
   useContext,
 } from "solid-js";
 import { useUIState } from "../App";
+import { InputBox } from "../components/InputBox";
 import { MyButton } from "../components/MyButton";
 import { MyTextInput } from "../components/MyTextInput";
 import {
@@ -31,9 +33,11 @@ import { useUser } from "../context/UserContext";
 import { msBetween, specToDate } from "../lib/date";
 import { renderDuration, renderTime, renderTimeFull } from "../lib/format";
 import { coarseLabel, leafLabel, prefixAndRemainder } from "../lib/labels";
-import { DateRange, dateRangeRule, parseString } from "../lib/parse";
+import { DateRange, dateRangeRule, emptyRule, parseString } from "../lib/parse";
 import { usePopper } from "../lib/solid-ext";
-import { listPairs, now, revit } from "../lib/util";
+import { listPairs, now, removeIndex, revit } from "../lib/util";
+import { Icon } from "solid-heroicons";
+import { x } from "solid-heroicons/solid";
 
 const second_ms = 1000;
 const minute_ms = 60 * second_ms;
@@ -70,15 +74,37 @@ const Block: Component<{
 
   const [isEdit, _] = useUIState<boolean>("report", "isEdit");
   const [showType, __] = useUIState<ShowType>("report", "showType");
+  const [showLabels, ___] = useUIState<string[]>("report", "showLabels");
 
   const [info, setInfo] = props.label
     ? getLabelInfo(props.label)
     : [null, null];
 
-  const topLabels = () =>
-    [...props.subMap.keys()]
+  const filteredKeys = () => {
+    const base = [...props.subMap.keys()];
+    if (showLabels().length === 0) return base;
+    return base.filter((topLabel) =>
+      R.anyPass(
+        topLabel,
+        showLabels().map((showLabel) => {
+          return (topLabel) => {
+            const fullLabel = props.label
+              ? props.label + " / " + topLabel
+              : topLabel;
+            return (
+              fullLabel.startsWith(showLabel) || showLabel.startsWith(fullLabel)
+            );
+          };
+        })
+      )
+    );
+  };
+
+  const topLabels = () => {
+    return filteredKeys()
       .filter((k) => k.includes("/") === false)
       .sort((a, b) => props.subMap.get(b) - props.subMap.get(a));
+  };
 
   // generate maps of reduced sublabels
   const mapOfMaps = () => {
@@ -86,7 +112,7 @@ const Block: Component<{
     for (const topLabel of topLabels()) {
       m.set(topLabel, new Map());
     }
-    for (const label of props.subMap.keys()) {
+    for (const label of filteredKeys()) {
       const [topLabel, rest] = prefixAndRemainder(label);
       if (rest !== "") {
         m.get(topLabel).set(rest, props.subMap.get(label));
@@ -207,10 +233,11 @@ export const defaultReportState = {
   rangeString: "today",
   showType: "total",
   isEdit: false,
+  showLabels: [],
 };
 
 const Report: Component = () => {
-  const { entries, syncState } = useEntries();
+  const { entries, labels } = useEntries();
 
   const [rangeString, setRangeString] = useUIState<string>(
     "report",
@@ -218,6 +245,10 @@ const Report: Component = () => {
   );
   const [showType, setShowType] = useUIState<ShowType>("report", "showType");
   const [isEdit, setIsEdit] = useUIState<boolean>("report", "isEdit");
+  const [showLabels, setShowLabels] = useUIState<string[]>(
+    "report",
+    "showLabels"
+  );
 
   const [dateRange, setDateRange] = createSignal<DateRange>();
   const [error, setError] = createSignal(false);
@@ -312,9 +343,37 @@ const Report: Component = () => {
           <div class="ml-2 text-red-400">Parsing error.</div>
         </Show>
       </div>
-      <div class="flex">
-        <label class="w-16">Labels:</label>
-        <MyTextInput class="" />
+      <div>
+        <div class="flex">
+          <label class="w-16">Labels:</label>
+          <InputBox
+            prefixRule={emptyRule}
+            universe={labels}
+            submit={async (_, label) => {
+              setShowLabels([...showLabels(), label]);
+            }}
+            clearAndRefocus={true}
+          />
+        </div>
+        <div class="flex space-x-1">
+          <For each={showLabels()}>
+            {(label, i) => {
+              return (
+                <div
+                  class="px-1 space-x-1 bg-gray-200 hover:bg-gray-300 rounded flex items-center group cursor-pointer"
+                  onclick={() => {
+                    setShowLabels(removeIndex(showLabels(), i()));
+                  }}
+                >
+                  <div>{label}</div>
+                  <div class="w-2 h-2 rounded-full bg-gray-100">
+                    <Icon path={x} class="hidden group-hover:block" />
+                  </div>
+                </div>
+              );
+            }}
+          </For>
+        </div>
       </div>
       <div class="flex">
         <label class="w-16">Edit:</label>
@@ -356,7 +415,6 @@ const Report: Component = () => {
         </RadioGroup>
       </div>
       <div class="flex space-x-2">
-        <MyButton onclick={() => null}>Generate</MyButton>
         <MyButton onclick={() => null}>Export</MyButton>
       </div>
       <div class="h-2" />
