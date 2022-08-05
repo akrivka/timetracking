@@ -12,6 +12,7 @@ import {
   useContext,
 } from "solid-js";
 import { createStore, SetStoreFunction, StoreSetter } from "solid-js/store";
+import { LabelEditContextMenu } from "./components/LabelEdit";
 import { SyncState } from "./components/SyncState";
 
 import { EntriesProvider, useEntries } from "./context/EntriesContext";
@@ -120,6 +121,7 @@ export const App: Component = () => {
             <SyncState />
           </Show>
           <Outlet />
+          <LabelEditContextMenu />
         </UIStateContext.Provider>
       </EntriesProvider>
     </UserProvider>

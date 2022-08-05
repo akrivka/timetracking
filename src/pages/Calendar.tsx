@@ -44,6 +44,7 @@ import {
 } from "../lib/parse";
 import { listPairs, it, minutesAfter, nthIndex, revit } from "../lib/util";
 import { coarseLabel } from "../lib/labels";
+import { openLabelEdit } from "../components/LabelEdit";
 
 export const defaultCalendarState = {
   week: thisMonday(),
@@ -328,7 +329,14 @@ const Calendar: Component = () => {
                             style={`height: ${
                               height * 100
                             }%; background-color: ${info.color};`}
-                            onclick={(e) => {}}
+                            oncontextmenu={(e) => {
+                              e.preventDefault();
+                              openLabelEdit({
+                                coord: [e.clientX, e.clientY],
+                                label: visibleLabel(),
+                                anchorEntry: start,
+                              });
+                            }}
                           >
                             <span class="absolute left-0.5 -top-0.5">
                               <Switch>
