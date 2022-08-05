@@ -17,6 +17,7 @@ import {
   Show,
   useContext,
 } from "solid-js";
+import { useUIState } from "../App";
 import { MyButton } from "../components/MyButton";
 import { MyTextInput } from "../components/MyTextInput";
 import {
@@ -62,9 +63,13 @@ const Block: Component<{
   label?: Label;
   duration: number;
 }> = (props) => {
-  const { isEdit, triggerRerender, showType, total } = useReport();
   const { getLabelInfo } = useUser();
   const { dispatch } = useEntries();
+
+  const { triggerRerender, total } = useReport();
+
+  const [isEdit, _] = useUIState<boolean>("report", "isEdit");
+  const [showType, __] = useUIState<ShowType>("report", "showType");
 
   const [info, setInfo] = props.label
     ? getLabelInfo(props.label)
@@ -196,20 +201,30 @@ function prefixAndRemainder(s: string): [string, string] {
 }
 
 type ShowType = "total" | "weekly" | "daily" | "percent";
+const showTypes = ["total", "weekly", "daily", "percent"];
 
 const ReportContext = createContext<{
-  isEdit?: Accessor<boolean>;
   triggerRerender?: () => void;
-  showType?: Accessor<ShowType>;
   total?: number;
 }>({});
 const useReport = () => useContext(ReportContext);
 
+export const defaultReportState = {
+  rangeString: "today",
+  showType: "total",
+  isEdit: false,
+};
+
 const Report: Component = () => {
   const { entries, syncState } = useEntries();
-  const { initialized } = syncState.local;
 
-  const [rangeString, setRangeString] = createSignal("today");
+  const [rangeString, setRangeString] = useUIState<string>(
+    "report",
+    "rangeString"
+  );
+  const [showType, setShowType] = useUIState<ShowType>("report", "showType");
+  const [isEdit, setIsEdit] = useUIState<boolean>("report", "isEdit");
+
   const [dateRange, setDateRange] = createSignal<DateRange>();
   const [error, setError] = createSignal(false);
   createRenderEffect(() => {
@@ -233,8 +248,6 @@ const Report: Component = () => {
     triggerRerender();
   };
 
-  const [isEdit, setIsEdit] = createSignal(false);
-
   const [rerenderSignal, setRerenderSignal] = createSignal(false);
   const triggerRerender = () => setRerenderSignal(!rerenderSignal());
 
@@ -242,36 +255,30 @@ const Report: Component = () => {
 
   const labelTimeMap = createMemo(() => {
     rerenderSignal();
-    if (initialized()) {
-      const map: Map<Label, number> = new Map();
+    const map: Map<Label, number> = new Map();
 
-      for (const [start, end] of listPairs(
-        revit([
-          ...entriesIteratorWithEnds(entries, {
-            start: startDate(),
-            end: endDate(),
-          }),
-        ])
-      )) {
-        const time = msBetween(start.time, end.time);
-        const label = labelFrom(start, end);
+    for (const [start, end] of listPairs(
+      revit([
+        ...entriesIteratorWithEnds(entries, {
+          start: startDate(),
+          end: endDate(),
+        }),
+      ])
+    )) {
+      const time = msBetween(start.time, end.time);
+      const label = labelFrom(start, end);
 
-        function add(label: string) {
-          map.set(label, (map.get(label) || 0) + time);
-          const labelAbove = coarseLabel(label);
-          if (labelAbove) add(labelAbove);
-        }
-
-        add(label);
+      function add(label: string) {
+        map.set(label, (map.get(label) || 0) + time);
+        const labelAbove = coarseLabel(label);
+        if (labelAbove) add(labelAbove);
       }
 
-      return map;
+      add(label);
     }
+
+    return map;
   });
-
-  const showTypes = ["total", "weekly", "daily", "percent"];
-
-  const [showType, setShowType] = createSignal<ShowType>("total");
 
   return (
     <div class="space-y-2 ml-4 mt-4">
@@ -320,6 +327,7 @@ const Report: Component = () => {
         <input
           class=""
           type="checkbox"
+          checked={isEdit()}
           onchange={(e) => setIsEdit(e.currentTarget.checked)}
         />
       </div>
@@ -359,19 +367,15 @@ const Report: Component = () => {
       </div>
       <div class="h-2" />
       <div class="select-none">
-        <Show when={initialized()}>
-          [{renderDuration(totalDuration())}] total
-          <ReportContext.Provider
-            value={{
-              isEdit,
-              triggerRerender,
-              showType,
-              total: totalDuration(),
-            }}
-          >
-            <Block subMap={labelTimeMap()} duration={totalDuration()} />
-          </ReportContext.Provider>
-        </Show>
+        [{renderDuration(totalDuration())}] total
+        <ReportContext.Provider
+          value={{
+            triggerRerender,
+            total: totalDuration(),
+          }}
+        >
+          <Block subMap={labelTimeMap()} duration={totalDuration()} />
+        </ReportContext.Provider>
       </div>
     </div>
   );

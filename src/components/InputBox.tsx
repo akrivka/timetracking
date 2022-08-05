@@ -35,7 +35,7 @@ export function InputBox<T>({
   const onEnter = (s: string) => {
     const m = parseString(prefixRule, s);
     if (m == "prefix" || m == "fail") {
-      submit(null, s);
+      submit(null, s.trim());
     } else {
       submit(m[0], m[2].trim());
     }
@@ -84,7 +84,7 @@ export function InputBox<T>({
   return (
     <div class="relative inline-block" onkeydown={onkeydown}>
       <input
-        autofocus
+        
         type="text"
         onkeydown={async (e) => {
           if (e.key === "Enter") {

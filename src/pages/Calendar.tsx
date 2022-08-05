@@ -7,6 +7,7 @@ import {
   For,
 } from "solid-js";
 import { unwrap } from "solid-js/store";
+import { useUIState } from "../App";
 import { ColorPicker } from "../components/ColorPicker";
 import { MyTextInput } from "../components/MyTextInput";
 import {
@@ -43,16 +44,28 @@ function coarseLabel(label: string, depth: number): string {
   else return label.slice(0, i).trim();
 }
 
+export const defaultCalendarState = {
+  week: thisMonday(),
+  startTimeString: "8:00",
+  endTimeString: "20:00",
+};
+
 const Calendar: Component = () => {
   const { entries } = useEntries();
   const { getLabelInfo } = useUser();
-  const [week, setWeek] = createSignal(thisMonday());
+
+  const [week, setWeek] = useUIState<Date>("calendar", "week");
+  const [startTimeString, setStartTimeString] = useUIState<string>(
+    "calendar",
+    "startTimeString"
+  );
+  const [endTimeString, setEndTimeString] = useUIState<string>(
+    "calendar",
+    "endTimeString"
+  );
 
   const startDay = week;
   const endDay = () => daysAfter(week(), 7);
-
-  const [startTimeString, setStartTimeString] = createSignal("8:00");
-  const [endTimeString, setEndTimeString] = createSignal("20:00");
 
   const [startTime, setStartTime] = createSignal<DayTimeSpec>();
   const [endTime, setEndTime] = createSignal<DayTimeSpec>();

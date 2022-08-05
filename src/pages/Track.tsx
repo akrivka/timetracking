@@ -24,11 +24,14 @@ import { now, minutesAfter, listPairsAndEnds, wait } from "../lib/util";
 import {
   createVirtualizer,
   createWindowVirtualizer,
+  elementScroll,
+  VirtualizerOptions,
 } from "@tanstack/solid-virtual";
 import { MyTextInput } from "../components/MyTextInput";
 import { Icon } from "solid-heroicons";
 import { chevronDown, chevronUp, x } from "solid-heroicons/solid";
 import { coarseLabel, leafLabel } from "../lib/labels";
+import { useUIState } from "../App";
 
 const EmptyBullet = () => {
   return (
@@ -83,12 +86,29 @@ const Line: Component<{ color: string }> = ({ color }) => {
   );
 };
 
+function easeInOutQuint(t) {
+  return t < 0.5 ? 16 * t * t * t * t * t : 1 + 16 * --t * t * t * t * t;
+}
+
+const [scrollStartTime, setScrollStartTime] = createSignal();
+
+export const defaultTrackState = {
+  scrollTop: 0,
+  focusedIndex: null,
+  showSearch: false,
+  searchText: "",
+  currentJump: 0,
+};
+
 const Track: Component = () => {
   const { time } = useWindow();
   const { entries, labels, dispatch } = useEntries();
   const { getLabelInfo } = useUser();
 
-  const [focusedIndex, setFocusedIndex] = createSignal(null);
+  const [focusedIndex, setFocusedIndex] = useUIState<number | null>(
+    "track",
+    "focusedIndex"
+  );
 
   const onkeydown = (e) => {
     if (e.key === "Escape") {
@@ -247,17 +267,62 @@ const Track: Component = () => {
   });
 
   let scrollRef;
+
+  let scrollDuration = 0;
+  const scrollToFn: VirtualizerOptions<any, any>["scrollToFn"] = (
+    offset,
+    canSmooth,
+    instance
+  ) => {
+    const speed = 25; // px / ms
+    const start = scrollRef.scrollTop;
+
+    const duration = Math.abs(start - offset) / speed;
+    scrollDuration = duration;
+
+    const now = Date.now();
+    setScrollStartTime(now);
+    const startTime = now;
+
+    const run = () => {
+      if (scrollStartTime() !== startTime) return;
+      const now = Date.now();
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const interpolated = start + (offset - start) * progress;
+
+      if (elapsed < duration) {
+        elementScroll(interpolated, canSmooth, instance);
+        requestAnimationFrame(run);
+      } else {
+        elementScroll(interpolated, canSmooth, instance);
+      }
+    };
+
+    requestAnimationFrame(run);
+  };
+
   const virtualizer = createVirtualizer({
     count: entries.length,
     getScrollElement: () => scrollRef,
     estimateSize: () => 100,
     paddingStart: 16,
-    overscan: 30,
-    enableSmoothScroll: false,
+    scrollPaddingStart: 16,
+    overscan: 50,
+    enableSmoothScroll: true,
+    scrollToFn,
   });
 
-  const [showSearch, setShowSearch] = createSignal(false);
-  const [searchText, setSearchText] = createSignal("");
+  const [showSearch, setShowSearch] = useUIState<boolean>(
+    "track",
+    "showSearch"
+  );
+  const [searchText, setSearchText] = useUIState<string>("track", "searchText");
+
+  const [currentJump, setCurrentJump] = useUIState<number>(
+    "track",
+    "currentJump"
+  );
 
   const jumpIndices = () => {
     const search = searchText();
@@ -274,18 +339,14 @@ const Track: Component = () => {
     }, [] as number[]);
   };
 
-  const [currentJump, setCurrentJump] = createSignal(0);
-
   createEffect(async () => {
     const i = jumpIndices()[currentJump()];
-    for (let n = 0; n < 3; n++) {
-      virtualizer.scrollToIndex(i - 1, { align: "start" });
-      await wait(10);
-    }
+    virtualizer.scrollToIndex(i - 1, { align: "start" });
+    await wait(scrollDuration + 500);
     setFocusedIndex(i);
   });
 
-  const [focusSearchSignal, setFocusSearchSignal] = createSignal(false);
+  const [focusSearchSignal, setFocusSearchSignal] = createSignal(null);
   const focusSearch = () => setFocusSearchSignal(!focusSearchSignal());
 
   const jumpDown = () => {
@@ -302,10 +363,19 @@ const Track: Component = () => {
   };
 
   onMount(() => {
-    document.addEventListener("keydown", (e) => {
+    document.addEventListener("keydown", async (e) => {
       // if cmd/ctrl+enter pressed
       if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+        virtualizer.scrollToIndex(0, { align: "start" });
+        await wait(scrollDuration + 500);
         setFocusedIndex(0);
+      } else if (e.key == "Enter") {
+        // document.activeElement is not of type input
+        if (document.activeElement.tagName != "INPUT" && focusedIndex() >= 0) {
+          const i = focusedIndex();
+          setFocusedIndex(-1);
+          setFocusedIndex(i);
+        }
       }
       // if cmd/ctrl+f pressed
       if (e.key === "f" && (e.metaKey || e.ctrlKey)) {
@@ -350,10 +420,10 @@ const Track: Component = () => {
                 universe={labels}
                 focusSignal={focusSearchSignal}
                 submit={async (_, label) => {
-                  setSearchText(label);
+                  setSearchText(label.trim());
                 }}
                 placeholder="Search..."
-                value=""
+                value={searchText()}
               />
               <Show when={searchText() !== ""}>
                 <div class="absolute top-1 right-1 pointer-events-none text-xs text-gray-400">
@@ -392,7 +462,7 @@ const Track: Component = () => {
             const i = virtualItem.index;
             const start = entries[i];
             const end = createMemo(() => (i > 0 ? entries[i - 1] : null));
-            console.log("rerendering", labelFrom(start, end));
+            //console.log("rerendering", labelFrom(start, end));
             const conflict = createMemo(
               () =>
                 end() &&

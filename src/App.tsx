@@ -1,10 +1,25 @@
+import * as R from "remeda";
 import { NavLink, Outlet, useNavigate } from "solid-app-router";
-import { Component, Match, onMount, Show, Switch } from "solid-js";
+import {
+  Accessor,
+  Component,
+  createContext,
+  Match,
+  onMount,
+  Setter,
+  Show,
+  Switch,
+  useContext,
+} from "solid-js";
+import { createStore, SetStoreFunction, StoreSetter } from "solid-js/store";
 import { SyncState } from "./components/SyncState";
 
 import { EntriesProvider, useEntries } from "./context/EntriesContext";
 import { deleteLocalUser, UserProvider, useUser } from "./context/UserContext";
 import { debug } from "./lib/util";
+import { defaultCalendarState } from "./pages/Calendar";
+import { defaultReportState } from "./pages/Report";
+import { defaultTrackState } from "./pages/Track";
 
 type MyLinkProps = {
   href: string;
@@ -65,6 +80,25 @@ export const Home: Component = () => {
   );
 };
 
+const defaultUIState = {
+  track: defaultTrackState,
+  report: defaultReportState,
+  calendar: defaultCalendarState,
+};
+
+const UIState = createStore(defaultUIState);
+
+const UIStateContext = createContext(UIState);
+
+export function useUIState<T>(...path): [get: Accessor<T>, set: Setter<T>] {
+  const [UIState, setUIState] = useContext(UIStateContext);
+  // @ts-ignore
+  const cursor: Accessor<T> = () => R.pathOr(UIState, path, "error");
+  // @ts-ignore
+  const setCursor: Setter<T> = (...args: any[]) => setUIState(...path, ...args);
+  return [cursor, setCursor];
+}
+
 export const App: Component = () => {
   const navigate = useNavigate();
   onMount(() => {
@@ -81,10 +115,12 @@ export const App: Component = () => {
   return (
     <UserProvider>
       <EntriesProvider>
-        <Show when={debug}>
-          <SyncState />
-        </Show>
-        <Outlet />
+        <UIStateContext.Provider value={UIState}>
+          <Show when={debug}>
+            <SyncState />
+          </Show>
+          <Outlet />
+        </UIStateContext.Provider>
       </EntriesProvider>
     </UserProvider>
   );
