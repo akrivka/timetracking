@@ -1,7 +1,7 @@
 import { Route, Router, Routes } from "solid-app-router";
 import { render } from "solid-js/web";
 
-import { App, Home, WithBackButton } from "./App";
+import { App, Home, Page } from "./App";
 import "./assets/index.css";
 import { WindowProvider } from "./context/WindowContext";
 import { Auth, Login, Signup } from "./pages/Auth";
@@ -21,7 +21,7 @@ render(
           </Route>
           <Route path="/" component={App}>
             <Route path="/" component={Home} />
-            <Route path="/" component={WithBackButton}>
+            <Route path="/" component={Page}>
               <Route path="/track" component={Track} />
               <Route path="/report" component={Report} />
               <Route path="/calendar" component={Calendar} />

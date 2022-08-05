@@ -5,6 +5,7 @@ import {
   createResource,
   createSignal,
   onMount,
+  Show,
   untrack,
   useContext,
 } from "solid-js";
@@ -435,7 +436,9 @@ export const EntriesProvider = (props) => {
         syncState,
       }}
     >
-      {props.children}
+      <Show when={initialized()} fallback="Loading...">
+        {props.children}
+      </Show>
     </EntriesContext.Provider>
   );
 };

@@ -46,7 +46,7 @@ const Navbar: Component = () => {
   );
 };
 
-export const WithBackButton: Component = () => {
+export const Page: Component = () => {
   return (
     <>
       {/* <div class="flex w-full justify-end">
@@ -77,23 +77,15 @@ export const App: Component = () => {
       }
     });
   });
+
   return (
     <UserProvider>
       <EntriesProvider>
         <Show when={debug}>
           <SyncState />
         </Show>
-        <WithProviders />
+        <Outlet />
       </EntriesProvider>
     </UserProvider>
-  );
-};
-
-const WithProviders: Component = () => {
-  const { syncState } = useEntries();
-  return (
-    <Show when={syncState.local.initialized()} fallback="Loading...">
-      <Outlet />
-    </Show>
   );
 };

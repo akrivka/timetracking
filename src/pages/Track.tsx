@@ -274,13 +274,6 @@ const Track: Component = () => {
     }, [] as number[]);
   };
 
-  createEffect(() => {
-    const indices = jumpIndices();
-    for (const i of indices) {
-      console.log(labelFrom(entries[i], entries[i - 1]));
-    }
-  });
-
   const [currentJump, setCurrentJump] = createSignal(0);
 
   createEffect(async () => {
