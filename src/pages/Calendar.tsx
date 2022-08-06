@@ -46,7 +46,12 @@ import {
 import { listPairs, it, minutesAfter, nthIndex, revit } from "../lib/util";
 import { coarseLabel } from "../lib/labels";
 import { openLabelEdit } from "../components/LabelEdit";
-import { chevronDown, chevronUp } from "solid-heroicons/solid";
+import {
+  chevronDown,
+  chevronLeft,
+  chevronRight,
+  chevronUp,
+} from "solid-heroicons/solid";
 import { Icon } from "solid-heroicons";
 
 export const defaultCalendarState = {
@@ -140,11 +145,6 @@ const Calendar: Component = () => {
   });
 
   type Interval = [Partial<Entry>, Partial<Entry>];
-  type DayInfo = {
-    hiddenBefore: string[];
-    hiddenAfter: string[];
-    dayIntervals: Interval[];
-  };
 
   const dayIntervals = createMemo(() => {
     const result: Interval[][] = [...Array(7)].map((_) => []);
@@ -173,12 +173,10 @@ const Calendar: Component = () => {
       const visibleIntervals = [];
 
       for (const [start, end] of intervals) {
-        if (
-          isBeforeDayTime(dateToDayTimeSpec(end.time), startTime()) != false
-        ) {
+        if (isBeforeDayTime(dateToDayTimeSpec(end.time), startTime()) >= 0) {
           end.before && hiddenBefore.push(end.before);
         } else if (
-          isBeforeDayTime(dateToDayTimeSpec(start.time), startTime()) == true
+          isBeforeDayTime(dateToDayTimeSpec(start.time), startTime()) == 1
         ) {
           end.before && hiddenBefore.push(end.before);
           const newStart = new Date(start.time.getTime());
@@ -186,21 +184,32 @@ const Calendar: Component = () => {
           newStart.setMinutes(startTime().minutes);
           newStart.setSeconds(0);
           newStart.setMilliseconds(0);
-          visibleIntervals.push([{ time: newStart }, end]);
+          visibleIntervals.push([{ time: newStart, after: start?.after }, end]);
         } else if (
-          isBeforeDayTime(endTime(), dateToDayTimeSpec(start.time)) != false
+          isBeforeDayTime(endTime(), dateToDayTimeSpec(start.time)) >= 0
         ) {
-          start.before && hiddenAfter.push(start.before);
+          hiddenAfter.push(
+            labelFrom(
+              { after: getVisibleLabel(start?.after) },
+              { before: getVisibleLabel(end?.before) }
+            )
+          );
         } else if (
-          isBeforeDayTime(endTime(), dateToDayTimeSpec(end.time)) == true
+          isBeforeDayTime(endTime(), dateToDayTimeSpec(end.time)) == 1
         ) {
-          start.before && hiddenAfter.push(start.before);
+          hiddenAfter.push(
+            labelFrom(
+              { after: getVisibleLabel(start?.after) },
+              { before: getVisibleLabel(end?.before) }
+            )
+          );
           const newEnd = new Date(end.time.getTime());
           newEnd.setHours(endTime().hours);
           newEnd.setMinutes(endTime().minutes);
           newEnd.setSeconds(0);
           newEnd.setMilliseconds(0);
-          visibleIntervals.push([start, { time: newEnd }]);
+
+          visibleIntervals.push([start, { time: newEnd, before: end?.before }]);
         } else {
           visibleIntervals.push([start, end]);
         }
@@ -237,20 +246,20 @@ const Calendar: Component = () => {
     <div class="mt-4">
       <div class="flex justify-center">
         <div class="mx-16 w-full h-screen">
-          <div class="flex justify-between">
+          <div class="flex justify-between h-8">
             <div class="flex font-bold">
               <button
                 class="hover:bg-gray-50 px-2 py-0.5"
                 onClick={() => setWeek(prevWeek)}
               >
-                {"<"}
+                <Icon class="w-4 h-4" path={chevronLeft}></Icon>
               </button>
               <div class="w-1"></div>
               <button
                 class="hover:bg-gray-50 px-2 py-0.5"
                 onClick={() => setWeek(nextWeek)}
               >
-                {">"}
+                <Icon class="w-4 h-4" path={chevronRight}></Icon>
               </button>
             </div>
             <div class="flex items-center space-x-2">

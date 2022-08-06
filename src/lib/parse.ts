@@ -361,11 +361,11 @@ export const dateToDayTimeSpec = (d: Date): DayTimeSpec => ({
 });
 
 export const isBeforeDayTime = (a: DayTimeSpec, b: DayTimeSpec) => {
-  if (a.hours < b.hours) return true;
-  if (a.hours > b.hours) return false;
-  if (a.minutes < b.minutes) return true;
-  if (a.minutes > b.minutes) return false;
-  return null;
+  if (a.hours < b.hours) return 1;
+  if (a.hours > b.hours) return -1;
+  if (a.minutes < b.minutes) return 1;
+  if (a.minutes > b.minutes) return -1;
+  return 0;
 };
 
 export const minutesAfterDayTime = (d: DayTimeSpec, minutes: number) => {
