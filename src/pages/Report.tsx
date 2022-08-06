@@ -71,11 +71,9 @@ const Block: Component<{
   duration: number;
 }> = (props) => {
   const { getLabelInfo } = useUser();
-  const { dispatch } = useEntries();
 
-  const { triggerRerender, total } = useReport();
+  const { total } = useReport();
 
-  const [isEdit, _] = useUIState<boolean>("report", "isEdit");
   const [showType, __] = useUIState<ShowType>("report", "showType");
   const [showLabels, ___] = useUIState<string[]>("report", "showLabels");
 
@@ -125,10 +123,6 @@ const Block: Component<{
   };
   const isLeaf = () => mapOfMaps().size == 0;
 
-  const [anchor, setAnchor] = createSignal<HTMLElement>();
-  const [popper, setPopper] = createSignal<HTMLElement>();
-  usePopper(anchor, popper, { placement: "top" });
-
   return (
     <>
       <Show when={props.label}>
@@ -168,7 +162,6 @@ type ShowType = "total" | "weekly" | "daily" | "percent";
 const showTypes = ["total", "weekly", "daily", "percent"];
 
 const ReportContext = createContext<{
-  triggerRerender?: () => void;
   total?: number;
 }>({});
 const useReport = () => useContext(ReportContext);
@@ -380,7 +373,6 @@ const Report: Component = () => {
         [{renderDuration(totalDuration())}] total
         <ReportContext.Provider
           value={{
-            triggerRerender,
             total: totalDuration(),
           }}
         >

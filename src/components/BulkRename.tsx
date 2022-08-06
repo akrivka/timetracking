@@ -84,11 +84,12 @@ export const BulkRename: Component = () => {
             </div>
             <div class="flex">
               <label class="w-12">To:</label>
-              <div>
+              <div class="w-full">
                 <MyTextInput
                   oninput={(e) => setNewName(e.currentTarget.value)}
                   onEnter={onSubmit}
                   value={state.label}
+                  class="w-full"
                 />
                 <div class="text-[10px] text-gray-600">
                   {labelFrequencies().get(newName()) || 0} existing entries
