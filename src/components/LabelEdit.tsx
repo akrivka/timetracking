@@ -15,24 +15,32 @@ const LabelEdit = () => {
   const { getLabelInfo } = useUser();
   const [info, setInfo] = getLabelInfo(state.label);
   return (
-    <div class="w-32 bg-white px-2 py-1 rounded shadow">
-      <div class="flex">
-        <div>Color: </div>
-        <input
-          class="w-5 h-5"
-          type="color"
-          value={info.color}
-          onchange={(e) => setInfo({ color: e.currentTarget.value })}
-        />
+    <div class="w-40 bg-white rounded shadow text-gray-800 text-sm">
+      <div class="text-gray-500 text-[10px] px-2 pt-1">{state.label}</div>
+      <div class="divide-y divide-gray-200">
+        <div class="px-2 h-6 w-full">
+          <div class="flex items-center space-x-1">
+            <div>Color: </div>
+            <input
+              class="w-5 h-5"
+              type="color"
+              value={info.color}
+              onchange={(e) => setInfo({ color: e.currentTarget.value })}
+            />
+          </div>
+        </div>
+        <button
+          class="hover:bg-gray-100 px-2 h-7 w-full text-left"
+          onclick={() => {
+            openBulkRenameDialog({ label: state.label });
+          }}
+        >
+          Bulk rename
+        </button>
+        <button class="hover:bg-gray-100 px-2 h-7 w-full text-left">
+          Jump to Track
+        </button>
       </div>
-      <button
-        onclick={() => {
-          openBulkRenameDialog({ label: state.label });
-        }}
-      >
-        Bulk rename
-      </button>
-      <div>Jump to Track</div>
     </div>
   );
 };
