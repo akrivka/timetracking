@@ -1,9 +1,6 @@
 /* @refresh reload */
 import * as R from "remeda";
-import {
-  RadioGroup,
-  RadioGroupOption
-} from "solid-headless";
+import { RadioGroup, RadioGroupOption } from "solid-headless";
 import { Icon } from "solid-heroicons";
 import { x } from "solid-heroicons/solid";
 import {
@@ -71,8 +68,9 @@ const Block: Component<{
 
   const { total, entriesInRange, triggerRerender } = useReport();
 
-  const [showType, __] = useUIState<ShowType>("report", "showType");
-  const [showLabels, ___] = useUIState<string[]>("report", "showLabels");
+  const [showType, _] = useUIState<ShowType>("report", "showType");
+  const [showLabels, __] = useUIState<string[]>("report", "showLabels");
+  const [showColors, ___] = useUIState<boolean>("report", "showColors");
 
   const [info, setInfo] = props.label
     ? getLabelInfo(props.label)
@@ -132,7 +130,10 @@ const Block: Component<{
     <>
       <Show when={props.label}>
         <div
-          class={!isLeaf() ? "cursor-pointer" : ""}
+          class={
+            "flex items-center space-x-1 h-6 " +
+            (!isLeaf() ? "cursor-pointer" : "")
+          }
           onclick={() => setInfo({ expanded: !info.expanded })}
           oncontextmenu={(e) => {
             e.preventDefault();
@@ -145,8 +146,15 @@ const Block: Component<{
             }
           }}
         >
-          [{renderReportDuration(props.duration, total, showType())}]{" "}
-          {leafLabel(props.label)} {!isLeaf() ? "[+]" : ""}
+          <Show when={showColors()}>
+            <div class="w-1 h-5" style={{ "background-color": info.color }} />
+          </Show>
+          <span>
+            [{renderReportDuration(props.duration, total, showType())}]
+          </span>
+          <span>
+            {leafLabel(props.label)} {!isLeaf() ? "[+]" : ""}
+          </span>
         </div>
       </Show>
       <Show when={info?.expanded || !props.label}>
@@ -180,6 +188,7 @@ export const defaultReportState = {
   rangeString: "today",
   showType: "total",
   showLabels: [],
+  showColors: false,
 };
 
 const Report: Component = () => {
@@ -193,6 +202,10 @@ const Report: Component = () => {
   const [showLabels, setShowLabels] = useUIState<string[]>(
     "report",
     "showLabels"
+  );
+  const [showColors, setShowColors] = useUIState<boolean>(
+    "report",
+    "showColors"
   );
 
   const [dateRange, setDateRange] = createSignal<DateRange>();
@@ -371,6 +384,14 @@ const Report: Component = () => {
               </div>
             )}
           </RadioGroup>
+        </div>
+        <div class="flex">
+          <label class="w-16">Colors:</label>
+          <input
+            type="checkbox"
+            checked={showColors()}
+            onchange={(e) => setShowColors(e.currentTarget.checked)}
+          />
         </div>
         <div class="flex space-x-2">
           <MyButton onclick={() => openBulkRenameDialog({ label: "label" })}>
