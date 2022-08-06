@@ -1,9 +1,11 @@
 import * as R from "remeda";
 import { NavLink, Outlet, useNavigate } from "solid-app-router";
+import { Toaster } from "solid-headless";
 import {
   Accessor,
   Component,
   createContext,
+  For,
   Match,
   onMount,
   Setter,
@@ -124,6 +126,18 @@ export const App: Component = () => {
           <Outlet />
           <LabelEditContextMenu />
           <BulkRename />
+          <Toaster class="fixed right-4 bottom-4">
+            <div class="text-sm">
+              <For each={useEntries().history.filter(({ show }) => show())}>
+                {({ event, type }) => (
+                  <div class="capitalize">
+                    <span>{type}</span>{" "}
+                    <span class="text-gray-500">({event})</span>
+                  </div>
+                )}
+              </For>
+            </div>
+          </Toaster>
         </UIStateContext.Provider>
       </EntriesProvider>
     </UserProvider>

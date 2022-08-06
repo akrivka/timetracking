@@ -1,15 +1,18 @@
 import axios from "axios";
+import { Toast, Toaster } from "solid-headless";
 import {
   createContext,
   createEffect,
   createResource,
   createSignal,
+  For,
   onMount,
   Show,
   untrack,
   useContext,
 } from "solid-js";
 import { createStore } from "solid-js/store";
+import { Portal } from "solid-js/web";
 import {
   connectDB,
   getAllEntries,
@@ -240,6 +243,9 @@ type EntriesContextType = {
   dispatch: (any) => any;
   syncState: any;
   forceSync: () => void;
+  undo: () => void;
+  redo: () => void;
+  history: any[];
 };
 
 const EntriesContext = createContext<EntriesContextType>();
@@ -393,7 +399,12 @@ export const EntriesProvider = (props) => {
         break;
     }
 
-    await putEntries(updatedEntries);
+    const updatedEntriesWithIds = updatedEntries.map((entry) => ({
+      ...makeEntry(),
+      ...entry,
+    }));
+    pushToUndoStack(updatedEntriesWithIds, event);
+    await putEntries(updatedEntriesWithIds);
   };
 
   const forceSync = async () => {
@@ -426,20 +437,76 @@ export const EntriesProvider = (props) => {
     }
   });
 
+  // undo part
+
+  const [undoStack, setUndoStack] = createStore([]),
+    [redoStack, setRedoStack] = createStore([]),
+    [history, setHistory] = createStore([]);
+  const pushToUndoStack = (updatedEntries, event) => {
+    const previousEntries = updatedEntries.map((entry) => {
+      const existingEntry = entries.find((e) => e.id === entry.id);
+      return existingEntry || { ...entry, deleted: true };
+    });
+    setUndoStack([
+      ...undoStack,
+      { prev: previousEntries, next: updatedEntries, event },
+    ]);
+    setRedoStack([]);
+  };
+
+  const createEvent = ({ event, type }) => {
+    const [show, setShow] = createSignal(true);
+    setTimeout(() => setShow(false), 2000);
+    return { show, event, type };
+  };
+  const undo = async () => {
+    if (undoStack.length === 0) return;
+    const { prev, next, event } = undoStack[undoStack.length - 1];
+
+    setUndoStack([...undoStack].slice(0, undoStack.length - 1));
+    setRedoStack([...redoStack, { prev, next, event }]);
+    await putEntries(prev);
+    setHistory([...history, createEvent({ event, type: "undo" })]);
+  };
+
+  const redo = async () => {
+    if (redoStack.length === 0) return;
+    const { prev, next, event } = redoStack[redoStack.length - 1];
+
+    setRedoStack([...redoStack].slice(0, redoStack.length - 1));
+    setUndoStack([...undoStack, { prev, next, event }]);
+    await putEntries(next);
+    setHistory([...history, createEvent({ event, type: "redo" })]);
+  };
+
+  onMount(() => {
+    document.addEventListener("keydown", (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "z") {
+        if (!e.shiftKey) undo();
+        else redo();
+      }
+    });
+  });
+
   return (
-    <EntriesContext.Provider
-      value={{
-        entries,
-        labels,
-        dispatch,
-        forceSync,
-        syncState,
-      }}
-    >
-      <Show when={initialized()} fallback="Loading...">
-        {props.children}
-      </Show>
-    </EntriesContext.Provider>
+    <>
+      <EntriesContext.Provider
+        value={{
+          entries,
+          labels,
+          dispatch,
+          forceSync,
+          syncState,
+          undo,
+          redo,
+          history,
+        }}
+      >
+        <Show when={initialized()} fallback="Loading...">
+          {props.children}
+        </Show>
+      </EntriesContext.Provider>
+    </>
   );
 };
 

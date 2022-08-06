@@ -383,7 +383,7 @@ const Report: Component = () => {
         </div>
       </div>
       <div class="h-2" />
-      <div class="select-none">
+      <div class="select-none overflow-auto">
         [{renderDuration(totalDuration())}] total
         <ReportContext.Provider
           value={{
