@@ -1,12 +1,6 @@
 import {
-  Component,
-  Accessor,
-  createSignal,
-  For,
-  onMount,
-  Show,
-  createEffect,
-  createRenderEffect,
+  Accessor, createEffect, createSignal,
+  For, Show
 } from "solid-js";
 import { parseString, Rule, splitPrefix } from "../lib/parse";
 import { wait } from "../lib/util";

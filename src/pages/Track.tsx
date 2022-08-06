@@ -1,38 +1,29 @@
 import {
+  createVirtualizer
+} from "@tanstack/solid-virtual";
+import { useLocation } from "solid-app-router";
+import { Icon } from "solid-heroicons";
+import { chevronDown, chevronUp, x } from "solid-heroicons/solid";
+import {
   Component,
   createEffect,
   createMemo,
-  createSignal,
-  For,
-  onMount,
-  Show,
+  createSignal, onMount,
+  Show
 } from "solid-js";
+import { useUIState } from "../App";
 import { InputBox } from "../components/InputBox";
 import {
-  Entry,
-  entryEquals,
-  labelFrom,
-  useEntries,
+  Entry, labelFrom,
+  useEntries
 } from "../context/EntriesContext";
 import { useUser } from "../context/UserContext";
 import { useWindow } from "../context/WindowContext";
-import { stringToColor } from "../lib/colors";
 import { specToDate } from "../lib/date";
 import { renderDuration, renderTime } from "../lib/format";
-import { actionRule, dateRule, emptyRule, parseString } from "../lib/parse";
-import { now, minutesAfter, listPairsAndEnds, wait } from "../lib/util";
-import {
-  createVirtualizer,
-  createWindowVirtualizer,
-  elementScroll,
-  VirtualizerOptions,
-} from "@tanstack/solid-virtual";
-import { MyTextInput } from "../components/MyTextInput";
-import { Icon } from "solid-heroicons";
-import { chevronDown, chevronUp, x } from "solid-heroicons/solid";
 import { coarseLabel, leafLabel } from "../lib/labels";
-import { useUIState } from "../App";
-import { useLocation } from "solid-app-router";
+import { actionRule, dateRule, emptyRule, parseString } from "../lib/parse";
+import { minutesAfter, now } from "../lib/util";
 
 const EmptyBullet = () => {
   return (

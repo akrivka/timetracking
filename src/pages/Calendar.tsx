@@ -1,58 +1,46 @@
 import * as R from "remeda";
+import { Icon } from "solid-heroicons";
 import {
-  Accessor,
-  Component,
-  createEffect,
-  createMemo,
+  chevronDown,
+  chevronLeft,
+  chevronRight,
+  chevronUp
+} from "solid-heroicons/solid";
+import {
+  Component, createMemo,
   createRenderEffect,
   createSignal,
   For,
   Match,
   onMount,
   Show,
-  Switch,
+  Switch
 } from "solid-js";
-import { unwrap } from "solid-js/store";
 import { useUIState } from "../App";
-import { ColorPicker } from "../components/ColorPicker";
+import { openLabelEdit } from "../components/LabelEdit";
 import { MyTextInput } from "../components/MyTextInput";
 import {
-  entriesIterator,
   Entry,
   labelFrom,
-  useEntries,
+  useEntries
 } from "../context/EntriesContext";
 import { useUser } from "../context/UserContext";
-import { stringToColor } from "../lib/colors";
 import {
   daysAfter,
   msBetween,
   nextMidnight,
   nextWeek,
   prevWeek,
-  thisMonday,
+  thisMonday
 } from "../lib/date";
-import { renderDay, renderTime, twoDigits } from "../lib/format";
-import {
-  isBeforeDayTime,
-  dateToDayTimeSpec,
-  DayTimeSpec,
-  parseString,
-  timeRule,
-  dayTimeSpecToMinutes,
-  minutesAfterDayTime,
-  dayTimeSpecToString,
-} from "../lib/parse";
-import { listPairs, it, minutesAfter, nthIndex, revit } from "../lib/util";
+import { renderDay } from "../lib/format";
 import { coarseLabel } from "../lib/labels";
-import { openLabelEdit } from "../components/LabelEdit";
 import {
-  chevronDown,
-  chevronLeft,
-  chevronRight,
-  chevronUp,
-} from "solid-heroicons/solid";
-import { Icon } from "solid-heroicons";
+  dateToDayTimeSpec,
+  DayTimeSpec, dayTimeSpecToMinutes, dayTimeSpecToString, isBeforeDayTime, minutesAfterDayTime, parseString,
+  timeRule
+} from "../lib/parse";
+import { it, listPairs } from "../lib/util";
 
 export const defaultCalendarState = {
   week: thisMonday(),

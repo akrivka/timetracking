@@ -1,24 +1,20 @@
 import axios from "axios";
-import { Toast, Toaster } from "solid-headless";
 import {
   createContext,
   createEffect,
   createResource,
-  createSignal,
-  For,
-  onMount,
+  createSignal, onMount,
   Show,
   untrack,
-  useContext,
+  useContext
 } from "solid-js";
 import { createStore } from "solid-js/store";
-import { Portal } from "solid-js/web";
 import {
   connectDB,
   getAllEntries,
   getAllEntriesModifiedAfter,
   putEntryLocal,
-  updateEntriesLocal,
+  updateEntriesLocal
 } from "../lib/localDB";
 import { getEntriesRemote } from "../lib/remoteDB";
 import { createSyncedStoreArray } from "../lib/solid-ext";

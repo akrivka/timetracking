@@ -1,12 +1,11 @@
 /* @refresh reload */
 import * as R from "remeda";
 import {
-  Popover,
-  PopoverButton,
-  PopoverPanel,
   RadioGroup,
-  RadioGroupOption,
+  RadioGroupOption
 } from "solid-headless";
+import { Icon } from "solid-heroicons";
+import { x } from "solid-heroicons/solid";
 import {
   Accessor,
   Component,
@@ -16,10 +15,12 @@ import {
   createSignal,
   For,
   Show,
-  useContext,
+  useContext
 } from "solid-js";
 import { useUIState } from "../App";
+import { openBulkRenameDialog } from "../components/BulkRename";
 import { InputBox } from "../components/InputBox";
+import { openLabelEdit } from "../components/LabelEdit";
 import { MyButton } from "../components/MyButton";
 import { MyTextInput } from "../components/MyTextInput";
 import {
@@ -29,19 +30,14 @@ import {
   getDistinctLabels,
   Label,
   labelFrom,
-  useEntries,
+  useEntries
 } from "../context/EntriesContext";
 import { useUser } from "../context/UserContext";
 import { msBetween, specToDate } from "../lib/date";
 import { renderDuration, renderTime, renderTimeFull } from "../lib/format";
 import { coarseLabel, leafLabel, prefixAndRemainder } from "../lib/labels";
 import { DateRange, dateRangeRule, emptyRule, parseString } from "../lib/parse";
-import { usePopper } from "../lib/solid-ext";
-import { listPairs, now, removeIndex, revit, it } from "../lib/util";
-import { Icon } from "solid-heroicons";
-import { x } from "solid-heroicons/solid";
-import { openBulkRenameDialog } from "../components/BulkRename";
-import { openLabelEdit } from "../components/LabelEdit";
+import { it, listPairs, now, removeIndex, revit } from "../lib/util";
 
 const second_ms = 1000;
 const minute_ms = 60 * second_ms;

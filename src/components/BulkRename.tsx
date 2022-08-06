@@ -1,21 +1,15 @@
 import {
-  Dialog,
-  DialogDescription,
-  DialogOverlay,
-  DialogPanel,
-  DialogTitle,
-  Transition,
+  Dialog, DialogOverlay,
+  DialogPanel, Transition
 } from "solid-headless";
 import {
   Component,
-  createEffect,
-  createRenderEffect,
-  createSignal,
+  createEffect, createSignal
 } from "solid-js";
 import { createStore } from "solid-js/store";
 import { labelFrom, useEntries } from "../context/EntriesContext";
 import { coarseLabel } from "../lib/labels";
-import { it, listPairs, revit } from "../lib/util";
+import { listPairs, revit } from "../lib/util";
 import { MyButton } from "./MyButton";
 import { MyTextInput } from "./MyTextInput";
 

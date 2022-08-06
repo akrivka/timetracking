@@ -1,14 +1,7 @@
 import axios from "axios";
-import { syncBuiltinESMExports } from "module";
 import {
-  Accessor,
-  createContext,
-  createResource,
-  createSignal,
-  onMount,
-  Setter,
-  Signal,
-  useContext,
+  createContext, createSignal,
+  onMount, useContext
 } from "solid-js";
 import { createStore, unwrap } from "solid-js/store";
 import { stringToColor } from "../lib/colors";
