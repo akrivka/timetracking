@@ -25,6 +25,7 @@ import { MyTextInput } from "../components/MyTextInput";
 import {
   entriesIterator,
   entriesIteratorWithEnds,
+  Entry,
   getDistinctLabels,
   Label,
   labelFrom,
@@ -36,7 +37,7 @@ import { renderDuration, renderTime, renderTimeFull } from "../lib/format";
 import { coarseLabel, leafLabel, prefixAndRemainder } from "../lib/labels";
 import { DateRange, dateRangeRule, emptyRule, parseString } from "../lib/parse";
 import { usePopper } from "../lib/solid-ext";
-import { listPairs, now, removeIndex, revit } from "../lib/util";
+import { listPairs, now, removeIndex, revit, it } from "../lib/util";
 import { Icon } from "solid-heroicons";
 import { x } from "solid-heroicons/solid";
 import { openBulkRenameDialog } from "../components/BulkRename";
@@ -72,7 +73,7 @@ const Block: Component<{
 }> = (props) => {
   const { getLabelInfo } = useUser();
 
-  const { total } = useReport();
+  const report = useReport();
 
   const [showType, __] = useUIState<ShowType>("report", "showType");
   const [showLabels, ___] = useUIState<string[]>("report", "showLabels");
@@ -123,6 +124,14 @@ const Block: Component<{
   };
   const isLeaf = () => mapOfMaps().size == 0;
 
+  const mostRecentEntry = () => {
+    for (const [end, start] of listPairs(it(report.entriesInRange()))) {
+      if (labelFrom(start, end).startsWith(props.label)) {
+        return start;
+      }
+    }
+  };
+
   return (
     <>
       <Show when={props.label}>
@@ -131,13 +140,16 @@ const Block: Component<{
           onclick={() => setInfo({ expanded: !info.expanded })}
           oncontextmenu={(e) => {
             e.preventDefault();
-            openLabelEdit({
-              coord: [e.clientX, e.clientY],
-              label: props.label,
-            });
+            if (mostRecentEntry()) {
+              openLabelEdit({
+                coord: [e.clientX, e.clientY],
+                label: props.label,
+                entry: mostRecentEntry(),
+              });
+            }
           }}
         >
-          [{renderReportDuration(props.duration, total, showType())}]{" "}
+          [{renderReportDuration(props.duration, report.total, showType())}]{" "}
           {leafLabel(props.label)} {!isLeaf() ? "[+]" : ""}
         </div>
       </Show>
@@ -163,6 +175,7 @@ const showTypes = ["total", "weekly", "daily", "percent"];
 
 const ReportContext = createContext<{
   total?: number;
+  entriesInRange?: Accessor<Entry[]>;
 }>({});
 const useReport = () => useContext(ReportContext);
 
@@ -374,6 +387,7 @@ const Report: Component = () => {
         <ReportContext.Provider
           value={{
             total: totalDuration(),
+            entriesInRange: entriesInRange,
           }}
         >
           <Block subMap={labelTimeMap()} duration={totalDuration()} />

@@ -1,3 +1,4 @@
+import { useNavigate } from "solid-app-router";
 import { createSignal, onMount, Show } from "solid-js";
 import { createStore } from "solid-js/store";
 import { Portal } from "solid-js/web";
@@ -12,6 +13,7 @@ export const openLabelEdit = (info) => {
 };
 
 const LabelEdit = () => {
+  const navigate = useNavigate();
   const { getLabelInfo } = useUser();
   const [info, setInfo] = getLabelInfo(state.label);
   return (
@@ -37,7 +39,12 @@ const LabelEdit = () => {
         >
           Bulk rename
         </button>
-        <button class="hover:bg-gray-100 px-2 h-7 w-full text-left">
+        <button
+          class="hover:bg-gray-100 px-2 h-7 w-full text-left"
+          onclick={() => {
+            navigate(`/track`, { state: { entry: state.entry } });
+          }}
+        >
           Jump to Track
         </button>
       </div>

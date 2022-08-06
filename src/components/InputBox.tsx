@@ -20,7 +20,7 @@ interface InputBoxProps<T> {
 }
 
 export function InputBox<T>(props: InputBoxProps<T>) {
-  console.log("rendering InputBox");
+  //console.log("rendering InputBox");
   const {
     prefixRule,
     submit,

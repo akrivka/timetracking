@@ -32,6 +32,7 @@ import { Icon } from "solid-heroicons";
 import { chevronDown, chevronUp, x } from "solid-heroicons/solid";
 import { coarseLabel, leafLabel } from "../lib/labels";
 import { useUIState } from "../App";
+import { useLocation } from "solid-app-router";
 
 const EmptyBullet = () => {
   return (
@@ -301,19 +302,20 @@ const Track: Component = () => {
       return acc;
     }, [] as number[]);
   };
-  const scrollToIndex = (i) => {
+
+  const scrollToIndex = (i, options?) => {
     let scrollingTimeout;
     scrollRef.addEventListener("scroll", function handler(e) {
       window.clearTimeout(scrollingTimeout);
       scrollingTimeout = setTimeout(() => {
-        console.log("finised scrolling");
+        //console.log("finised scrolling");
 
         setFocusedIndex(i);
         document.removeEventListener("scroll", handler);
       }, 40);
     });
 
-    virtualizer.scrollToIndex(i - 1, { align: "start" });
+    virtualizer.scrollToIndex(i - 1, { align: "start", ...options });
   };
 
   createEffect(async () => {
@@ -369,6 +371,18 @@ const Track: Component = () => {
         jumpUp();
       }
     });
+  });
+
+  const location = useLocation();
+  onMount(() => {
+    if (location.state) {
+      //@ts-ignore
+      const { entry } = location.state;
+      if (entry) {
+        const i = entries.findIndex((e) => e.id === entry.id);
+        scrollToIndex(i, { smoothScroll: false });
+      }
+    }
   });
 
   return (

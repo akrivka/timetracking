@@ -155,7 +155,12 @@ const Calendar: Component = () => {
       let b = end;
       let nm = nextMidnight(start.time);
       while (nm < end.time && day < 7) {
-        let newB = { time: nm, before: end.before, after: end.before };
+        let newB = {
+          time: nm,
+          before: end.before,
+          after: end.before,
+          id: start.id,
+        };
         result[day].push([a, newB]);
         day++;
         a = newB;
@@ -184,7 +189,7 @@ const Calendar: Component = () => {
           newStart.setMinutes(startTime().minutes);
           newStart.setSeconds(0);
           newStart.setMilliseconds(0);
-          visibleIntervals.push([{ time: newStart, after: start?.after }, end]);
+          visibleIntervals.push([{ ...start, time: newStart }, end]);
         } else if (
           isBeforeDayTime(endTime(), dateToDayTimeSpec(start.time)) >= 0
         ) {
@@ -209,7 +214,7 @@ const Calendar: Component = () => {
           newEnd.setSeconds(0);
           newEnd.setMilliseconds(0);
 
-          visibleIntervals.push([start, { time: newEnd, before: end?.before }]);
+          visibleIntervals.push([start, { ...end, time: newEnd }]);
         } else {
           visibleIntervals.push([start, end]);
         }
@@ -404,7 +409,7 @@ const Calendar: Component = () => {
                               openLabelEdit({
                                 coord: [e.clientX, e.clientY],
                                 label: visibleLabel(),
-                                anchorEntry: start,
+                                entry: start,
                               });
                             }}
                           >
