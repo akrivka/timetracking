@@ -268,49 +268,12 @@ const Track: Component = () => {
 
   let scrollRef;
 
-  let scrollDuration = 0;
-  const scrollToFn: VirtualizerOptions<any, any>["scrollToFn"] = (
-    offset,
-    canSmooth,
-    instance
-  ) => {
-    const speed = 25; // px / ms
-    const start = scrollRef.scrollTop;
-
-    const duration = Math.abs(start - offset) / speed;
-    scrollDuration = duration;
-
-    const now = Date.now();
-    setScrollStartTime(now);
-    const startTime = now;
-
-    const run = () => {
-      if (scrollStartTime() !== startTime) return;
-      const now = Date.now();
-      const elapsed = now - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      const interpolated = start + (offset - start) * progress;
-
-      if (elapsed < duration) {
-        elementScroll(interpolated, canSmooth, instance);
-        requestAnimationFrame(run);
-      } else {
-        elementScroll(interpolated, canSmooth, instance);
-      }
-    };
-
-    requestAnimationFrame(run);
-  };
-
   const virtualizer = createVirtualizer({
     count: entries.length,
     getScrollElement: () => scrollRef,
     estimateSize: () => 100,
-    paddingStart: 16,
     scrollPaddingStart: 16,
-    overscan: 50,
-    enableSmoothScroll: true,
-    scrollToFn,
+    overscan: 5,
   });
 
   const [showSearch, setShowSearch] = useUIState<boolean>(
@@ -338,12 +301,25 @@ const Track: Component = () => {
       return acc;
     }, [] as number[]);
   };
+  const scrollToIndex = (i) => {
+    let scrollingTimeout;
+    scrollRef.addEventListener("scroll", function handler(e) {
+      window.clearTimeout(scrollingTimeout);
+      scrollingTimeout = setTimeout(() => {
+        console.log("finised scrolling");
+
+        setFocusedIndex(i);
+        document.removeEventListener("scroll", handler);
+      }, 40);
+    });
+
+    virtualizer.scrollToIndex(i - 1, { align: "start" });
+  };
 
   createEffect(async () => {
     const i = jumpIndices()[currentJump()];
-    virtualizer.scrollToIndex(i - 1, { align: "start" });
-    await wait(scrollDuration + 500);
-    setFocusedIndex(i);
+
+    scrollToIndex(i);
   });
 
   const [focusSearchSignal, setFocusSearchSignal] = createSignal(null);
@@ -366,9 +342,7 @@ const Track: Component = () => {
     document.addEventListener("keydown", async (e) => {
       // if cmd/ctrl+enter pressed
       if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-        virtualizer.scrollToIndex(0, { align: "start" });
-        await wait(scrollDuration + 500);
-        setFocusedIndex(0);
+        scrollToIndex(0);
       } else if (e.key == "Enter") {
         // document.activeElement is not of type input
         if (document.activeElement.tagName != "INPUT" && focusedIndex() >= 0) {
@@ -453,81 +427,83 @@ const Track: Component = () => {
         </div>
       </Show>
       <div class="pl-8 pt-4">
-        <div
-          ref={scrollRef}
-          class="h-screen w-full overflow-auto relative no-scrollbar"
-        >
+        <div ref={scrollRef} class="h-screen w-full overflow-auto no-scrollbar">
           <EmptyBullet />
-          {virtualizer.getVirtualItems().map((virtualItem) => {
-            const i = virtualItem.index;
-            const start = entries[i];
-            const end = createMemo(() => (i > 0 ? entries[i - 1] : null));
-            //console.log("rerendering", labelFrom(start, end));
-            const conflict = createMemo(
-              () =>
-                end() &&
-                start?.after &&
-                start?.after !== "" &&
-                end()?.before &&
-                end()?.before !== "" &&
-                start.after !== end()?.before
-            );
-            const label = createMemo(() => labelFrom(start, end()));
+          <div
+            class="w-full relative"
+            style={{ height: `${virtualizer.getTotalSize()}px` }}
+          >
+            {virtualizer.getVirtualItems().map((virtualItem) => {
+              const i = virtualItem.index;
+              const start = entries[i];
+              const end = createMemo(() => (i > 0 ? entries[i - 1] : null));
+              //console.log("rerendering", labelFrom(start, end));
+              const conflict = createMemo(
+                () =>
+                  end() &&
+                  start?.after &&
+                  start?.after !== "" &&
+                  end()?.before &&
+                  end()?.before !== "" &&
+                  start.after !== end()?.before
+              );
+              const label = createMemo(() => labelFrom(start, end()));
 
-            const color = createMemo(() => getLabelInfo(label())[0].color);
+              const color = createMemo(() => getLabelInfo(label())[0].color);
 
-            const duration = createMemo(
-              () => (end()?.time?.getTime() || time()) - start?.time.getTime()
-            );
+              const duration = createMemo(
+                () => (end()?.time?.getTime() || time()) - start?.time.getTime()
+              );
 
-            //console.log("(re)rendering", start?.after, end()?.before);
+              //console.log("(re)rendering", start?.after, end()?.before);
 
-            return (
-              <div
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  width: "100%",
-                  height: `${virtualItem.size}px`,
-                  transform: `translateY(${virtualItem.start}px)`,
-                }}
-              >
-                <div class="flex text-sm" data-label={label()}>
-                  <Line color={end() ? color() : "gray"} />
-                  <div
-                    class="ml-8 pl-1 flex flex-col justify-center cursor-pointer hover:bg-sky-50 w-56"
-                    onClick={() => setFocusedIndex(i)}
-                  >
-                    <div class={conflict() ? "text-red-600" : ""}>
-                      <div>{leafLabel(label())}</div>
-                      <div class="text-xs text-gray-400 -translate-y-0.5">
-                        {coarseLabel(label())}
+              return (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: `${virtualItem.size}px`,
+                    transform: `translateY(${virtualItem.start}px)`,
+                  }}
+                >
+                  <div class="flex text-sm" data-label={label()}>
+                    <Line color={end() ? color() : "gray"} />
+                    <div
+                      class="ml-8 pl-1 flex flex-col justify-center cursor-pointer hover:bg-sky-50 w-56"
+                      onClick={() => setFocusedIndex(i)}
+                    >
+                      <div class={conflict() ? "text-red-600" : ""}>
+                        <div>{leafLabel(label())}</div>
+                        <div class="text-xs text-gray-400 -translate-y-0.5">
+                          {coarseLabel(label())}
+                        </div>
+                      </div>
+                      <div>
+                        {duration() >= 1000 && renderDuration(duration())}
                       </div>
                     </div>
-                    <div>
-                      {duration() >= 1000 && renderDuration(duration())}
-                    </div>
-                  </div>
 
-                  <Show when={focusedIndex() === i}>
-                    <div
-                      class="flex items-center"
-                      onkeydown={onkeydown}
-                      onfocusout={(e) => {
-                        if (focusedIndex() === i) {
-                          setFocusedIndex(-1);
-                        }
-                      }}
-                    >
-                      {inputBox}
-                    </div>
-                  </Show>
+                    <Show when={focusedIndex() === i}>
+                      <div
+                        class="flex items-center"
+                        onkeydown={onkeydown}
+                        onfocusout={(e) => {
+                          if (focusedIndex() === i) {
+                            setFocusedIndex(-1);
+                          }
+                        }}
+                      >
+                        {inputBox}
+                      </div>
+                    </Show>
+                  </div>
+                  <Bullet entry={start} />
                 </div>
-                <Bullet entry={start} />
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </div>
     </Show>
