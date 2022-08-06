@@ -41,10 +41,13 @@ import {
   timeRule,
   dayTimeSpecToMinutes,
   minutesAfterDayTime,
+  dayTimeSpecToString,
 } from "../lib/parse";
 import { listPairs, it, minutesAfter, nthIndex, revit } from "../lib/util";
 import { coarseLabel } from "../lib/labels";
 import { openLabelEdit } from "../components/LabelEdit";
+import { chevronDown, chevronUp } from "solid-heroicons/solid";
+import { Icon } from "solid-heroicons";
 
 export const defaultCalendarState = {
   week: thisMonday(),
@@ -250,23 +253,81 @@ const Calendar: Component = () => {
                 {">"}
               </button>
             </div>
-            <div class="flex">
-              <div class="flex space-x-2">
-                <div class="space-x-1">
-                  <label class="w-16">Start time:</label>
-                  <MyTextInput
-                    class="w-14 text-center"
-                    value={startTimeString()}
-                    onEnter={setStartTimeString}
-                  />
+            <div class="flex items-center space-x-2">
+              <div class="space-x-1 h-4 flex items-center">
+                <label class="w-18">Start time:</label>
+                <MyTextInput
+                  class="w-14 text-center"
+                  value={startTimeString()}
+                  onEnter={setStartTimeString}
+                />
+                <div class="w-4 flex flex-col">
+                  <button
+                    class="h-1/2 hover:bg-gray-100"
+                    onclick={() => {
+                      setStartTimeString(
+                        dayTimeSpecToString(
+                          minutesAfterDayTime(startTime(), 60)
+                        )
+                      );
+                    }}
+                  >
+                    <Icon
+                      class="w-4 h-3 flex justify-center items-center rounded"
+                      path={chevronUp}
+                    ></Icon>
+                  </button>
+                  <button
+                    class="h-1/2 hover:bg-gray-100"
+                    onclick={() => {
+                      setStartTimeString(
+                        dayTimeSpecToString(
+                          minutesAfterDayTime(startTime(), -60)
+                        )
+                      );
+                    }}
+                  >
+                    <Icon
+                      class="w-4 h-3 flex justify-center items-center rounded"
+                      path={chevronDown}
+                    ></Icon>
+                  </button>
                 </div>
-                <div class="space-x-1">
-                  <label class="w-16">End time:</label>
-                  <MyTextInput
-                    class="w-14 text-center"
-                    value={endTimeString()}
-                    onEnter={setEndTimeString}
-                  />
+              </div>
+              <div class="space-x-1 h-4 flex items-center">
+                <label class="w-18">End time:</label>
+                <MyTextInput
+                  class="w-14 text-center"
+                  value={endTimeString()}
+                  onEnter={setEndTimeString}
+                />
+                <div class="w-4 flex flex-col">
+                  <button
+                    class="h-1/2 hover:bg-gray-100"
+                    onclick={() => {
+                      setEndTimeString(
+                        dayTimeSpecToString(minutesAfterDayTime(endTime(), 60))
+                      );
+                    }}
+                  >
+                    <Icon
+                      class="w-4 h-3 flex justify-center items-center rounded"
+                      path={chevronUp}
+                    ></Icon>
+                  </button>
+                  <button
+                    class="h-1/2 hover:bg-gray-100"
+                    onclick={() => {
+                      setEndTimeString(
+                        dayTimeSpecToString(minutesAfterDayTime(endTime(), -60))
+                      );
+                    }}
+                  >
+                    <Icon
+                      class="w-4 h-3 flex justify-center items-center rounded"
+                      path={chevronDown}
+                    ></Icon>
+                  </button>
                 </div>
               </div>
             </div>
@@ -289,7 +350,7 @@ const Calendar: Component = () => {
                         class="text-[8px] flex items-center text-gray-400 absolute h-4 -translate-y-2 w-full justify-end pr-0.5"
                         style={`top: ${top * 100}%`}
                       >
-                        {twoDigits(mark.hours) + ":" + twoDigits(mark.minutes)}
+                        {dayTimeSpecToString(mark)}
                       </div>
                     );
                   }}

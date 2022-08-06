@@ -1,4 +1,7 @@
 //TODO: wish I could accurately typecheck this...
+
+import { twoDigits } from "./format";
+
 //(at least it can be separated and be kind of easy to debug)
 export type Rule<T> =
   | { kind: "token"; bind: (x: string) => T; applies: (x: string) => boolean }
@@ -374,6 +377,9 @@ export const minutesAfterDayTime = (d: DayTimeSpec, minutes: number) => {
 
 export const dayTimeSpecToMinutes = (d: DayTimeSpec): number =>
   d.hours * 60 + d.minutes;
+
+export const dayTimeSpecToString = (d: DayTimeSpec): string =>
+  twoDigits(d.hours) + ":" + twoDigits(d.minutes);
 
 const startOrEnd = any([raw("start"), raw("end")]);
 
