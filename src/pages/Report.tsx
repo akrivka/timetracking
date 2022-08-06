@@ -321,16 +321,16 @@ const Report: Component = () => {
                 <For each={showLabels()}>
                   {(label, i) => {
                     return (
-                      <div
-                        class="px-1 space-x-1 bg-gray-200 hover:bg-gray-300 rounded flex items-center group cursor-pointer"
-                        onclick={() => {
-                          setShowLabels(removeIndex(showLabels(), i()));
-                        }}
-                      >
+                      <div class="pl-1 fixeh-6 bg-gray-200 rounded flex items-center">
                         <div>{label}</div>
-                        <div class="w-2 h-2 rounded-full bg-gray-100">
-                          <Icon path={x} class="hidden group-hover:block" />
-                        </div>
+                        <button
+                          class="w-5 h-6 flex justify-center items-center text-gray-500  hover:text-gray-800"
+                          onclick={() => {
+                            setShowLabels(removeIndex(showLabels(), i()));
+                          }}
+                        >
+                          <Icon path={x} class="w-4 h-4" />
+                        </button>
                       </div>
                     );
                   }}
