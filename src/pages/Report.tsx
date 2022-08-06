@@ -298,7 +298,7 @@ const Report: Component = () => {
           <div class="flex">
             <label class="w-16">Labels:</label>
             <InputBox
-              class="bg-gray-50"
+              class="w-72 px-1 border rounded"
               prefixRule={emptyRule}
               universe={labelsInWeek()}
               submit={async (_, label) => {

@@ -127,7 +127,7 @@ const Track: Component = () => {
     universe: labels,
     focusSignal: focusedIndex,
     clearAndRefocus: true,
-    class: "bg-gray-50",
+    class: "w-72 px-1 border rounded bg-gray-50",
     submit: async (action, label) => {
       // start, end
       const i = focusedIndex();
@@ -381,7 +381,7 @@ const Track: Component = () => {
       }
     >
       <Show when={showSearch()}>
-        <div class="z-50 fixed -top-1 right-2 bg-gray-200 px-2 pb-1 rounded">
+        <div class="z-50 fixed -top-1 right-8 px-2 pb-1 rounded border shadow focus-within:bg-gray-50">
           <div class="h-2" />
           <div class="flex items-center space-x-">
             <div
@@ -389,7 +389,7 @@ const Track: Component = () => {
               onkeydown={(e) => e.key == "Escape" && closeSearch()}
             >
               <InputBox
-                class="w-64"
+                class="w-64 px-1 focus:bg-gray-50 focus:outline-none"
                 prefixRule={emptyRule}
                 universe={labels}
                 focusSignal={focusSearchSignal}

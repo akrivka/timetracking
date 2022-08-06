@@ -101,7 +101,7 @@ export function InputBox<T>(props: InputBoxProps<T>) {
         oninput={(e) => onInput(e.currentTarget.value)}
         ref={ref}
         {...otherProps}
-        class={"w-full px-1 border rounded " + props.class}
+        class={"" + props.class}
       />
 
       <Show when={searchPhrase() !== ""}>
