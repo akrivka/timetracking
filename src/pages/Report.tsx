@@ -73,7 +73,7 @@ const Block: Component<{
 }> = (props) => {
   const { getLabelInfo } = useUser();
 
-  const report = useReport();
+  const { total, entriesInRange, triggerRerender } = useReport();
 
   const [showType, __] = useUIState<ShowType>("report", "showType");
   const [showLabels, ___] = useUIState<string[]>("report", "showLabels");
@@ -125,7 +125,7 @@ const Block: Component<{
   const isLeaf = () => mapOfMaps().size == 0;
 
   const mostRecentEntry = () => {
-    for (const [end, start] of listPairs(it(report.entriesInRange()))) {
+    for (const [end, start] of listPairs(it(entriesInRange()))) {
       if (labelFrom(start, end).startsWith(props.label)) {
         return start;
       }
@@ -149,7 +149,7 @@ const Block: Component<{
             }
           }}
         >
-          [{renderReportDuration(props.duration, report.total, showType())}]{" "}
+          [{renderReportDuration(props.duration, total, showType())}]{" "}
           {leafLabel(props.label)} {!isLeaf() ? "[+]" : ""}
         </div>
       </Show>
@@ -176,6 +176,7 @@ const showTypes = ["total", "weekly", "daily", "percent"];
 const ReportContext = createContext<{
   total?: number;
   entriesInRange?: Accessor<Entry[]>;
+  triggerRerender?: () => void;
 }>({});
 const useReport = () => useContext(ReportContext);
 
@@ -388,6 +389,7 @@ const Report: Component = () => {
           value={{
             total: totalDuration(),
             entriesInRange: entriesInRange,
+            triggerRerender,
           }}
         >
           <Block subMap={labelTimeMap()} duration={totalDuration()} />
