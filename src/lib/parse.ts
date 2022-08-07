@@ -279,6 +279,28 @@ function endOfDay(d: DaySpec): DateSpec {
   };
 }
 
+function startOfMonth(m: number): DateSpec {
+  return {
+    hours: 12,
+    minutes: 0,
+    ampm: "am",
+    month: m,
+    day: 1,
+    year: new Date().getFullYear(),
+  };
+}
+
+function endOfMonth(m: number): DateSpec {
+  return {
+    hours: 12,
+    minutes: 0,
+    ampm: "am",
+    month: (m + 1) % 12,
+    day: 1,
+    year: new Date().getFullYear() + Math.floor((m + 1) / 12),
+  };
+}
+
 type lessThan7 = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
 function lastDayOfWeek(n: lessThan7, weeksAgo: number = 0): DaySpec {
@@ -396,7 +418,7 @@ export const dayTimeSpecToMinutes = (d: DayTimeSpec): number =>
 export const dayTimeSpecToString = (d: DayTimeSpec): string =>
   twoDigits(d.hours) + ":" + twoDigits(d.minutes);
 
-const startOrEnd = any([raw("start"), raw("end")]);
+const startOrEnd = any([raw("start"), raw("end"), emptyRule]);
 
 export const dateRule: Rule<DateSpec> = any<DateSpec>([
   seq([ampmTimeRule, raw(","), dayRule], (x) => ({
@@ -520,6 +542,14 @@ export const dateRangeRule = any<DateRange>([
   seq([dateRule, raw("until"), dateRule], ([start, _, end]) => ({
     start,
     end,
+  })),
+  seq([month], ([month]) => ({
+    start: startOfMonth(month),
+    end: endOfMonth(month),
+  })),
+  seq([dateRule], ([day]) => ({
+    start: startOfDay(day),
+    end: endOfDay(day),
   })),
   map(raw("today"), () => ({
     start: startOfDay(today()),
