@@ -242,15 +242,18 @@ interface DaySpec {
   year?: number;
 }
 
-function today(): DaySpec {
-  const d = new Date();
+function dateToDaySpec(d: Date) {
   return { month: d.getMonth(), day: d.getDate(), year: d.getFullYear() };
+}
+
+function today(): DaySpec {
+  return dateToDaySpec(new Date());
 }
 
 function yesterday() {
   const d = new Date();
   d.setDate(d.getDate() - 1);
-  return { month: d.getMonth(), day: d.getDate(), year: d.getFullYear() };
+  return dateToDaySpec(d);
 }
 
 function startOfDay(d: DaySpec): DateSpec {
@@ -290,6 +293,18 @@ function lastDayOfMonth(n: number, monthsAgo: number = 0): DaySpec {
   while (d.getDate() != n) d.setDate(d.getDate() - 1);
   d.setMonth(d.getMonth() - monthsAgo);
   return { month: d.getMonth(), day: d.getDate(), year: d.getFullYear() };
+}
+
+function yearsAgo(y: number) {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - y);
+  d.setDate(1);
+  d.setMonth(0);
+  d.setHours(0);
+  d.setMinutes(0);
+  d.setSeconds(0);
+  d.setMilliseconds(0);
+  return dateToDaySpec(d);
 }
 
 export const dayRule: Rule<DaySpec> = any<DaySpec>([
@@ -508,7 +523,7 @@ export const dateRangeRule = any<DateRange>([
   })),
   map(raw("today"), () => ({
     start: startOfDay(today()),
-    end: endOfDay(today()),
+    end: null,
   })),
   map(raw("yesterday"), () => ({
     start: startOfDay(yesterday()),
@@ -516,7 +531,7 @@ export const dateRangeRule = any<DateRange>([
   })),
   seq([raw("this"), raw("week")], () => ({
     start: startOfDay(lastDayOfWeek(0, 0)),
-    end: startOfDay(lastDayOfWeek(0, -1)),
+    end: null,
   })),
   seq([raw("last"), raw("week")], () => ({
     start: startOfDay(lastDayOfWeek(0, 1)),
@@ -524,10 +539,22 @@ export const dateRangeRule = any<DateRange>([
   })),
   seq([raw("this"), raw("month")], () => ({
     start: startOfDay(lastDayOfMonth(1, 0)),
-    end: startOfDay(lastDayOfMonth(1, -1)),
+    end: null,
   })),
   seq([raw("last"), raw("month")], () => ({
     start: startOfDay(lastDayOfMonth(1, 1)),
     end: startOfDay(lastDayOfMonth(1, 0)),
+  })),
+  seq([raw("this"), raw("year")], () => ({
+    start: startOfDay(yearsAgo(0)),
+    end: null,
+  })),
+  seq([raw("last"), raw("year")], () => ({
+    start: startOfDay(yearsAgo(1)),
+    end: startOfDay(yearsAgo(0)),
+  })),
+  seq([raw("all"), any([raw("time"), emptyRule])], () => ({
+    start: null,
+    end: null,
   })),
 ]);

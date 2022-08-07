@@ -200,10 +200,13 @@ const ReportPage: Component = () => {
   });
 
   const startDate = createMemo(() =>
-    specToDate(dateRange()?.start, now(), "closest")
+    dateRange()?.start
+      ? specToDate(dateRange()?.start, now(), "closest")
+      : entries[entries.length - 1].time
   );
+
   const endDate = createMemo(() =>
-    specToDate(dateRange()?.end, now(), "closest")
+    dateRange()?.end ? specToDate(dateRange()?.end, now(), "closest") : now()
   );
 
   const shift = (dir: 1 | -1) => {
