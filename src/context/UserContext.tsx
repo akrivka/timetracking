@@ -1,12 +1,8 @@
 import axios from "axios";
-import {
-  createContext, createSignal,
-  onMount, useContext
-} from "solid-js";
+import { createContext, createSignal, onMount, useContext } from "solid-js";
 import { createStore, unwrap } from "solid-js/store";
 import { stringToColor } from "../lib/colors";
 import { isIterable } from "../lib/util";
-import { Label } from "./EntriesContext";
 import { useWindow } from "./WindowContext";
 
 export type Credentials = { username: string; hashedPassword: string };
@@ -23,10 +19,10 @@ type Profile = {
 
 type User = {
   credentials?: Credentials;
-  profile: Profile;
+  profile?: Profile;
 };
 
-function makeUser(): User {
+function makeDefaultUser(): User {
   return {
     credentials: null,
     profile: { labelInfo: new Map<Label, LabelInfo>() },
@@ -85,18 +81,33 @@ export function mergeProfiles(profileA: Profile, profileB: Profile) {
 }
 
 function serializeUser(user: User): string {
-  return JSON.stringify({ ...user, profile: serializeProfile(user.profile) });
+  return JSON.stringify({
+    ...user,
+    profile: user.profile && serializeProfile(user.profile),
+  });
 }
 
 export function deserializeUser(user: string): User {
   const parsed = JSON.parse(user);
-  return { ...parsed, profile: deserializeProfile(parsed.profile) };
+  return {
+    ...parsed,
+    profile: parsed.profile && deserializeProfile(parsed.profile),
+  };
 }
 
 function getLocalUser(): User | undefined {
   const userString = localStorage.getItem("user");
-  const user = userString ? deserializeUser(userString) : makeUser();
+  const user = userString ? deserializeUser(userString) : {};
   if (!userString) saveLocalUser(user);
+  return user;
+}
+
+function getLocalEnhancedUser() {
+  let user = getLocalUser();
+  if (!user) user = makeDefaultUser();
+  if (!user.profile)
+    user = { ...user, profile: { labelInfo: new Map<Label, LabelInfo>() } };
+  saveLocalUser(user);
   return user;
 }
 
@@ -112,6 +123,10 @@ export function saveLocalCredentials(credentials: Credentials) {
   const user = getLocalUser();
   user.credentials = credentials;
   saveLocalUser(user);
+}
+
+export function getLocalCredentials() {
+  return getLocalUser()?.credentials;
 }
 
 function wrapInfo(
@@ -170,7 +185,8 @@ const UserContext = createContext<{
 }>({});
 
 export const UserProvider = (props) => {
-  let user = getLocalUser();
+  let user = getLocalEnhancedUser();
+
   const { hasNetwork } = useWindow();
 
   const [profile, setProfile] = createSignal(

@@ -7,7 +7,8 @@ import {
   chevronUp
 } from "solid-heroicons/solid";
 import {
-  Component, createMemo,
+  Component,
+  createMemo,
   createRenderEffect,
   createSignal,
   For,
@@ -19,11 +20,7 @@ import {
 import { useUIState } from "../App";
 import { openLabelEdit } from "../components/LabelEdit";
 import { MyTextInput } from "../components/MyTextInput";
-import {
-  Entry,
-  labelFrom,
-  useEntries
-} from "../context/EntriesContext";
+import { useEntries } from "../context/EntriesContext";
 import { useUser } from "../context/UserContext";
 import {
   daysAfter,
@@ -33,11 +30,17 @@ import {
   prevWeek,
   thisMonday
 } from "../lib/date";
+import { Entry, labelFrom } from "../lib/entries";
 import { renderDay } from "../lib/format";
 import { coarseLabel } from "../lib/labels";
 import {
   dateToDayTimeSpec,
-  DayTimeSpec, dayTimeSpecToMinutes, dayTimeSpecToString, isBeforeDayTime, minutesAfterDayTime, parseString,
+  DayTimeSpec,
+  dayTimeSpecToMinutes,
+  dayTimeSpecToString,
+  isBeforeDayTime,
+  minutesAfterDayTime,
+  parseString,
   timeRule
 } from "../lib/parse";
 import { it, listPairs } from "../lib/util";

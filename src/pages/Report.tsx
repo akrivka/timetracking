@@ -12,7 +12,6 @@ import { Icon } from "solid-heroicons";
 import { x } from "solid-heroicons/solid";
 import {
   Component,
-  createContext,
   createEffect,
   createMemo,
   createRenderEffect,
@@ -20,135 +19,30 @@ import {
   For,
   Match,
   Show,
-  Switch,
-  useContext
+  Switch
 } from "solid-js";
 import { useUIState } from "../App";
 import { InputBox } from "../components/InputBox";
 import { openLabelEdit } from "../components/LabelEdit";
 import { MyButton } from "../components/MyButton";
 import { MyTextInput } from "../components/MyTextInput";
+import Report, { ShowType } from "../components/ReportComp";
 import { SpinnerIcon } from "../components/SpinnerIcon";
+import { useEntries } from "../context/EntriesContext";
+import { useUser } from "../context/UserContext";
+import { msBetween, specToDate } from "../lib/date";
 import {
   entriesIterator,
   entriesIteratorWithEnds,
   getDistinctLabels,
-  Label,
-  labelFrom,
-  useEntries
-} from "../context/EntriesContext";
-import { useUser, WrappedInfo } from "../context/UserContext";
-import { MS_IN_DAYS, MS_IN_WEEKS } from "../lib/constants";
-import { msBetween, specToDate } from "../lib/date";
-import {
-  renderDuration,
-  renderPercentage,
-  renderTime,
-  renderTimeFull
-} from "../lib/format";
-import {
-  coarseLabel,
-  getLabelImmediateChildren,
-  leafLabel
-} from "../lib/labels";
+  labelFrom
+} from "../lib/entries";
+import { renderTime, renderTimeFull } from "../lib/format";
+import { coarseLabel } from "../lib/labels";
 import { DateRange, dateRangeRule, emptyRule, parseString } from "../lib/parse";
 import { it, listPairs, now, removeIndex, revit, wait } from "../lib/util";
 
-type ShowType = "total" | "weekly" | "daily" | "percent";
 const showTypes = ["total", "weekly", "daily", "percent"];
-
-type ReportProps = {
-  labelTimeMap: Map<Label, number>;
-  totalDuration: number;
-  showType?: ShowType;
-  showColors?: boolean;
-  getLabelInfo?: (label: Label) => WrappedInfo;
-  oncontextmenu?: (e: MouseEvent, label: Label) => void;
-};
-
-function renderReportDuration(time: number, total: number, display: ShowType) {
-  switch (display) {
-    case "total":
-      return renderDuration(time);
-    case "daily":
-      return `${renderDuration((time * MS_IN_DAYS) / total)}/d`;
-    case "weekly":
-      return `${renderDuration((time * MS_IN_WEEKS) / total)}/w`;
-    case "percent":
-      return renderPercentage(time / total);
-  }
-}
-
-const Block: Component<{
-  label: Label;
-}> = (props) => {
-  const report = useReport();
-  const { getLabelInfo, oncontextmenu } = report;
-
-  const [info, setInfo] = getLabelInfo(props.label);
-
-  const childrenLabels = createMemo(() =>
-    getLabelImmediateChildren(props.label, [...report.labelTimeMap.keys()])
-  );
-
-  const isLeaf = createMemo(() => childrenLabels().length === 0);
-
-  return (
-    <>
-      <div
-        class={
-          "flex items-center space-x-1 h-6 " +
-          (!isLeaf() ? "cursor-pointer" : "")
-        }
-        onclick={() => setInfo({ expanded: !info.expanded })}
-        oncontextmenu={(e) => oncontextmenu(e, props.label)}
-      >
-        <Show when={report.showColors}>
-          <div class="w-1 h-5" style={{ "background-color": info.color }} />
-        </Show>
-        <span>
-          [
-          {renderReportDuration(
-            report.labelTimeMap.get(props.label),
-            report.totalDuration,
-            report.showType || "total"
-          )}
-          ]
-        </span>
-        <span>
-          {leafLabel(props.label)} {!isLeaf() ? "[+]" : ""}
-        </span>
-      </div>
-      <Show when={info?.expanded}>
-        <div class="pl-8">
-          <For each={childrenLabels()}>
-            {(label) => <Block label={label} />}
-          </For>
-        </div>
-      </Show>
-    </>
-  );
-};
-
-const ReportContext = createContext<ReportProps>();
-const useReport = () => useContext(ReportContext);
-
-export const Report: Component<ReportProps> = (props) => {
-  const topLabels = createMemo(() =>
-    getLabelImmediateChildren(null, [...props.labelTimeMap.keys()])
-  );
-
-  return (
-    <div class="select-none overflow-auto">
-      [{renderDuration(props.totalDuration)}] total
-      <ReportContext.Provider value={props}>
-        <div class="pl-8">
-          <For each={topLabels()}>{(label) => <Block label={label} />}</For>
-        </div>
-      </ReportContext.Provider>
-    </div>
-  );
-};
 
 export type ReportExport = {
   labelTimeMap: Map<Label, number>;
@@ -183,7 +77,6 @@ function baseURL(): string {
 
 const Export: Component<ReportExport> = (props) => {
   const { credentials } = useUser();
-  console.log(credentials);
 
   const [isOpen, setIsOpen] = createSignal(false);
   const [ok, setOk] = createSignal();

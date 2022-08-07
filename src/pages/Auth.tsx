@@ -1,11 +1,24 @@
 import axios from "axios";
-import { Link, Outlet, useNavigate } from "solid-app-router";
+import { Link, Outlet, useLocation, useNavigate } from "solid-app-router";
 import {
-  Accessor, Component, createEffect, createSignal,
+  Accessor,
+  Component,
+  createEffect,
+  createSignal,
   Show
 } from "solid-js";
-import { saveLocalCredentials } from "../context/UserContext";
-import { hashPassword } from "../lib/util";
+
+function hash(s: string): number {
+  var hash: number = 0;
+  for (var i = 0; i < s.length; i++) {
+    hash = (hash << 5) - hash + s.charCodeAt(i);
+  }
+  return hash;
+}
+
+function hashPassword(password: string): string {
+  return hash(password).toString(16);
+}
 
 type CredentialsFormProps = {
   onSubmit: (username: string, password: string) => void;
@@ -68,8 +81,10 @@ export const Signup: Component = () => {
       params: credentials,
     });
 
-    saveLocalCredentials(credentials);
-    navigate("/track");
+    if (res.data === "ok") {
+      localStorage.setItem("user", JSON.stringify({ credentials }));
+      navigate("/track");
+    }
   };
   return (
     <>
@@ -89,6 +104,7 @@ export const Signup: Component = () => {
 
 export const Login: Component = () => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [invalid, setInvalid] = createSignal(false);
 
@@ -105,9 +121,9 @@ export const Login: Component = () => {
     });
 
     if (res.data == "ok") {
-      saveLocalCredentials(credentials);
+      localStorage.setItem("user", JSON.stringify({ credentials }));
 
-      navigate("/track");
+      navigate((location.state as any)?.redirect || "/track");
     } else if (res.data == "username+password not found") {
       setInvalid(true);
     }

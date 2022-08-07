@@ -29,10 +29,6 @@ export function hash(s: string): number {
   return hash;
 }
 
-export function hashPassword(password: string): string {
-  return hash(password).toString(16);
-}
-
 export function* it<T>(xs: T[]): Generator<T> {
   for (let i = 0; i < xs.length; i++) {
     yield xs[i];

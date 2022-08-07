@@ -1,6 +1,4 @@
-import {
-  createVirtualizer
-} from "@tanstack/solid-virtual";
+import { createVirtualizer } from "@tanstack/solid-virtual";
 import { useLocation } from "solid-app-router";
 import { Icon } from "solid-heroicons";
 import { chevronDown, chevronUp, x } from "solid-heroicons/solid";
@@ -8,18 +6,17 @@ import {
   Component,
   createEffect,
   createMemo,
-  createSignal, onMount,
+  createSignal,
+  onMount,
   Show
 } from "solid-js";
 import { useUIState } from "../App";
 import { InputBox } from "../components/InputBox";
-import {
-  Entry, labelFrom,
-  useEntries
-} from "../context/EntriesContext";
+import { useEntries } from "../context/EntriesContext";
 import { useUser } from "../context/UserContext";
 import { useWindow } from "../context/WindowContext";
 import { specToDate } from "../lib/date";
+import { Entry, labelFrom } from "../lib/entries";
 import { renderDuration, renderTime } from "../lib/format";
 import { coarseLabel, leafLabel } from "../lib/labels";
 import { actionRule, dateRule, emptyRule, parseString } from "../lib/parse";

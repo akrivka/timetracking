@@ -1,10 +1,6 @@
 import axios from "axios";
-import {
-  deserializeEntries,
-  Entry,
-  serializeEntries,
-} from "../context/EntriesContext";
 import { Credentials } from "../context/UserContext";
+import { deserializeEntries, Entry, serializeEntries } from "./entries";
 import { delay, wait } from "./util";
 
 export async function putEntryRemote(entry: Entry, credentials: Credentials) {

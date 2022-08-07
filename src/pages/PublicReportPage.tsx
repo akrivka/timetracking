@@ -1,10 +1,17 @@
 import { useRouteData } from "solid-app-router";
 import { Component, Match, Resource, Switch } from "solid-js";
 import { createStore } from "solid-js/store";
+import Report from "../components/ReportComp";
 import { WrappedInfo } from "../context/UserContext";
 import { msBetween } from "../lib/date";
 import { renderTimeFull } from "../lib/format";
-import { Report, ReportExport } from "./Report";
+
+// duplicating here not ideal!
+type ReportExport = {
+  labelTimeMap: Map<Label, number>;
+  startDate: Date;
+  endDate: Date;
+};
 
 const PublicReport: Component<ReportExport> = (props) => {
   const labelInfoMap = new Map<string, WrappedInfo>();

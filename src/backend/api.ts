@@ -2,11 +2,8 @@ import bodyParser from "body-parser";
 import "dotenv/config";
 import express from "express";
 import postgres from "postgres";
-import {
-  deserializeEntries,
-  serializeEntries
-} from "../context/EntriesContext";
 import { Credentials } from "../context/UserContext";
+import { deserializeEntries, serializeEntries } from "../lib/entries";
 import { delay, wait } from "../lib/util";
 
 const db_url = process.env.DATABASE_URL;
