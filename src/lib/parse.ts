@@ -485,7 +485,8 @@ export type Action =
   | { kind: "until"; time: DateSpec }
   | { kind: "after"; time: DateSpec }
   | { kind: "continueFirst"; minutes: number }
-  | { kind: "continue" };
+  | { kind: "continue" }
+  | { kind: "reverseContinue" };
 
 export const rawAction: Action = { kind: "raw" };
 
@@ -495,12 +496,18 @@ function alias<T extends string>(main: T, synonyms: string[]): Rule<T> {
 }
 
 const continueRule: Rule<"continue"> = alias("continue", ["c"]);
+const reverseContinueRule: Rule<"reverseContinue"> = alias("reverseContinue", [
+  "reverse continue",
+  "rev continue",
+  "rc",
+]);
 
 const after: Rule<"after"> = map(anyToken(["after", "since"]), () => "after");
 
 export const actionRule: Rule<Action> = any<Action>([
   map(raw("now"), () => ({ kind: "now" })),
   map(continueRule, () => ({ kind: "continue" })),
+  map(reverseContinueRule, () => ({ kind: "reverseContinue" })),
   seq([duration, continueRule], (xs) => ({
     kind: "continueFirst",
     minutes: xs[0],

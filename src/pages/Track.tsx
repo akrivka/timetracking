@@ -155,7 +155,25 @@ const Track: Component = () => {
           const newStart = entries[i + 1];
           dispatch([
             "deleteRelabel",
-            { entry: middle, start: newStart, end, label: middle.before },
+            {
+              entry: middle,
+              start: newStart,
+              end,
+              label: labelFrom(newStart, middle),
+            },
+          ]);
+          break;
+        case "reverseContinue":
+          const middle2 = start;
+          const newStart2 = entries[i + 1];
+          dispatch([
+            "deleteRelabel",
+            {
+              entry: middle2,
+              start: newStart2,
+              end,
+              label: labelFrom(middle2, end),
+            },
           ]);
           break;
         case "first":
@@ -342,9 +360,7 @@ const Track: Component = () => {
       } else if (e.key == "Enter") {
         // document.activeElement is not of type input
         if (document.activeElement.tagName != "INPUT" && focusedIndex() >= 0) {
-          const i = focusedIndex();
-          setFocusedIndex(-1);
-          setFocusedIndex(i);
+          refocusIndex(focusedIndex());
         }
       }
       // if cmd/ctrl+f pressed
