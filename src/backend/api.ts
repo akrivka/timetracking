@@ -181,12 +181,14 @@ const app = express()
     }
   })
   .post("/api/export", async (req: any, res: any) => {
+    console.log(req.body.id);
+
     try {
       const results = await sql`
-            INSERT INTO reports (id, serialized)
+            INSERT INTO reports (id, username, serialized)
             VALUES (${decodeURIComponent(req.body.id)}, ${decodeURIComponent(
-        req.body.serialized
-      )})
+        req.body.username
+      )}, ${decodeURIComponent(req.body.serialized)})
           `;
       res.send("ok");
     } catch (err) {

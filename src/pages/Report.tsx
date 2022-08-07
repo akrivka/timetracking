@@ -18,7 +18,9 @@ import {
   createRenderEffect,
   createSignal,
   For,
+  Match,
   Show,
+  Switch,
   useContext
 } from "solid-js";
 import { useUIState } from "../App";
@@ -180,6 +182,9 @@ function baseURL(): string {
 }
 
 const Export: Component<ReportExport> = (props) => {
+  const { credentials } = useUser();
+  console.log(credentials);
+
   const [isOpen, setIsOpen] = createSignal(false);
   const [ok, setOk] = createSignal();
   const [id, setId] = createSignal();
@@ -192,12 +197,17 @@ const Export: Component<ReportExport> = (props) => {
         "/api/export",
         "id=" +
           encodeURIComponent(id) +
+          "&username=" +
+          encodeURIComponent(credentials.username) +
           "&serialized=" +
           encodeURIComponent(serializeReportExport(props))
       );
-      console.log(response.data);
-      setOk("ok");
-      setId(id);
+      if (response.data === "ok") {
+        setOk("ok");
+        setId(id);
+      } else {
+        setOk("error");
+      }
     }
   });
 
@@ -217,36 +227,39 @@ const Export: Component<ReportExport> = (props) => {
           <div class="min-h-screen flex items-center justify-center">
             <DialogOverlay class="fixed inset-0 bg-gray-800 opacity-25" />
             <DialogPanel class="inline-block w-96 h-32 bg-white px-4 py-3 rounded-lg border shadow z-20">
-              <Show
-                when={ok() === "ok"}
-                fallback={
+              <Switch>
+                <Match when={!ok()}>
                   <div class="flex items-center justify-center">
                     <SpinnerIcon />
                   </div>
-                }
-              >
-                <div class="flex flex-col h-full justify-between space-y-1">
-                  <div class="flex h-16 items-center justify-center">
-                    <input
-                      class="w-72 border px-2 py-0.5 rounded focus:outline-none text-center"
-                      readonly
-                      ref={async (e) => {
-                        await wait(100);
-                        e.select();
-                      }}
-                      value={link()}
-                    />
+                </Match>
+                <Match when={ok() === "error"}>error</Match>
+                <Match when={ok() === "ok"}>
+                  <div class="flex flex-col h-full justify-between space-y-1">
+                    <div class="flex h-16 items-center justify-center">
+                      <input
+                        class="w-72 border px-2 py-0.5 rounded focus:outline-none text-center"
+                        readonly
+                        ref={async (e) => {
+                          await wait(100);
+                          e.select();
+                        }}
+                        value={link()}
+                      />
+                    </div>
+                    <div class="flex justify-end space-x-1">
+                      <MyButton
+                        onclick={() => navigator.clipboard.writeText(link())}
+                      >
+                        Copy
+                      </MyButton>
+                      <MyButton onclick={() => setIsOpen(false)}>
+                        Close
+                      </MyButton>
+                    </div>
                   </div>
-                  <div class="flex justify-end space-x-1">
-                    <MyButton
-                      onclick={() => navigator.clipboard.writeText(link())}
-                    >
-                      Copy
-                    </MyButton>
-                    <MyButton onclick={() => setIsOpen(false)}>Close</MyButton>
-                  </div>
-                </div>
-              </Show>
+                </Match>
+              </Switch>
             </DialogPanel>
           </div>
         </Dialog>

@@ -17,5 +17,6 @@ CREATE TABLE entries (
 
 CREATE TABLE reports (
     id TEXT PRIMARY KEY,
+    username TEXT,
     serialized TEXT NOT NULL
 );
