@@ -41,7 +41,7 @@ const PublicReportPage: Component = () => {
       <Match when={report.loading}>Loading...</Match>
       <Match when={!report() || report() === "not found"}>Not found.</Match>
       <Match when={true}>
-        <PublicReport {...report()} />
+        <PublicReport {...(report() as ReportExport)} />
       </Match>
     </Switch>
   );

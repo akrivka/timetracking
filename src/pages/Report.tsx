@@ -50,7 +50,7 @@ import {
   leafLabel
 } from "../lib/labels";
 import { DateRange, dateRangeRule, emptyRule, parseString } from "../lib/parse";
-import { it, listPairs, now, removeIndex, revit } from "../lib/util";
+import { it, listPairs, now, removeIndex, revit, wait } from "../lib/util";
 
 type ShowType = "total" | "weekly" | "daily" | "percent";
 const showTypes = ["total", "weekly", "daily", "percent"];
@@ -174,9 +174,16 @@ function randomLinkID(): string {
   return Math.random().toString(36).substring(2, 8);
 }
 
+function baseURL(): string {
+  const url = window.location;
+  return url.protocol + "//" + url.host;
+}
+
 const Export: Component<ReportExport> = (props) => {
   const [isOpen, setIsOpen] = createSignal(false);
   const [ok, setOk] = createSignal();
+  const [id, setId] = createSignal();
+
   createEffect(async () => {
     if (isOpen()) {
       const id = randomLinkID();
@@ -190,8 +197,12 @@ const Export: Component<ReportExport> = (props) => {
       );
       console.log(response.data);
       setOk("ok");
+      setId(id);
     }
   });
+
+  const link = createMemo(() => `${baseURL()}/r/${id()}`);
+
   return (
     <>
       <div class="flex space-x-2">
@@ -205,7 +216,7 @@ const Export: Component<ReportExport> = (props) => {
         >
           <div class="min-h-screen flex items-center justify-center">
             <DialogOverlay class="fixed inset-0 bg-gray-800 opacity-25" />
-            <DialogPanel class="inline-block w-96 bg-white px-4 py-3 rounded-lg border shadow z-20">
+            <DialogPanel class="inline-block w-96 h-32 bg-white px-4 py-3 rounded-lg border shadow z-20">
               <Show
                 when={ok() === "ok"}
                 fallback={
@@ -214,7 +225,27 @@ const Export: Component<ReportExport> = (props) => {
                   </div>
                 }
               >
-                <div class="space-y-1">copy link</div>
+                <div class="flex flex-col h-full justify-between space-y-1">
+                  <div class="flex h-16 items-center justify-center">
+                    <input
+                      class="w-72 border px-2 py-0.5 rounded focus:outline-none text-center"
+                      readonly
+                      ref={async (e) => {
+                        await wait(100);
+                        e.select();
+                      }}
+                      value={link()}
+                    />
+                  </div>
+                  <div class="flex justify-end space-x-1">
+                    <MyButton
+                      onclick={() => navigator.clipboard.writeText(link())}
+                    >
+                      Copy
+                    </MyButton>
+                    <MyButton onclick={() => setIsOpen(false)}>Close</MyButton>
+                  </div>
+                </div>
               </Show>
             </DialogPanel>
           </div>
