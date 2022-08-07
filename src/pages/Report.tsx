@@ -18,6 +18,7 @@ import {
   createSignal,
   For,
   Match,
+  onMount,
   Show,
   Switch
 } from "solid-js";
@@ -252,6 +253,16 @@ const ReportPage: Component = () => {
     }
 
     return new Map([...m].sort((a, b) => b[1] - a[1]));
+  });
+
+  onMount(() => {
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowLeft") {
+        shift(-1);
+      } else if (e.key === "ArrowRight") {
+        shift(1);
+      }
+    });
   });
 
   return (

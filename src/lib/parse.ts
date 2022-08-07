@@ -523,7 +523,7 @@ export const dateRangeRule = any<DateRange>([
   })),
   map(raw("today"), () => ({
     start: startOfDay(today()),
-    end: null,
+    end: endOfDay(today()),
   })),
   map(raw("yesterday"), () => ({
     start: startOfDay(yesterday()),
@@ -531,7 +531,7 @@ export const dateRangeRule = any<DateRange>([
   })),
   seq([raw("this"), raw("week")], () => ({
     start: startOfDay(lastDayOfWeek(0, 0)),
-    end: null,
+    end: startOfDay(lastDayOfWeek(0, -1)),
   })),
   seq([raw("last"), raw("week")], () => ({
     start: startOfDay(lastDayOfWeek(0, 1)),
@@ -539,7 +539,7 @@ export const dateRangeRule = any<DateRange>([
   })),
   seq([raw("this"), raw("month")], () => ({
     start: startOfDay(lastDayOfMonth(1, 0)),
-    end: null,
+    end: startOfDay(lastDayOfMonth(1, -1)),
   })),
   seq([raw("last"), raw("month")], () => ({
     start: startOfDay(lastDayOfMonth(1, 1)),
@@ -547,7 +547,7 @@ export const dateRangeRule = any<DateRange>([
   })),
   seq([raw("this"), raw("year")], () => ({
     start: startOfDay(yearsAgo(0)),
-    end: null,
+    end: startOfDay(yearsAgo(-1)),
   })),
   seq([raw("last"), raw("year")], () => ({
     start: startOfDay(yearsAgo(1)),
