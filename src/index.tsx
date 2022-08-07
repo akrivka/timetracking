@@ -1,4 +1,5 @@
 import { Route, Router, Routes } from "solid-app-router";
+import { lazy } from "solid-js";
 import { render } from "solid-js/web";
 
 import { App, Home, Page } from "./App";
@@ -9,6 +10,9 @@ import Calendar from "./pages/Calendar";
 import Mobile from "./pages/Mobile";
 import ReportPage from "./pages/Report";
 import Track from "./pages/Track";
+
+import PublicReportData from "./pages/PublicReportData";
+const PublicReportPage = lazy(() => import("./pages/PublicReportPage"));
 
 render(
   () => (
@@ -27,6 +31,11 @@ render(
               <Route path="/calendar" component={Calendar} />
             </Route>
           </Route>
+          <Route
+            path="/r/:id"
+            component={PublicReportPage}
+            data={PublicReportData}
+          ></Route>
           <Route path="/mobile" component={Mobile} />
         </Routes>
       </Router>

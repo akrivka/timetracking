@@ -12,9 +12,9 @@ import { useWindow } from "./WindowContext";
 export type Credentials = { username: string; hashedPassword: string };
 
 type LabelInfo = {
-  color: string;
-  expanded: boolean;
-  lastModified: Date;
+  color?: string;
+  expanded?: boolean;
+  lastModified?: Date;
 };
 
 type Profile = {

@@ -4,13 +4,9 @@ import express from "express";
 import postgres from "postgres";
 import {
   deserializeEntries,
-  serializeEntries,
+  serializeEntries
 } from "../context/EntriesContext";
-import {
-  Credentials,
-  deserializeProfile,
-  serializeProfile,
-} from "../context/UserContext";
+import { Credentials } from "../context/UserContext";
 import { delay, wait } from "../lib/util";
 
 const db_url = process.env.DATABASE_URL;
@@ -182,6 +178,35 @@ const app = express()
       console.log(e);
 
       res.send(e);
+    }
+  })
+  .post("/api/export", async (req: any, res: any) => {
+    try {
+      const results = await sql`
+            INSERT INTO reports (id, serialized)
+            VALUES (${decodeURIComponent(req.body.id)}, ${decodeURIComponent(
+        req.body.serialized
+      )})
+          `;
+      res.send("ok");
+    } catch (err) {
+      console.log(err);
+
+      res.send(err);
+    }
+  })
+  .get("/api/report", async (req: any, res: any) => {
+    try {
+      const results = await sql`
+            SELECT serialized FROM reports WHERE id = ${decodeURIComponent(
+              req.query.id
+            )}
+          `;
+      res.send(JSON.stringify(results[0]?.serialized) || "not found");
+    } catch (err) {
+      console.log(err);
+
+      res.send(err);
     }
   });
 

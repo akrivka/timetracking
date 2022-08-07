@@ -1,10 +1,19 @@
 /* @refresh reload */
-import { RadioGroup, RadioGroupOption } from "solid-headless";
+import axios from "axios";
+import {
+  Dialog,
+  DialogOverlay,
+  DialogPanel,
+  RadioGroup,
+  RadioGroupOption,
+  Transition
+} from "solid-headless";
 import { Icon } from "solid-heroicons";
 import { x } from "solid-heroicons/solid";
 import {
   Component,
   createContext,
+  createEffect,
   createMemo,
   createRenderEffect,
   createSignal,
@@ -13,11 +22,11 @@ import {
   useContext
 } from "solid-js";
 import { useUIState } from "../App";
-import { openBulkRenameDialog } from "../components/BulkRename";
 import { InputBox } from "../components/InputBox";
 import { openLabelEdit } from "../components/LabelEdit";
 import { MyButton } from "../components/MyButton";
 import { MyTextInput } from "../components/MyTextInput";
+import { SpinnerIcon } from "../components/SpinnerIcon";
 import {
   entriesIterator,
   entriesIteratorWithEnds,
@@ -100,7 +109,7 @@ const Block: Component<{
           {renderReportDuration(
             report.labelTimeMap.get(props.label),
             report.totalDuration,
-            report.showType
+            report.showType || "total"
           )}
           ]
         </span>
@@ -128,13 +137,89 @@ export const Report: Component<ReportProps> = (props) => {
   );
 
   return (
-    <>
+    <div class="select-none overflow-auto">
       [{renderDuration(props.totalDuration)}] total
       <ReportContext.Provider value={props}>
         <div class="pl-8">
           <For each={topLabels()}>{(label) => <Block label={label} />}</For>
         </div>
       </ReportContext.Provider>
+    </div>
+  );
+};
+
+export type ReportExport = {
+  labelTimeMap: Map<Label, number>;
+  startDate: Date;
+  endDate: Date;
+};
+
+export function serializeReportExport(report: ReportExport): string {
+  return JSON.stringify({
+    ...report,
+    labelTimeMap: [...report.labelTimeMap.entries()],
+  });
+}
+
+export function deserializeReportExport(json: string): ReportExport {
+  const { labelTimeMap, startDate, endDate } = JSON.parse(json);
+  return {
+    labelTimeMap: new Map(labelTimeMap),
+    startDate: new Date(startDate),
+    endDate: new Date(endDate),
+  };
+}
+
+function randomLinkID(): string {
+  return Math.random().toString(36).substring(2, 8);
+}
+
+const Export: Component<ReportExport> = (props) => {
+  const [isOpen, setIsOpen] = createSignal(false);
+  const [ok, setOk] = createSignal();
+  createEffect(async () => {
+    if (isOpen()) {
+      const id = randomLinkID();
+      // send to server using axios
+      const response = await axios.post(
+        "/api/export",
+        "id=" +
+          encodeURIComponent(id) +
+          "&serialized=" +
+          encodeURIComponent(serializeReportExport(props))
+      );
+      console.log(response.data);
+      setOk("ok");
+    }
+  });
+  return (
+    <>
+      <div class="flex space-x-2">
+        <MyButton onclick={() => setIsOpen(true)}>Export</MyButton>
+      </div>
+      <Transition appear show={isOpen()}>
+        <Dialog
+          isOpen={isOpen()}
+          onClose={() => setIsOpen(false)}
+          class="fixed inset-0 z-10 overflow-y-auto"
+        >
+          <div class="min-h-screen flex items-center justify-center">
+            <DialogOverlay class="fixed inset-0 bg-gray-800 opacity-25" />
+            <DialogPanel class="inline-block w-96 bg-white px-4 py-3 rounded-lg border shadow z-20">
+              <Show
+                when={ok() === "ok"}
+                fallback={
+                  <div class="flex items-center justify-center">
+                    <SpinnerIcon />
+                  </div>
+                }
+              >
+                <div class="space-y-1">copy link</div>
+              </Show>
+            </DialogPanel>
+          </div>
+        </Dialog>
+      </Transition>
     </>
   );
 };
@@ -351,36 +436,35 @@ const ReportPage: Component = () => {
             onchange={(e) => setShowColors(e.currentTarget.checked)}
           />
         </div>
-        <div class="flex space-x-2">
-          <MyButton onclick={() => openBulkRenameDialog({ label: "label" })}>
-            Export
-          </MyButton>
-        </div>
-      </div>
-      <div class="h-2" />
-      <div class="select-none overflow-auto">
-        <Report
+        <Export
           labelTimeMap={labelTimeMap()}
-          totalDuration={totalDuration()}
-          showType={showType()}
-          showColors={showColors()}
-          getLabelInfo={getLabelInfo}
-          oncontextmenu={(e, label) => {
-            e.preventDefault();
-
-            for (const [end, start] of listPairs(it(entriesInRange()))) {
-              if (labelFrom(start, end).startsWith(label)) {
-                openLabelEdit({
-                  coord: [e.clientX, e.clientY],
-                  label: label,
-                  entry: start,
-                });
-                break;
-              }
-            }
-          }}
+          startDate={startDate()}
+          endDate={endDate()}
         />
       </div>
+      <div class="h-2" />
+
+      <Report
+        labelTimeMap={labelTimeMap()}
+        totalDuration={totalDuration()}
+        showType={showType()}
+        showColors={showColors()}
+        getLabelInfo={getLabelInfo}
+        oncontextmenu={(e, label) => {
+          e.preventDefault();
+
+          for (const [end, start] of listPairs(it(entriesInRange()))) {
+            if (labelFrom(start, end).startsWith(label)) {
+              openLabelEdit({
+                coord: [e.clientX, e.clientY],
+                label: label,
+                entry: start,
+              });
+              break;
+            }
+          }
+        }}
+      />
     </div>
   );
 };
