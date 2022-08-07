@@ -291,6 +291,11 @@ const Track: Component = () => {
     }, [] as number[]);
   };
 
+  const refocusIndex = (i) => {
+    setFocusedIndex(-1);
+    setFocusedIndex(i);
+  };
+
   const scrollToIndex = (i, options?) => {
     let scrollingTimeout;
     scrollRef.addEventListener("scroll", function handler(e) {
@@ -298,10 +303,11 @@ const Track: Component = () => {
       scrollingTimeout = setTimeout(() => {
         //console.log("finised scrolling");
 
-        setFocusedIndex(i);
+        refocusIndex(i);
         document.removeEventListener("scroll", handler);
       }, 40);
     });
+    refocusIndex(i);
 
     virtualizer.scrollToIndex(i - 1, { align: "start", ...options });
   };
