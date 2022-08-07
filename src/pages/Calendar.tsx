@@ -27,8 +27,7 @@ import {
   msBetween,
   nextMidnight,
   nextWeek,
-  prevWeek,
-  thisMonday
+  prevWeek
 } from "../lib/date";
 import { Entry, labelFrom } from "../lib/entries";
 import { renderDay } from "../lib/format";
@@ -44,12 +43,6 @@ import {
   timeRule
 } from "../lib/parse";
 import { it, listPairs } from "../lib/util";
-
-export const defaultCalendarState = {
-  week: thisMonday(),
-  startTimeString: "8:00",
-  endTimeString: "20:00",
-};
 
 const Calendar: Component = () => {
   const { entries } = useEntries();

@@ -162,13 +162,6 @@ const Export: Component<ReportExport> = (props) => {
   );
 };
 
-export const defaultReportState = {
-  rangeString: "today",
-  showType: "total",
-  showLabels: [],
-  showColors: false,
-};
-
 const ReportPage: Component = () => {
   const { entries } = useEntries();
   const { getLabelInfo } = useUser();

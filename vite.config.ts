@@ -1,9 +1,20 @@
 import { defineConfig } from "vite";
-import solidPlugin from "vite-plugin-solid";
 import mix from "vite-plugin-mix";
+import { VitePWA } from "vite-plugin-pwa";
+import solidPlugin from "vite-plugin-solid";
 
 export default defineConfig({
-  plugins: [solidPlugin(), mix({ handler: "./src/backend/api.ts" })],
+  plugins: [
+    solidPlugin(),
+    mix({ handler: "./src/backend/api.ts" }),
+    VitePWA({
+      registerType: "autoUpdate",
+      // mode: "development",
+      // devOptions: {
+      //   enabled: true,
+      // },
+    }),
+  ],
   build: {
     target: "esnext",
     polyfillDynamicImport: false,

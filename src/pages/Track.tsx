@@ -81,14 +81,6 @@ function easeInOutQuint(t) {
 
 const [scrollStartTime, setScrollStartTime] = createSignal();
 
-export const defaultTrackState = {
-  scrollTop: 0,
-  focusedIndex: null,
-  showSearch: false,
-  searchText: "",
-  currentJump: 0,
-};
-
 const Track: Component = () => {
   const { time } = useWindow();
   const { entries, labels, dispatch } = useEntries();
