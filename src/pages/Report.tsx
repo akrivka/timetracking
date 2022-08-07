@@ -1,10 +1,8 @@
 /* @refresh reload */
-import * as R from "remeda";
 import { RadioGroup, RadioGroupOption } from "solid-headless";
 import { Icon } from "solid-heroicons";
 import { x } from "solid-heroicons/solid";
 import {
-  Accessor,
   Component,
   createContext,
   createMemo,
@@ -23,150 +21,97 @@ import { MyTextInput } from "../components/MyTextInput";
 import {
   entriesIterator,
   entriesIteratorWithEnds,
-  Entry,
   getDistinctLabels,
   Label,
   labelFrom,
   useEntries
 } from "../context/EntriesContext";
-import { useUser } from "../context/UserContext";
+import { useUser, WrappedInfo } from "../context/UserContext";
+import { MS_IN_DAYS, MS_IN_WEEKS } from "../lib/constants";
 import { msBetween, specToDate } from "../lib/date";
-import { renderDuration, renderTime, renderTimeFull } from "../lib/format";
-import { coarseLabel, leafLabel, prefixAndRemainder } from "../lib/labels";
+import {
+  renderDuration,
+  renderPercentage,
+  renderTime,
+  renderTimeFull
+} from "../lib/format";
+import {
+  coarseLabel,
+  getLabelImmediateChildren,
+  leafLabel
+} from "../lib/labels";
 import { DateRange, dateRangeRule, emptyRule, parseString } from "../lib/parse";
 import { it, listPairs, now, removeIndex, revit } from "../lib/util";
 
-const second_ms = 1000;
-const minute_ms = 60 * second_ms;
-const hour_ms = 60 * minute_ms;
-const day_ms = 24 * hour_ms;
-const week_ms = 7 * day_ms;
+type ShowType = "total" | "weekly" | "daily" | "percent";
+const showTypes = ["total", "weekly", "daily", "percent"];
 
-function renderPercentage(x: number): string {
-  return `${Math.round(x * 100)}%`;
-}
+type ReportProps = {
+  labelTimeMap: Map<Label, number>;
+  totalDuration: number;
+  showType?: ShowType;
+  showColors?: boolean;
+  getLabelInfo?: (label: Label) => WrappedInfo;
+  oncontextmenu?: (e: MouseEvent, label: Label) => void;
+};
 
 function renderReportDuration(time: number, total: number, display: ShowType) {
   switch (display) {
     case "total":
       return renderDuration(time);
     case "daily":
-      return `${renderDuration((time * day_ms) / total)}/d`;
+      return `${renderDuration((time * MS_IN_DAYS) / total)}/d`;
     case "weekly":
-      return `${renderDuration((time * week_ms) / total)}/w`;
+      return `${renderDuration((time * MS_IN_WEEKS) / total)}/w`;
     case "percent":
       return renderPercentage(time / total);
   }
 }
 
 const Block: Component<{
-  subMap: Map<string, number>;
-  label?: Label;
-  duration: number;
+  label: Label;
 }> = (props) => {
-  const { getLabelInfo } = useUser();
+  const report = useReport();
+  const { getLabelInfo, oncontextmenu } = report;
 
-  const { total, entriesInRange, triggerRerender } = useReport();
+  const [info, setInfo] = getLabelInfo(props.label);
 
-  const [showType, _] = useUIState<ShowType>("report", "showType");
-  const [showLabels, __] = useUIState<string[]>("report", "showLabels");
-  const [showColors, ___] = useUIState<boolean>("report", "showColors");
+  const childrenLabels = createMemo(() =>
+    getLabelImmediateChildren(props.label, [...report.labelTimeMap.keys()])
+  );
 
-  const [info, setInfo] = props.label
-    ? getLabelInfo(props.label)
-    : [null, null];
-
-  const filteredKeys = () => {
-    const base = [...props.subMap.keys()];
-    if (showLabels().length === 0) return base;
-    return base.filter((topLabel) =>
-      R.anyPass(
-        topLabel,
-        showLabels().map((showLabel) => {
-          return (topLabel) => {
-            const fullLabel = props.label
-              ? props.label + " / " + topLabel
-              : topLabel;
-            return (
-              fullLabel.startsWith(showLabel) || showLabel.startsWith(fullLabel)
-            );
-          };
-        })
-      )
-    );
-  };
-
-  const topLabels = () => {
-    return filteredKeys()
-      .filter((k) => k.includes("/") === false)
-      .sort((a, b) => props.subMap.get(b) - props.subMap.get(a));
-  };
-
-  // generate maps of reduced sublabels
-  const mapOfMaps = () => {
-    const m = new Map<string, Map<string, number>>();
-    for (const topLabel of topLabels()) {
-      m.set(topLabel, new Map());
-    }
-    for (const label of filteredKeys()) {
-      const [topLabel, rest] = prefixAndRemainder(label);
-      if (rest !== "") {
-        m.get(topLabel).set(rest, props.subMap.get(label));
-      }
-    }
-    return m;
-  };
-  const isLeaf = () => mapOfMaps().size == 0;
-
-  const mostRecentEntry = () => {
-    for (const [end, start] of listPairs(it(entriesInRange()))) {
-      if (labelFrom(start, end).startsWith(props.label)) {
-        return start;
-      }
-    }
-  };
+  const isLeaf = createMemo(() => childrenLabels().length === 0);
 
   return (
     <>
-      <Show when={props.label}>
-        <div
-          class={
-            "flex items-center space-x-1 h-6 " +
-            (!isLeaf() ? "cursor-pointer" : "")
-          }
-          onclick={() => setInfo({ expanded: !info.expanded })}
-          oncontextmenu={(e) => {
-            e.preventDefault();
-            if (mostRecentEntry()) {
-              openLabelEdit({
-                coord: [e.clientX, e.clientY],
-                label: props.label,
-                entry: mostRecentEntry(),
-              });
-            }
-          }}
-        >
-          <Show when={showColors()}>
-            <div class="w-1 h-5" style={{ "background-color": info.color }} />
-          </Show>
-          <span>
-            [{renderReportDuration(props.duration, total, showType())}]
-          </span>
-          <span>
-            {leafLabel(props.label)} {!isLeaf() ? "[+]" : ""}
-          </span>
-        </div>
-      </Show>
-      <Show when={info?.expanded || !props.label}>
-        <div class="pl-8 flex flex-col">
-          <For each={topLabels()}>
-            {(topLabel) => (
-              <Block
-                subMap={mapOfMaps().get(topLabel)}
-                label={props.label ? props.label + " / " + topLabel : topLabel}
-                duration={props.subMap.get(topLabel)}
-              />
-            )}
+      <div
+        class={
+          "flex items-center space-x-1 h-6 " +
+          (!isLeaf() ? "cursor-pointer" : "")
+        }
+        onclick={() => setInfo({ expanded: !info.expanded })}
+        oncontextmenu={(e) => oncontextmenu(e, props.label)}
+      >
+        <Show when={report.showColors}>
+          <div class="w-1 h-5" style={{ "background-color": info.color }} />
+        </Show>
+        <span>
+          [
+          {renderReportDuration(
+            report.labelTimeMap.get(props.label),
+            report.totalDuration,
+            report.showType
+          )}
+          ]
+        </span>
+        <span>
+          {leafLabel(props.label)} {!isLeaf() ? "[+]" : ""}
+        </span>
+      </div>
+      <Show when={info?.expanded}>
+        <div class="pl-8">
+          <For each={childrenLabels()}>
+            {(label) => <Block label={label} />}
           </For>
         </div>
       </Show>
@@ -174,15 +119,25 @@ const Block: Component<{
   );
 };
 
-type ShowType = "total" | "weekly" | "daily" | "percent";
-const showTypes = ["total", "weekly", "daily", "percent"];
-
-const ReportContext = createContext<{
-  total?: number;
-  entriesInRange?: Accessor<Entry[]>;
-  triggerRerender?: () => void;
-}>({});
+const ReportContext = createContext<ReportProps>();
 const useReport = () => useContext(ReportContext);
+
+export const Report: Component<ReportProps> = (props) => {
+  const topLabels = createMemo(() =>
+    getLabelImmediateChildren(null, [...props.labelTimeMap.keys()])
+  );
+
+  return (
+    <>
+      [{renderDuration(props.totalDuration)}] total
+      <ReportContext.Provider value={props}>
+        <div class="pl-8">
+          <For each={topLabels()}>{(label) => <Block label={label} />}</For>
+        </div>
+      </ReportContext.Provider>
+    </>
+  );
+};
 
 export const defaultReportState = {
   rangeString: "today",
@@ -191,8 +146,9 @@ export const defaultReportState = {
   showColors: false,
 };
 
-const Report: Component = () => {
-  const { entries, labels } = useEntries();
+const ReportPage: Component = () => {
+  const { entries } = useEntries();
+  const { getLabelInfo } = useUser();
 
   const [rangeString, setRangeString] = useUIState<string>(
     "report",
@@ -220,33 +176,33 @@ const Report: Component = () => {
       setError(false);
     }
   });
-  const startDate = () => specToDate(dateRange()?.start, now(), "closest");
-  const endDate = () => specToDate(dateRange()?.end, now(), "closest");
+
+  const startDate = createMemo(() =>
+    specToDate(dateRange()?.start, now(), "closest")
+  );
+  const endDate = createMemo(() =>
+    specToDate(dateRange()?.end, now(), "closest")
+  );
 
   const shift = (dir: 1 | -1) => {
     const dur = totalDuration();
     const newStart = new Date(startDate().getTime() + dir * dur);
     const newEnd = new Date(endDate().getTime() + dir * dur);
     setRangeString(`${renderTimeFull(newStart)} to ${renderTimeFull(newEnd)}`);
-    triggerRerender();
   };
 
-  const [rerenderSignal, setRerenderSignal] = createSignal(false);
-  const triggerRerender = () => setRerenderSignal(!rerenderSignal());
+  const totalDuration = createMemo(() => msBetween(startDate(), endDate()));
 
-  const totalDuration = () => msBetween(startDate(), endDate());
-
-  const entriesInRange = () => {
+  const entriesInRange = createMemo(() => {
     return [
       ...entriesIterator(entries, { start: startDate(), end: endDate() }),
     ];
-  };
+  });
 
-  const labelsInWeek = createMemo(() => getDistinctLabels(entriesInRange()));
+  const labelsInRange = createMemo(() => getDistinctLabels(entriesInRange()));
 
   const labelTimeMap = createMemo(() => {
-    rerenderSignal();
-    const map: Map<Label, number> = new Map();
+    const m: Map<Label, number> = new Map();
 
     for (const [start, end] of listPairs(
       revit([
@@ -256,19 +212,21 @@ const Report: Component = () => {
         }),
       ])
     )) {
-      const time = msBetween(start.time, end.time);
-      const label = labelFrom(start, end);
+      let label = labelFrom(start, end);
 
-      function add(label: string) {
-        map.set(label, (map.get(label) || 0) + time);
-        const labelAbove = coarseLabel(label);
-        if (labelAbove) add(labelAbove);
+      if (
+        showLabels().length === 0 ||
+        showLabels().some((l) => label.startsWith(l) || l.startsWith(label))
+      ) {
+        const time = msBetween(start.time, end.time);
+        while (label) {
+          m.set(label, (m.get(label) ?? 0) + time);
+          label = coarseLabel(label);
+        }
       }
-
-      add(label);
     }
 
-    return map;
+    return new Map([...m].sort((a, b) => b[1] - a[1]));
   });
 
   return (
@@ -316,7 +274,7 @@ const Report: Component = () => {
             <InputBox
               class="w-72 px-1 border rounded"
               prefixRule={emptyRule}
-              universe={labelsInWeek()}
+              universe={labelsInRange()}
               submit={async (_, label) => {
                 setShowLabels([...showLabels(), label]);
               }}
@@ -401,19 +359,30 @@ const Report: Component = () => {
       </div>
       <div class="h-2" />
       <div class="select-none overflow-auto">
-        [{renderDuration(totalDuration())}] total
-        <ReportContext.Provider
-          value={{
-            total: totalDuration(),
-            entriesInRange: entriesInRange,
-            triggerRerender,
+        <Report
+          labelTimeMap={labelTimeMap()}
+          totalDuration={totalDuration()}
+          showType={showType()}
+          showColors={showColors()}
+          getLabelInfo={getLabelInfo}
+          oncontextmenu={(e, label) => {
+            e.preventDefault();
+
+            for (const [end, start] of listPairs(it(entriesInRange()))) {
+              if (labelFrom(start, end).startsWith(label)) {
+                openLabelEdit({
+                  coord: [e.clientX, e.clientY],
+                  label: label,
+                  entry: start,
+                });
+                break;
+              }
+            }
           }}
-        >
-          <Block subMap={labelTimeMap()} duration={totalDuration()} />
-        </ReportContext.Provider>
+        />
       </div>
     </div>
   );
 };
 
-export default Report;
+export default ReportPage;

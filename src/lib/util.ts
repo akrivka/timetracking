@@ -97,3 +97,15 @@ export function nthIndex(str, pat, n) {
 export function removeIndex(arr, i) {
   return [...arr.slice(0, i), ...arr.slice(i + 1)];
 }
+
+export function numberOfOccurrences(str, pat) {
+  var n = 0;
+  var L = str.length;
+  var i = -1;
+  while (i++ < L) {
+    i = str.indexOf(pat, i);
+    if (i < 0) break;
+    n++;
+  }
+  return n;
+}

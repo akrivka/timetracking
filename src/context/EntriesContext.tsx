@@ -3,7 +3,8 @@ import {
   createContext,
   createEffect,
   createResource,
-  createSignal, onMount,
+  createSignal,
+  onMount,
   Show,
   untrack,
   useContext
@@ -135,8 +136,8 @@ export function getDistinctLabels(entries: Entry[]): Label[] {
   const seen: Set<string> = new Set();
 
   for (const entry of revit(entries)) {
-    for (const name of namesFrom(entry.before)) seen.add(name);
-    for (const name of namesFrom(entry.after)) seen.add(name);
+    for (const name of namesFrom(entry.before)) seen.add(name.trim());
+    for (const name of namesFrom(entry.after)) seen.add(name.trim());
   }
   return [...seen];
 }

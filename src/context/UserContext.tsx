@@ -162,7 +162,7 @@ async function getRemoteProfile(credentials) {
   return serializedProfile && deserializeProfile(serializedProfile);
 }
 
-type WrappedInfo = [LabelInfo, (info: Partial<LabelInfo>) => void];
+export type WrappedInfo = [LabelInfo, (info: Partial<LabelInfo>) => void];
 
 const UserContext = createContext<{
   credentials?: Credentials;

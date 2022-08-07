@@ -7,7 +7,7 @@ import { WindowProvider } from "./context/WindowContext";
 import { Auth, Login, Signup } from "./pages/Auth";
 import Calendar from "./pages/Calendar";
 import Mobile from "./pages/Mobile";
-import Report from "./pages/Report";
+import ReportPage from "./pages/Report";
 import Track from "./pages/Track";
 
 render(
@@ -23,7 +23,7 @@ render(
             <Route path="/" component={Home} />
             <Route path="/" component={Page}>
               <Route path="/track" component={Track} />
-              <Route path="/report" component={Report} />
+              <Route path="/report" component={ReportPage} />
               <Route path="/calendar" component={Calendar} />
             </Route>
           </Route>
