@@ -18,10 +18,29 @@ import { SyncState } from "./components/SyncState";
 
 import { EntriesProvider, useEntries } from "./context/EntriesContext";
 import { UserProvider } from "./context/UserContext";
+import { thisMonday } from "./lib/date";
 import { debug } from "./lib/util";
-import { defaultCalendarState } from "./pages/Calendar";
-import { defaultReportState } from "./pages/Report";
-import { defaultTrackState } from "./pages/Track";
+
+const defaultTrackState = {
+  scrollTop: 0,
+  focusedIndex: null,
+  showSearch: false,
+  searchText: "",
+  currentJump: 0,
+};
+
+const defaultReportState = {
+  rangeString: "today",
+  showType: "total",
+  showLabels: [],
+  showColors: false,
+};
+
+const defaultCalendarState = {
+  week: thisMonday(),
+  startTimeString: "8:00",
+  endTimeString: "20:00",
+};
 
 const defaultUIState = {
   track: defaultTrackState,
