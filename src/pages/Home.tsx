@@ -20,6 +20,7 @@ const Navbar: Component = () => {
       <MyLink href="/track" label="Track" />
       <MyLink href="/report" label="Report" />
       <MyLink href="/calendar" label="Calendar" />
+      <MyLink href="/mobile" label="Mobile" />
       <Switch>
         <Match when={!credentials}>
           <MyLink href="/signup" label="Sign up" />
@@ -48,4 +49,4 @@ const Home: Component = () => {
   );
 };
 
-export default Home
+export default Home;
