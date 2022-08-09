@@ -12,6 +12,10 @@ export const openLabelEdit = (info) => {
   setState({ ...info, isOpen: true });
 };
 
+export const closeLabelEdit = () => {
+  setState({ isOpen: false });
+};
+
 // typescript being weird
 declare module "solid-js" {
   namespace JSX {
@@ -46,6 +50,7 @@ const LabelEdit = () => {
           class="hover:bg-gray-100 px-2 h-7 w-full text-left"
           onclick={() => {
             openBulkRenameDialog({ label: state.label });
+            closeLabelEdit;
           }}
         >
           Bulk rename
@@ -54,6 +59,7 @@ const LabelEdit = () => {
           class="hover:bg-gray-100 px-2 h-7 w-full text-left"
           onclick={() => {
             navigate(`/track`, { state: { entry: state.entry } });
+            closeLabelEdit();
           }}
         >
           Jump to Track
@@ -76,10 +82,7 @@ export const LabelEditContextMenu = () => {
           class="absolute z-50"
           style={{ top: state.coord[1] + "px", left: state.coord[0] + "px" }}
         >
-          <div
-            ref={setPopper}
-            use:clickOutside={() => setState({ isOpen: false })}
-          >
+          <div ref={setPopper} use:clickOutside={closeLabelEdit}>
             <LabelEdit />
           </div>
         </div>
