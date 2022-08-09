@@ -1,4 +1,4 @@
-import { createSignal, createEffect, Accessor, onCleanup } from "solid-js";
+import { Accessor, createEffect, createSignal, onCleanup } from "solid-js";
 import { createStore, SetStoreFunction, Store, unwrap } from "solid-js/store";
 import { delay, wait } from "./util";
 
@@ -118,4 +118,11 @@ export function usePopper<
     }
     return undefined;
   };
+}
+
+export function clickOutside(el, accessor) {
+  const onClick = (e) => !el.contains(e.target) && accessor()?.();
+  document.body.addEventListener("click", onClick);
+
+  onCleanup(() => document.body.removeEventListener("click", onClick));
 }

@@ -1,9 +1,9 @@
 import { useNavigate } from "solid-app-router";
-import { createSignal, onMount, Show } from "solid-js";
+import { createSignal, Show } from "solid-js";
 import { createStore } from "solid-js/store";
 import { Portal } from "solid-js/web";
 import { useUser } from "../context/UserContext";
-import { usePopper } from "../lib/solid-ext";
+import { clickOutside, usePopper } from "../lib/solid-ext";
 import { openBulkRenameDialog } from "./BulkRename";
 
 const [state, setState] = createStore(null);
@@ -11,6 +11,17 @@ const [state, setState] = createStore(null);
 export const openLabelEdit = (info) => {
   setState({ ...info, isOpen: true });
 };
+
+// typescript being weird
+declare module "solid-js" {
+  namespace JSX {
+    interface Directives {
+      // use:clickOutside
+      clickOutside: () => void;
+    }
+  }
+}
+false && clickOutside;
 
 const LabelEdit = () => {
   const navigate = useNavigate();
@@ -57,12 +68,6 @@ export const LabelEditContextMenu = () => {
   const [popper, setPopper] = createSignal<HTMLElement>();
   usePopper(anchor, popper, { placement: "right-start" });
 
-  onMount(() => {
-    document.addEventListener("click", (e) => {
-      setState({ isOpen: false });
-    });
-  });
-
   return (
     <Show when={state.isOpen}>
       <Portal>
@@ -71,7 +76,10 @@ export const LabelEditContextMenu = () => {
           class="absolute z-50"
           style={{ top: state.coord[1] + "px", left: state.coord[0] + "px" }}
         >
-          <div ref={setPopper}>
+          <div
+            ref={setPopper}
+            use:clickOutside={() => setState({ isOpen: false })}
+          >
             <LabelEdit />
           </div>
         </div>
