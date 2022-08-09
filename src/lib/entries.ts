@@ -1,4 +1,4 @@
-import { now, revit } from "./util";
+import { it, now } from "./util";
 
 export type uid = string;
 
@@ -112,7 +112,7 @@ function* namesFrom(label: Label | undefined): Generator<Label> {
 export function getDistinctLabels(entries: Entry[]): Label[] {
   const seen: Set<string> = new Set();
 
-  for (const entry of revit(entries)) {
+  for (const entry of it(entries)) {
     for (const name of namesFrom(entry.before)) seen.add(name.trim());
     for (const name of namesFrom(entry.after)) seen.add(name.trim());
   }

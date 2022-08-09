@@ -1,7 +1,4 @@
-import {
-  Accessor, createEffect, createSignal,
-  For, Show
-} from "solid-js";
+import { Accessor, createEffect, createSignal, For, Show } from "solid-js";
 import { parseString, Rule, splitPrefix } from "../lib/parse";
 import { wait } from "../lib/util";
 interface InputBoxProps<T> {
@@ -12,7 +9,6 @@ interface InputBoxProps<T> {
   clearAndRefocus?: boolean;
   [x: string | number | symbol]: unknown;
 }
-
 
 export function InputBox<T>(props: InputBoxProps<T>) {
   //console.log("rendering InputBox");
@@ -61,13 +57,13 @@ export function InputBox<T>(props: InputBoxProps<T>) {
   const onkeydown = (e) => {
     if (searchPhrase() !== "" && e.key !== "Escape") {
       e.stopPropagation();
-      if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+      if (e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "Tab") {
         e.preventDefault();
 
-        if (e.key === "ArrowUp") {
+        if (e.key === "ArrowUp" || (e.key === "Tab" && e.shiftKey)) {
           setSelected(Math.max(selected() - 1, -1));
         }
-        if (e.key === "ArrowDown") {
+        if (e.key === "ArrowDown" || e.key === "Tab") {
           setSelected(Math.min(selected() + 1, props.universe.length - 1));
         }
 
