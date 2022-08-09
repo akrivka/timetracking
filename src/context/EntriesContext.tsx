@@ -162,7 +162,11 @@ export const EntriesProvider = (props) => {
     }
   };
 
-  onMount(subscribe);
+  onMount(() => {
+    subscribe();
+
+    document.addEventListener("focus", () => pullUpdates());
+  });
 
   // SYNC STATE
   const syncState = {
