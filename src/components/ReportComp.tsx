@@ -1,10 +1,10 @@
 import {
-    Component,
-    createContext,
-    createMemo,
-    For,
-    Show,
-    useContext
+  Component,
+  createContext,
+  createMemo,
+  For,
+  Show,
+  useContext
 } from "solid-js";
 import { MS_IN_DAYS, MS_IN_WEEKS } from "../lib/constants";
 import { renderDuration, renderPercentage } from "../lib/format";
@@ -35,28 +35,40 @@ function renderReportDuration(time: number, total: number, display: ShowType) {
 }
 
 const Block: Component<{
+  prelabel?: Label;
   label: Label;
 }> = (props) => {
   const report = useReport();
   const { getLabelInfo, oncontextmenu } = report;
 
-  const [info, setInfo] = getLabelInfo(props.label);
+  const fullLabel = () =>
+    (props.prelabel ? props.prelabel + " / " : "") + props.label;
+
+  const [info, setInfo] = getLabelInfo(fullLabel());
 
   const childrenLabels = createMemo(() =>
-    getLabelImmediateChildren(props.label, [...report.labelTimeMap.keys()])
+    getLabelImmediateChildren(fullLabel(), [...report.labelTimeMap.keys()])
   );
 
   const isLeaf = createMemo(() => childrenLabels().length === 0);
 
   return (
-    <>
+    <Show
+      when={childrenLabels().length !== 1}
+      fallback={() => (
+        <Block
+          prelabel={props.prelabel}
+          label={props.label + " / " + leafLabel(childrenLabels()[0])}
+        />
+      )}
+    >
       <div
         class={
           "flex items-center space-x-1 h-6 " +
           (!isLeaf() ? "cursor-pointer" : "")
         }
         onclick={() => setInfo({ expanded: !info.expanded })}
-        oncontextmenu={(e) => oncontextmenu(e, props.label)}
+        oncontextmenu={(e) => oncontextmenu(e, fullLabel())}
       >
         <Show when={report.showColors}>
           <div class="w-1 h-5" style={{ "background-color": info.color }} />
@@ -64,24 +76,26 @@ const Block: Component<{
         <span>
           [
           {renderReportDuration(
-            report.labelTimeMap.get(props.label),
+            report.labelTimeMap.get(fullLabel()),
             report.totalDuration,
             report.showType || "total"
           )}
           ]
         </span>
         <span>
-          {leafLabel(props.label)} {!isLeaf() ? "[+]" : ""}
+          {props.label} {!isLeaf() ? "[+]" : ""}
         </span>
       </div>
       <Show when={info?.expanded}>
         <div class="pl-8">
           <For each={childrenLabels()}>
-            {(label) => <Block label={label} />}
+            {(label) => (
+              <Block prelabel={fullLabel()} label={leafLabel(label)} />
+            )}
           </For>
         </div>
       </Show>
-    </>
+    </Show>
   );
 };
 
