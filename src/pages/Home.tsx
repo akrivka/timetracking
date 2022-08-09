@@ -16,11 +16,13 @@ const Navbar: Component = () => {
   const navigate = useNavigate();
 
   return (
-    <div class="flex">
+    <div class="flex space-x-2">
       <MyLink href="/track" label="Track" />
       <MyLink href="/report" label="Report" />
       <MyLink href="/calendar" label="Calendar" />
+      <MyLink href="/help" label="Help" />
       <MyLink href="/mobile" label="Mobile" />
+      <div class="w-4"/>
       <Switch>
         <Match when={!credentials}>
           <MyLink href="/signup" label="Sign up" />

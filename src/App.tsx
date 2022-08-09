@@ -69,6 +69,7 @@ const App: Component = () => {
         e.code === "Digit1" && navigate("/track");
         e.code === "Digit2" && navigate("/report");
         e.code === "Digit3" && navigate("/calendar");
+        e.code === "Digit4" && navigate("/help");
         e.code === "Backquote" && navigate("/");
       }
     });

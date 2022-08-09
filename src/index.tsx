@@ -16,6 +16,7 @@ const Report = lazy(() => import("./pages/Report"));
 const Calendar = lazy(() => import("./pages/Calendar"));
 const Mobile = lazy(() => import("./pages/Mobile"));
 const PublicReportPage = lazy(() => import("./pages/PublicReportPage"));
+const Help = lazy(() => import("./pages/Help"));
 
 render(
   () => (
@@ -32,6 +33,7 @@ render(
               <Route path="/track" component={Track} />
               <Route path="/report" component={Report} />
               <Route path="/calendar" component={Calendar} />
+              <Route path="/help" component={Help} />
             </Route>
           </Route>
           <Route
