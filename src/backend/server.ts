@@ -39,8 +39,6 @@ function getCredentialsFromReq(req: any): Credentials {
 const subscribers = new Map<string, Set<any>>();
 
 const resolveSubscribers = (username: string) => {
-  console.log("resolving subscribers for", username);
-
   const resSet = subscribers.get(username);
   if (resSet) {
     resSet.forEach((res) => res.send("ok"));
