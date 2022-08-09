@@ -485,13 +485,17 @@ const Track: Component = () => {
                       onClick={() => setFocusedIndex(i)}
                     >
                       <div class={conflict() ? "text-red-600" : ""}>
-                        <div>{leafLabel(label())}</div>
+                        <div>
+                          {end() || start.after ? leafLabel(label()) : "TBD"}
+                        </div>
                         <div class="text-xs text-gray-400 -translate-y-0.5">
                           {coarseLabel(label())}
                         </div>
                       </div>
                       <div>
-                        {duration() >= 1000 && renderDuration(duration())}
+                        {duration() >= 1000
+                          ? renderDuration(duration())
+                          : "<1s"}
                       </div>
                     </div>
 
