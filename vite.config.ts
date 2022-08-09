@@ -6,7 +6,7 @@ import solidPlugin from "vite-plugin-solid";
 export default defineConfig({
   plugins: [
     solidPlugin(),
-    mix({ handler: "./src/backend/api.ts" }),
+    mix({ handler: "./src/backend/server.ts" }),
     VitePWA({
       registerType: "autoUpdate",
       // mode: "development",

@@ -207,6 +207,7 @@ const app = express()
 
       res.send(err);
     }
-  });
+  })
+  .get("/api/sync", async (req: any, res: any) => {});
 
 export const handler = app;
