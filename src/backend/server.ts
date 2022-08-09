@@ -35,6 +35,19 @@ function getCredentialsFromReq(req: any): Credentials {
   };
 }
 
+// subscribers map from usernames to array of response callbacks
+const subscribers = new Map<string, Set<any>>();
+
+const resolveSubscribers = (username: string) => {
+  console.log("resolving subscribers for", username);
+
+  const resSet = subscribers.get(username);
+  if (resSet) {
+    resSet.forEach((res) => res.send("ok"));
+    resSet.clear();
+  }
+};
+
 // BACKEND
 const app = express()
   .use(bodyParser.urlencoded({ limit: "200mb", extended: false }))
@@ -167,6 +180,7 @@ const app = express()
               entries.lastmodified < EXCLUDED.lastmodified
       `;
         }
+        resolveSubscribers(credentials.username);
         res.send("ok");
       } else {
         res.send("username+password not found");
@@ -178,8 +192,6 @@ const app = express()
     }
   })
   .post("/api/export", async (req: any, res: any) => {
-    console.log(req.body.id);
-
     try {
       const results = await sql`
             INSERT INTO reports (id, username, serialized)
@@ -208,6 +220,19 @@ const app = express()
       res.send(err);
     }
   })
-  .get("/api/sync", async (req: any, res: any) => {});
+  .get("/api/sync", async (req: any, res: any) => {
+    const credentials = getCredentialsFromReq(req);
+
+    try {
+      if (await userExists(credentials)) {
+        if (!subscribers.has(credentials.username))
+          subscribers.set(credentials.username, new Set());
+        subscribers.get(credentials.username).add(res);
+      }
+    } catch (e) {
+      console.log(e);
+      res.send(e);
+    }
+  });
 
 export const handler = app;
