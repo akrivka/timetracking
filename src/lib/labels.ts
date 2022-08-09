@@ -1,3 +1,4 @@
+import { addRgbColors, rgbToHex, stringToRgbColor } from "./colors";
 import { numberOfOccurrences } from "./util";
 
 export function coarseLabel(label: string): string {
@@ -31,4 +32,21 @@ export function getLabelImmediateChildren(
       numberOfOccurrences(l, "/") ===
       (label ? numberOfOccurrences(label, "/") + 1 : 0)
   );
+}
+
+function labelToRgbColor(label: Label) {
+  if (label.includes("/")) {
+    return addRgbColors(
+      labelToRgbColor(coarseLabel(label)),
+      labelToRgbColor(leafLabel(label)),
+      0.6,
+      0.4
+    );
+  } else return stringToRgbColor(label);
+}
+
+export function labelToColor(label: Label): string {
+  console.log(labelToRgbColor(label));
+
+  return rgbToHex(labelToRgbColor(label));
 }

@@ -10,7 +10,7 @@ type RgbColor = {
   b: number;
 };
 
-function stringToRgbColor(_str: string | undefined): RgbColor {
+export function stringToRgbColor(_str: string | undefined): RgbColor {
   const str = _str || "";
   var hash = 0;
   for (var i = 0; i < str.length; i++) {
@@ -22,6 +22,20 @@ function stringToRgbColor(_str: string | undefined): RgbColor {
   }
   const [r, g, b] = colorArr;
   return { r, g, b };
+}
+
+//add rgb colors
+export function addRgbColors(
+  rgb1: RgbColor,
+  rgb2: RgbColor,
+  w1: number = 0.5,
+  w2: number = 0.5
+): RgbColor {
+  return {
+    r: (rgb1.r * w1 + rgb2.r * w2) / (w1 + w2),
+    g: (rgb1.g * w1 + rgb2.g * w2) / (w1 + w2),
+    b: (rgb1.b * w1 + rgb2.b * w2) / (w1 + w2),
+  };
 }
 
 export function stringToColor(str: string | undefined): string {
@@ -100,7 +114,7 @@ function pad(s: string): string {
   return s;
 }
 
-function rgbToHex(rgb: RgbColor): string {
+export function rgbToHex(rgb: RgbColor): string {
   const r = Math.round(rgb.r);
   const g = Math.round(rgb.g);
   const b = Math.round(rgb.b);

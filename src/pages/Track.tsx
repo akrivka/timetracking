@@ -75,12 +75,6 @@ const Line: Component<{ color: string }> = ({ color }) => {
   );
 };
 
-function easeInOutQuint(t) {
-  return t < 0.5 ? 16 * t * t * t * t * t : 1 + 16 * --t * t * t * t * t;
-}
-
-const [scrollStartTime, setScrollStartTime] = createSignal();
-
 const Track: Component = () => {
   const { time } = useWindow();
   const { entries, labels, dispatch } = useEntries();
