@@ -41,7 +41,7 @@ import {
 import { renderTime, renderTimeFull } from "../lib/format";
 import { coarseLabel } from "../lib/labels";
 import { DateRange, dateRangeRule, emptyRule, parseString } from "../lib/parse";
-import { it, listPairs, now, removeIndex, revit, wait } from "../lib/util";
+import { listPairs, now, removeIndex, revit, wait } from "../lib/util";
 
 const showTypes = ["total", "weekly", "daily", "percent"];
 
@@ -265,7 +265,7 @@ const ReportPage: Component = () => {
     document.addEventListener("keydown", (e) => {
       if (!(e.target instanceof HTMLInputElement)) {
         if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-          dateRangeInputEl.focus()
+          dateRangeInputEl.focus();
         } else if (e.key === "ArrowLeft") {
           shift(-1);
         } else if (e.key === "ArrowRight") {
@@ -419,7 +419,9 @@ const ReportPage: Component = () => {
           ((e, label) => {
             e.preventDefault();
 
-            for (const [end, start] of listPairs(it(entriesInRange()))) {
+            for (const [end, start] of listPairs(
+              entriesIterator(entries, { end: endDate() })
+            )) {
               if (labelFrom(start, end).startsWith(label)) {
                 openLabelEdit({
                   coord: [e.clientX, e.clientY],

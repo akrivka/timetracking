@@ -69,7 +69,7 @@ const Block: Component<{
       )
     );
   });
-
+  
   return (
     <Show
       when={
@@ -111,7 +111,7 @@ const Block: Component<{
       </div>
       <Show when={info?.expanded}>
         <div class="pl-8">
-          <Show when={uncategorizedTime() > 0}>
+          <Show when={uncategorizedTime() > 0 && !isLeaf()}>
             <StaticBlock
               label={"uncategorized"}
               duration={uncategorizedTime()}

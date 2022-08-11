@@ -1,5 +1,5 @@
-import { useNavigate } from "solid-app-router";
-import { createSignal, Show } from "solid-js";
+import { useLocation, useNavigate } from "solid-app-router";
+import { createEffect, createMemo, createSignal, Show } from "solid-js";
 import { createStore } from "solid-js/store";
 import { Portal } from "solid-js/web";
 import { useUser } from "../context/UserContext";
@@ -30,7 +30,7 @@ false && clickOutside;
 const LabelEdit = () => {
   const navigate = useNavigate();
   const { getLabelInfo } = useUser();
-  const [info, setInfo] = getLabelInfo(state.label);
+  const infoTuple = createMemo(() => getLabelInfo(state.label));
   return (
     <div class="w-40 bg-white rounded shadow text-gray-800 text-sm">
       <div class="text-gray-500 text-[10px] px-2 pt-1">{state.label}</div>
@@ -41,8 +41,8 @@ const LabelEdit = () => {
             <input
               class="w-5 h-5"
               type="color"
-              value={info.color}
-              onchange={(e) => setInfo({ color: e.currentTarget.value })}
+              value={infoTuple()[0].color}
+              onchange={(e) => infoTuple()[1]({ color: e.currentTarget.value })}
             />
           </div>
         </div>
@@ -50,7 +50,7 @@ const LabelEdit = () => {
           class="hover:bg-gray-100 px-2 h-7 w-full text-left"
           onclick={() => {
             openBulkRenameDialog({ label: state.label });
-            closeLabelEdit;
+            closeLabelEdit();
           }}
         >
           Bulk rename
@@ -73,6 +73,12 @@ export const LabelEditContextMenu = () => {
   const [anchor, setAnchor] = createSignal<HTMLElement>();
   const [popper, setPopper] = createSignal<HTMLElement>();
   usePopper(anchor, popper, { placement: "right-start" });
+
+  const location = useLocation();
+  createEffect(() => {
+    location.pathname;
+    closeLabelEdit();
+  });
 
   return (
     <Show when={state.isOpen}>

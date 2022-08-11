@@ -116,13 +116,13 @@ export function usePopper<
         ...instance,
       };
     }
-    return undefined;
+  return undefined;
   };
 }
 
 export function clickOutside(el, accessor) {
   const onClick = (e) => !el.contains(e.target) && accessor()?.();
-  document.body.addEventListener("click", onClick);
+  window.addEventListener("click", onClick);
 
-  onCleanup(() => document.body.removeEventListener("click", onClick));
+  onCleanup(() => window.removeEventListener("click", onClick));
 }

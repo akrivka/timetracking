@@ -67,7 +67,7 @@ export function entrySetEquals(xs: Entry[], ys: Entry[]) {
 
 export function* entriesIterator(
   entries: Entry[],
-  { start, end }: { start: Date; end: Date }
+  { start, end }: { start?: Date; end?: Date }
 ): Generator<Entry> {
   for (const entry of entries) {
     if ((!start || entry.time >= start) && (!end || entry.time <= end))
