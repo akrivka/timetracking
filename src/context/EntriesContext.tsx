@@ -303,7 +303,7 @@ export const EntriesProvider = (props) => {
   const pushEntriesFromConsole = async (serializedEntries) => {
     const entries = deserializeEntries(serializedEntries);
     try {
-      await putEntries(entries);
+      await putEntriesLocal(entries);
     } catch (e) {
       console.error(e);
     }
