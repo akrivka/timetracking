@@ -204,11 +204,13 @@ const ReportPage: Component = () => {
   );
 
   const shift = (dir: 1 | -1) => {
-    const dur = totalDuration();
+    const dur = msBetween(startDate(), endDate());
     const newStart = new Date(startDate().getTime() + dir * dur);
     const newEnd = new Date(endDate().getTime() + dir * dur);
     setRangeString(`${renderTimeFull(newStart)} to ${renderTimeFull(newEnd)}`);
   };
+
+  const isFiltered = createMemo(() => showLabels().length > 0);
 
   const [totalDuration, setTotalDuration] = createSignal(0);
 
@@ -232,19 +234,24 @@ const ReportPage: Component = () => {
         }),
       ])
     )) {
-      let label = labelFrom(start, end);
+      if (end.time !== endDate()) {
+        const baseLabel = labelFrom(start, end);
+        const prefix = showLabels().find((l) => baseLabel.startsWith(l));
 
-      if (
-        showLabels().length === 0 ||
-        showLabels().some((l) => label.startsWith(l) || l.startsWith(label))
-      ) {
-        const time = msBetween(start.time, end.time);
-        console.log(label, time);
+        if (!isFiltered() || prefix) {
+          const time = msBetween(start.time, end.time);
+          let label = !isFiltered()
+            ? baseLabel
+            : baseLabel
+                .slice((prefix ?? "").length)
+                .trim()
+                .slice(1);
 
-        dur += time;
-        while (label) {
-          m.set(label, (m.get(label) ?? 0) + time);
-          label = coarseLabel(label);
+          dur += time;
+          while (label) {
+            m.set(label, (m.get(label) ?? 0) + time);
+            label = coarseLabel(label);
+          }
         }
       }
     }
@@ -401,20 +408,23 @@ const ReportPage: Component = () => {
         showType={showType()}
         showColors={showColors()}
         getLabelInfo={getLabelInfo}
-        oncontextmenu={(e, label) => {
-          e.preventDefault();
+        oncontextmenu={
+          !isFiltered() &&
+          ((e, label) => {
+            e.preventDefault();
 
-          for (const [end, start] of listPairs(it(entriesInRange()))) {
-            if (labelFrom(start, end).startsWith(label)) {
-              openLabelEdit({
-                coord: [e.clientX, e.clientY],
-                label: label,
-                entry: start,
-              });
-              break;
+            for (const [end, start] of listPairs(it(entriesInRange()))) {
+              if (labelFrom(start, end).startsWith(label)) {
+                openLabelEdit({
+                  coord: [e.clientX, e.clientY],
+                  label: label,
+                  entry: start,
+                });
+                break;
+              }
             }
-          }
-        }}
+          })
+        }
       />
     </div>
   );
