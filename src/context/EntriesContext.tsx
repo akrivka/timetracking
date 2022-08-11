@@ -294,6 +294,8 @@ export const EntriesProvider = (props) => {
   onMount(() => {
     window.timemarker = {};
     window.timemarker.pushEntriesFromConsole = pushEntriesFromConsole;
+    window.timemarker.putEntries = putEntries;
+    window.timemarker.entries = entries;
   });
 
   // LABELS
