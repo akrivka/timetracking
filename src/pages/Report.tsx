@@ -260,12 +260,17 @@ const ReportPage: Component = () => {
     return new Map([...m].sort((a, b) => b[1] - a[1]));
   });
 
+  let dateRangeInputEl: HTMLInputElement | undefined;
   onMount(() => {
     document.addEventListener("keydown", (e) => {
-      if (e.key === "ArrowLeft") {
-        shift(-1);
-      } else if (e.key === "ArrowRight") {
-        shift(1);
+      if (!(e.target instanceof HTMLInputElement)) {
+        if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+          dateRangeInputEl.focus()
+        } else if (e.key === "ArrowLeft") {
+          shift(-1);
+        } else if (e.key === "ArrowRight") {
+          shift(1);
+        }
       }
     });
   });
@@ -278,6 +283,7 @@ const ReportPage: Component = () => {
           <div class="w-96">
             <div class="flex">
               <MyTextInput
+                ref={dateRangeInputEl}
                 class="w-96"
                 value={rangeString()}
                 onchange={(e) => setRangeString(e.currentTarget.value.trim())}

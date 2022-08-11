@@ -44,6 +44,47 @@ import {
 } from "../lib/parse";
 import { it, listPairs } from "../lib/util";
 
+const UpDownInput = (props) => {
+  return (
+    <div class="flex">
+      <MyTextInput
+        class="w-14 text-center"
+        value={props.value}
+        onEnter={props.setValue}
+        onkeydown={(e) => {
+          if (e.key === "ArrowUp") {
+            props.increment();
+          } else if (e.key === "ArrowDown") {
+            props.decrement();
+          }
+        }}
+      />
+      <div class="w-4 flex flex-col">
+        <button
+          tabindex="-1"
+          class="h-1/2 hover:bg-gray-100"
+          onclick={props.increment}
+        >
+          <Icon
+            class="w-4 h-3 flex justify-center items-center rounded"
+            path={chevronUp}
+          ></Icon>
+        </button>
+        <button
+          tabindex="-1"
+          class="h-1/2 hover:bg-gray-100"
+          onclick={props.decrement}
+        >
+          <Icon
+            class="w-4 h-3 flex justify-center items-center rounded"
+            path={chevronDown}
+          ></Icon>
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const Calendar: Component = () => {
   const { entries } = useEntries();
   const { getLabelInfo } = useUser();
@@ -76,6 +117,11 @@ const Calendar: Component = () => {
     const m = parseString(timeRule, endTimeString());
     if (m == "fail" || m == "prefix") {
       console.log("Error parsing end time", m);
+    } else if (
+      dayTimeSpecToMinutes(m[0]) - dayTimeSpecToMinutes(startTime()) <=
+      0
+    ) {
+      console.log("End time is before start time");
     } else {
       setEndTime(m[0]);
     }
@@ -220,13 +266,16 @@ const Calendar: Component = () => {
 
   onMount(() => {
     document.addEventListener("keydown", (e) => {
-      // if cmd/ctrl+left
-      if (e.key === "ArrowLeft") {
-        setWeek(prevWeek);
-      }
-      // if cmd/ctrl+right
-      if (e.key === "ArrowRight") {
-        setWeek(nextWeek);
+      // if not focus on an input
+      if (!(e.target instanceof HTMLInputElement)) {
+        // if cmd/ctrl+left
+        if (e.key === "ArrowLeft") {
+          setWeek(prevWeek);
+        }
+        // if cmd/ctrl+right
+        if (e.key === "ArrowRight") {
+          setWeek(nextWeek);
+        }
       }
     });
   });
@@ -238,6 +287,7 @@ const Calendar: Component = () => {
           <div class="flex justify-between h-8">
             <div class="flex font-bold">
               <button
+                tabindex="-1"
                 class="hover:bg-gray-50 px-2 py-0.5"
                 onClick={() => setWeek(prevWeek)}
               >
@@ -245,6 +295,7 @@ const Calendar: Component = () => {
               </button>
               <div class="w-1"></div>
               <button
+                tabindex="-1"
                 class="hover:bg-gray-50 px-2 py-0.5"
                 onClick={() => setWeek(nextWeek)}
               >
@@ -254,79 +305,37 @@ const Calendar: Component = () => {
             <div class="flex items-center space-x-2">
               <div class="space-x-1 h-4 flex items-center">
                 <label class="w-18">Start time:</label>
-                <MyTextInput
-                  class="w-14 text-center"
+                <UpDownInput
                   value={startTimeString()}
-                  onEnter={setStartTimeString}
+                  setValue={setStartTimeString}
+                  increment={() => {
+                    const newStartTime = minutesAfterDayTime(startTime(), 60);
+                    if (dayTimeSpecToMinutes(newStartTime) <= 24 * 60)
+                      setStartTimeString(dayTimeSpecToString(newStartTime));
+                  }}
+                  decrement={() => {
+                    const newStartTime = minutesAfterDayTime(startTime(), -60);
+                    if (dayTimeSpecToMinutes(newStartTime) >= 0)
+                      setStartTimeString(dayTimeSpecToString(newStartTime));
+                  }}
                 />
-                <div class="w-4 flex flex-col">
-                  <button
-                    class="h-1/2 hover:bg-gray-100"
-                    onclick={() => {
-                      setStartTimeString(
-                        dayTimeSpecToString(
-                          minutesAfterDayTime(startTime(), 60)
-                        )
-                      );
-                    }}
-                  >
-                    <Icon
-                      class="w-4 h-3 flex justify-center items-center rounded"
-                      path={chevronUp}
-                    ></Icon>
-                  </button>
-                  <button
-                    class="h-1/2 hover:bg-gray-100"
-                    onclick={() => {
-                      setStartTimeString(
-                        dayTimeSpecToString(
-                          minutesAfterDayTime(startTime(), -60)
-                        )
-                      );
-                    }}
-                  >
-                    <Icon
-                      class="w-4 h-3 flex justify-center items-center rounded"
-                      path={chevronDown}
-                    ></Icon>
-                  </button>
-                </div>
               </div>
               <div class="space-x-1 h-4 flex items-center">
                 <label class="w-18">End time:</label>
-                <MyTextInput
-                  class="w-14 text-center"
+                <UpDownInput
                   value={endTimeString()}
-                  onEnter={setEndTimeString}
+                  setValue={setEndTimeString}
+                  increment={() => {
+                    const newEndTime = minutesAfterDayTime(endTime(), 60);
+                    if (dayTimeSpecToMinutes(newEndTime) <= 24 * 60)
+                      setEndTimeString(dayTimeSpecToString(newEndTime));
+                  }}
+                  decrement={() => {
+                    const newEndTime = minutesAfterDayTime(endTime(), -60);
+                    if (dayTimeSpecToMinutes(newEndTime) >= 0)
+                      setEndTimeString(dayTimeSpecToString(newEndTime));
+                  }}
                 />
-                <div class="w-4 flex flex-col">
-                  <button
-                    class="h-1/2 hover:bg-gray-100"
-                    onclick={() => {
-                      setEndTimeString(
-                        dayTimeSpecToString(minutesAfterDayTime(endTime(), 60))
-                      );
-                    }}
-                  >
-                    <Icon
-                      class="w-4 h-3 flex justify-center items-center rounded"
-                      path={chevronUp}
-                    ></Icon>
-                  </button>
-                  <button
-                    class="h-1/2 hover:bg-gray-100"
-                    onclick={() => {
-                      setEndTimeString(
-                        dayTimeSpecToString(minutesAfterDayTime(endTime(), -60))
-                      );
-                    }}
-                  >
-                    <Icon
-                      class="w-4 h-3 flex justify-center items-center rounded"
-                      path={chevronDown}
-                    ></Icon>
-                  </button>
-                </div>
               </div>
             </div>
           </div>

@@ -38,8 +38,8 @@ const defaultReportState = {
 
 const defaultCalendarState = {
   week: thisMonday(),
-  startTimeString: "8:00",
-  endTimeString: "20:00",
+  startTimeString: "0:00",
+  endTimeString: "24:00",
 };
 
 const defaultUIState = {
