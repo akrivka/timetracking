@@ -1,4 +1,3 @@
-import { createVirtualizer } from "@tanstack/solid-virtual";
 import { useLocation } from "solid-app-router";
 import { Icon } from "solid-heroicons";
 import { chevronDown, chevronUp, x } from "solid-heroicons/solid";
@@ -7,6 +6,7 @@ import {
   createEffect,
   createMemo,
   createSignal,
+  For,
   onMount,
   Show
 } from "solid-js";
@@ -30,11 +30,11 @@ const EmptyBullet = () => {
   );
 };
 
-const Bullet: Component<{ entry: Entry }> = (props) => {
+const Bullet: Component<{ entry: Entry; id: string }> = (props) => {
   const { dispatch } = useEntries();
 
   return (
-    <div class="flex items-center">
+    <div class="flex items-center" id={props.id}>
       <div class="flex justify-center items-center w-4 h-4">
         <div class="w-3 h-3 bg-black rounded-full" />
       </div>
@@ -259,16 +259,6 @@ const Track: Component = () => {
     },
   });
 
-  let scrollRef;
-
-  const virtualizer = createVirtualizer({
-    count: entries.length,
-    getScrollElement: () => scrollRef,
-    estimateSize: () => 100,
-    scrollPaddingStart: 16,
-    overscan: 5,
-  });
-
   const [showSearch, setShowSearch] = useUIState<boolean>(
     "track",
     "showSearch"
@@ -300,20 +290,31 @@ const Track: Component = () => {
     setFocusedIndex(i);
   };
 
-  const scrollToIndex = (i, options?) => {
-    let scrollingTimeout;
-    scrollRef.addEventListener("scroll", function handler(e) {
-      window.clearTimeout(scrollingTimeout);
-      scrollingTimeout = setTimeout(() => {
-        //console.log("finised scrolling");
+  const [limit, setLimit] = createSignal(100);
+  let endOfList!: HTMLDivElement;
+  let scrollContainer!: HTMLDivElement;
+  onMount(() => {
+    const observer = new IntersectionObserver(
+      (intersections) => {
+        if (intersections.some((intersection) => intersection.isIntersecting)) {
+          setLimit(limit() + 10);
+        }
+      },
+      {
+        root: scrollContainer,
+        rootMargin: "100px",
+        threshold: 1.0,
+      }
+    );
+    observer.observe(endOfList);
+  });
 
-        refocusIndex(i);
-        document.removeEventListener("scroll", handler);
-      }, 40);
-    });
+  const scrollToIndex = (i) => {
+    if (i > limit()) {
+      setLimit(i + 100);
+    }
+    document.getElementById(`entry-${i}`)?.scrollIntoView();
     refocusIndex(i);
-
-    virtualizer.scrollToIndex(i - 1, { align: "start", ...options });
   };
 
   createEffect(async () => {
@@ -373,10 +374,13 @@ const Track: Component = () => {
   onMount(() => {
     if (location.state) {
       //@ts-ignore
-      const { entry } = location.state;
+      const { entry, label } = location.state;
       if (entry) {
         const i = entries.findIndex((e) => e.id === entry.id);
-        scrollToIndex(i, { smoothScroll: false });
+        scrollToIndex(i);
+        setCurrentJump(0);
+        setShowSearch(true);
+        setSearchText(label);
       }
     }
   });
@@ -436,18 +440,16 @@ const Track: Component = () => {
           </div>
         </div>
       </Show>
-      <div class="pl-8 pt-4">
-        <div ref={scrollRef} class="h-screen w-full overflow-auto no-scrollbar">
+      <div class="pl-8 pt-4 h-screen">
+        <div
+          class="h-full w-full overflow-auto no-scrollbar"
+          ref={scrollContainer}
+        >
           <EmptyBullet />
-          <div
-            class="w-full relative"
-            style={{ height: `${virtualizer.getTotalSize()}px` }}
-          >
-            {virtualizer.getVirtualItems().map((virtualItem) => {
-              const i = virtualItem.index;
-              const start = entries[i];
-              const end = createMemo(() => (i > 0 ? entries[i - 1] : null));
-              //console.log("rerendering", labelFrom(start, end));
+          <For each={entries.slice(0, limit())}>
+            {(start, i) => {
+              const end = createMemo(() => (i() > 0 ? entries[i() - 1] : null));
+              console.log("rerendering", labelFrom(start, end()));
               const conflict = createMemo(
                 () =>
                   end() &&
@@ -468,17 +470,8 @@ const Track: Component = () => {
               //console.log("(re)rendering", start?.after, end()?.before);
 
               return (
-                <div
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    width: "100%",
-                    height: `${virtualItem.size}px`,
-                    transform: `translateY(${virtualItem.start}px)`,
-                  }}
-                >
-                  <div class="flex text-sm" data-label={label()}>
+                <>
+                  <div class="flex text-sm">
                     <Line color={end() ? color() : "gray"} />
                     <div
                       class="ml-8 pl-1 flex flex-col justify-center cursor-pointer hover:bg-sky-50 w-56"
@@ -499,12 +492,12 @@ const Track: Component = () => {
                       </div>
                     </div>
 
-                    <Show when={focusedIndex() === i}>
+                    <Show when={focusedIndex() === i()}>
                       <div
                         class="flex items-center"
                         onkeydown={onkeydown}
-                        onfocusout={(e) => {
-                          if (focusedIndex() === i) {
+                        onfocusout={(_) => {
+                          if (focusedIndex() === i()) {
                             setFocusedIndex(-1);
                           }
                         }}
@@ -513,11 +506,13 @@ const Track: Component = () => {
                       </div>
                     </Show>
                   </div>
-                  <Bullet entry={start} />
-                </div>
+                  <Bullet entry={start} id={`entry-${i()}`} />
+                </>
               );
-            })}
-          </div>
+            }}
+          </For>
+          <div class="w-0 h-0" ref={endOfList} />
+          <div class="h-2" />
         </div>
       </div>
     </Show>

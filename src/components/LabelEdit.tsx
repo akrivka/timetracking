@@ -58,7 +58,9 @@ const LabelEdit = () => {
         <button
           class="hover:bg-gray-100 px-2 h-7 w-full text-left"
           onclick={() => {
-            navigate(`/track`, { state: { entry: state.entry } });
+            navigate(`/track`, {
+              state: { entry: state.entry, label: state.label },
+            });
             closeLabelEdit();
           }}
         >
