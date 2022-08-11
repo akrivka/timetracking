@@ -42,7 +42,7 @@ const Block: Component<{
   const { getLabelInfo, oncontextmenu } = report;
 
   const fullLabel = () =>
-    (props.prelabel ? props.prelabel + " / " : "") + props.label;
+    (props.prelabel ? props.prelabel + "/" : "") + props.label;
 
   const [info, setInfo] = getLabelInfo(fullLabel());
 
@@ -54,11 +54,16 @@ const Block: Component<{
 
   return (
     <Show
-      when={childrenLabels().length !== 1}
+      when={
+        childrenLabels().length !== 1 ||
+        (childrenLabels().length === 1 &&
+          report.labelTimeMap.get(childrenLabels()[0]) !==
+            report.labelTimeMap.get(fullLabel()))
+      }
       fallback={() => (
         <Block
           prelabel={props.prelabel}
-          label={props.label + " / " + leafLabel(childrenLabels()[0])}
+          label={props.label + "/" + leafLabel(childrenLabels()[0])}
         />
       )}
     >

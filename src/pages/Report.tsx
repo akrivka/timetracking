@@ -210,7 +210,7 @@ const ReportPage: Component = () => {
     setRangeString(`${renderTimeFull(newStart)} to ${renderTimeFull(newEnd)}`);
   };
 
-  const totalDuration = createMemo(() => msBetween(startDate(), endDate()));
+  const [totalDuration, setTotalDuration] = createSignal(0);
 
   const entriesInRange = createMemo(() => {
     return [
@@ -222,6 +222,7 @@ const ReportPage: Component = () => {
 
   const labelTimeMap = createMemo(() => {
     const m: Map<Label, number> = new Map();
+    let dur = 0;
 
     for (const [start, end] of listPairs(
       revit([
@@ -238,12 +239,16 @@ const ReportPage: Component = () => {
         showLabels().some((l) => label.startsWith(l) || l.startsWith(label))
       ) {
         const time = msBetween(start.time, end.time);
+        console.log(label, time);
+
+        dur += time;
         while (label) {
           m.set(label, (m.get(label) ?? 0) + time);
           label = coarseLabel(label);
         }
       }
     }
+    setTotalDuration(dur);
 
     return new Map([...m].sort((a, b) => b[1] - a[1]));
   });
