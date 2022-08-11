@@ -52,7 +52,7 @@ const Block: Component<{
   const fullLabel = () =>
     (props.prelabel ? props.prelabel + "/" : "") + props.label;
 
-  const [info, setInfo] = getLabelInfo(fullLabel());
+  const [info, setInfo] = getLabelInfo(fullLabel()) || [{ expanded: true }];
 
   const childrenLabels = createMemo(() =>
     getLabelImmediateChildren(fullLabel(), [...report.labelTimeMap.keys()])
@@ -69,7 +69,6 @@ const Block: Component<{
       )
     );
   });
-  console.log(uncategorizedTime());
 
   return (
     <Show
@@ -91,8 +90,8 @@ const Block: Component<{
           "flex items-center space-x-1 h-6 " +
           (!isLeaf() ? "cursor-pointer" : "")
         }
-        onclick={() => setInfo({ expanded: !info.expanded })}
-        oncontextmenu={(e) => oncontextmenu(e, fullLabel())}
+        onclick={() => setInfo && setInfo({ expanded: !info.expanded })}
+        oncontextmenu={(e) => oncontextmenu && oncontextmenu(e, fullLabel())}
       >
         <Show when={report.showColors}>
           <div class="w-1 h-5" style={{ "background-color": info.color }} />

@@ -24,7 +24,7 @@ const PublicReport: Component<ReportExport> = (props) => {
   const getLabelInfo = (label: string) => labelInfoMap.get(label);
 
   return (
-    <div class="pl-8 pt-4">
+    <div class="pl-8 pt-4 h-screen overflow-auto">
       <div class="text-xs text-gray-700">
         {`${renderTimeFull(props.startDate)} – ${renderTimeFull(
           props.endDate

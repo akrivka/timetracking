@@ -60,7 +60,7 @@ export const BulkRename: Component = () => {
       >
         <div class="min-h-screen flex items-center justify-center">
           <DialogOverlay class="fixed inset-0 bg-gray-800 opacity-25" />
-          <DialogPanel class="inline-block w-96 bg-white px-4 py-3 rounded-lg border-1 shadow z-20 space-y-1">
+          <DialogPanel class="inline-block w-[36rem] bg-white px-4 py-3 rounded-lg border-1 shadow z-20 space-y-1">
             <div class="font-bold">Bulk Rename</div>
             <div class="flex">
               <label class="w-12">From:</label>
