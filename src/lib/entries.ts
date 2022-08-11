@@ -28,15 +28,34 @@ export function makeEntry(): Entry {
   };
 }
 
-export function entryEquals(a: Entry, b: Entry): boolean {
-  return (
-    (a.before || "") === (b.before || "") &&
-    (a.after || "") === (b.after || "") &&
-    a.time.getTime() === b.time.getTime() &&
-    a.id === b.id &&
-    a.lastModified.getTime() === b.lastModified.getTime() &&
-    a.deleted === b.deleted
-  );
+export function entryEquals(a: Entry, b: Entry) {
+  if ((a.before || "") !== (b.before || "")) {
+    return [a, b, "before", a.before, b.before];
+  } else if ((a.after || "") !== (b.after || "")) {
+    return [a, b, "after", a.after, b.after];
+  } else if (a.time.getTime() !== b.time.getTime()) {
+    return [a, b, "time"];
+  } else if (a.id !== b.id) {
+    return [a, b, "id", a.id, b.id];
+  } else if (a.lastModified.getTime() !== b.lastModified.getTime()) {
+    return [
+      a,
+      b,
+      "lastModified",
+      a.lastModified.getTime(),
+      b.lastModified.getTime(),
+    ];
+  } else if (a.deleted !== b.deleted) {
+    return [a, b, "deleted", a.deleted, b.deleted];
+  } else {
+    return true;
+  }
+}
+
+function pretifyEntry(entry: Entry) {
+  return `[${entry.id}, ${entry.time.toISOString()}, ${entry.before}, ${
+    entry.after
+  }, ${entry.deleted}, ${entry.lastModified.toISOString()}]`;
 }
 
 export function entrySetEquals(xs: Entry[], ys: Entry[]) {
@@ -53,13 +72,15 @@ export function entrySetEquals(xs: Entry[], ys: Entry[]) {
 
   for (const x of xs) {
     const y = yMap.get(x.id);
-    if (y === undefined) return false;
-    if (!entryEquals(x, y)) return false;
+    if (y === undefined) return pretifyEntry(x) + " not found";
+    const eq = entryEquals(x, y);
+    if (eq !== true) return eq;
   }
   for (const y of ys) {
     const x = xMap.get(y.id);
-    if (x === undefined) return false;
-    if (!entryEquals(x, y)) return false;
+    if (x === undefined) return pretifyEntry(y) + " not found";
+    const eq = entryEquals(x, y);
+    if (eq !== true) return eq;
   }
 
   return true;

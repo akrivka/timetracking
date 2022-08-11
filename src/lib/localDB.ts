@@ -1,5 +1,5 @@
 import { IDBPDatabase, openDB } from "idb/with-async-ittr";
-import { Entry, uid } from "../context/EntriesContext";
+import { Entry, uid } from "./entries";
 import { delay, wait } from "./util";
 
 let db: undefined | IDBPDatabase;
@@ -62,7 +62,7 @@ export async function removeEntryLocal(id: uid) {
   return await db?.delete("entries", id);
 }
 
-export async function updateEntriesLocal(entries: Entry[]) {
+export async function putEntriesLocal(entries: Entry[]) {
   await wait(delay);
 
   const tx = db.transaction("entries", "readwrite");

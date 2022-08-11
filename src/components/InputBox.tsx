@@ -101,13 +101,21 @@ export function InputBox<T>(props: InputBoxProps<T>) {
             {(m, i) => (
               <div
                 class={
-                  "p-2 w-full cursor-pointer border-b border-gray-200 " +
+                  "p-2 w-full cursor-pointer border-b border-gray-200 hover:bg-blue-200 z-20 " +
                   (selected() === i()
                     ? "bg-blue-400 text-gray-50"
                     : "bg-white text-gray-900")
                 }
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log("here");
+
+                  onEnter(command() + " " + m);
+                }}
               >
-                {command() + " " + m}
+                <span class="text-gray-600">{command()}</span>
+                {" " + m}
               </div>
             )}
           </For>

@@ -23,8 +23,8 @@ import {
   connectDB,
   getAllEntries,
   getAllEntriesModifiedAfter,
-  putEntryLocal,
-  updateEntriesLocal
+  putEntriesLocal,
+  putEntryLocal
 } from "../lib/localDB";
 import { getEntriesRemote } from "../lib/remoteDB";
 import { createSyncedStoreArray } from "../lib/solid-ext";
@@ -32,22 +32,12 @@ import { insertIntoSortedDecreasingBy, now, wait } from "../lib/util";
 import { Credentials, useUser } from "./UserContext";
 import { useWindow } from "./WindowContext";
 
-export async function fullValidate(credentials: Credentials) {
-  const response = await axios.get("/api/entries", {
-    params: credentials,
-  });
-  const remoteEntries = deserializeEntries(decodeURIComponent(response.data));
-  const localEntries = await getAllEntries();
-
-  return entrySetEquals(localEntries, remoteEntries);
-}
-
 type EntriesContextType = {
   entries: Entry[];
   labels: Label[];
   dispatch: (any) => any;
   syncState: any;
-  forceSync: () => void;
+  sync: () => void;
   undo: () => void;
   redo: () => void;
   history: any[];
@@ -70,21 +60,23 @@ export const EntriesProvider = (props) => {
   ] = createSyncedStoreArray<Entry>(localDB, {
     query: getAllEntries,
     equals: (entriesA, entriesB) => {
-      const breakingIndex = entriesA.findIndex(
-        (entryA, i) => !entryEquals(entryA, entriesB[i])
+      const eq = entriesA.some(
+        (entryA, i) => entryEquals(entryA, entriesB[i]) !== true
       );
-      if (breakingIndex === -1) return true;
-      else {
-        const a = entriesA[breakingIndex],
-          b = entriesB[breakingIndex];
-        return [a, b];
+      if (eq) {
+        return eq;
+      } else {
+        return true;
       }
     },
   });
 
   const [pushingUpdates, setPushingUpdates] = createSignal();
-  const [pullingUpdates, setPullingUpdates] = createSignal();
+  const [pushedUpdates, setPushedUpdates] = createSignal(false);
+
   const pushUpdates = async () => {
+    console.log("pushing updates");
+
     setPushingUpdates(true);
     const lastPushed = new Date(JSON.parse(localStorage.lastPushed || "0"));
 
@@ -95,18 +87,23 @@ export const EntriesProvider = (props) => {
     const s = serializeEntries(entries);
 
     // send to server using axios
+    setPushedUpdates(true);
     const response = await axios.post(
       "/api/update",
       "entries=" + encodeURIComponent(s),
       { params: credentials }
     );
+    //if(response.)
 
     // update lastPushed
     localStorage.lastPushed = JSON.stringify(now().getTime());
     setPushingUpdates(false);
   };
 
+  const [pullingUpdates, setPullingUpdates] = createSignal();
   const pullUpdates = async () => {
+    console.log("pulling updates");
+
     setPullingUpdates(true);
     const lastPulled = new Date(JSON.parse(localStorage.lastPulled || "0"));
 
@@ -116,38 +113,46 @@ export const EntriesProvider = (props) => {
       credentials
     );
 
-    await updateEntriesLocal(entries);
-    storeForceSync();
+    if (entries.length > 100) {
+      await putEntriesFast(entries);
+    } else {
+      await putEntries(entries, { shouldPushUpdates: false });
+    }
 
     // change last pulled
     localStorage.lastPulled = JSON.stringify(now().getTime());
     setPullingUpdates(false);
   };
 
-  const forceSync = async () => {
-    delete localStorage.lastPushed;
-    delete localStorage.lastPulled;
+  const [validating, setValidating] = createSignal();
+  const fullValidate = async (credentials: Credentials) => {
+    setValidating(true);
+    const response = await axios.get("/api/entries", {
+      params: credentials,
+    });
+    const remoteEntries = deserializeEntries(decodeURIComponent(response.data));
+    const localEntries = await getAllEntries();
+    console.log("validated", remoteEntries.length, "entries");
 
-    await pullUpdates();
+    const result = entrySetEquals(localEntries, remoteEntries);
+    setValidating(false);
+    return result === true ? "ok" : result;
+  };
 
-    await pushUpdates();
+  const sync = async () => {
+    await Promise.all([pushUpdates(), pullUpdates()]);
 
-    localStorage.lastPushed = JSON.stringify(now().getTime());
-    localStorage.lastPulled = JSON.stringify(now().getTime());
-
-    storeForceSync();
-    if (!(await fullValidate(credentials))) {
-      console.log("something went wrong");
-    }
-    return null;
+    console.log("validating");
+    console.log(await fullValidate(credentials));
   };
 
   // long polling real time updates
   const subscribe = async () => {
     console.log("resubscribing");
 
-    const res = await axios.get("/api/sync", { params: credentials });
-    console.log(res.status);
+    const res = await axios.get("/api/sync", {
+      params: credentials,
+    });
 
     if (res.status === 502) {
       await subscribe();
@@ -155,15 +160,17 @@ export const EntriesProvider = (props) => {
       await wait(1000);
       await subscribe();
     } else {
-      console.log("gotiimmm");
-
-      await pullUpdates();
+      if (!pushedUpdates()) {
+        setPushedUpdates(false);
+        await pullUpdates();
+      }
+      setPushedUpdates(false);
       await subscribe();
     }
   };
 
   onMount(() => {
-    subscribe();
+    //untrack(subscribe);
 
     document.addEventListener("focus", () => pullUpdates());
   });
@@ -171,11 +178,22 @@ export const EntriesProvider = (props) => {
   // SYNC STATE
   const syncState = {
     local: { initialized, querying, mutating },
-    remote: { loggedIn, pushingUpdates, pullingUpdates },
+    remote: { loggedIn, pushingUpdates, pullingUpdates, validating },
   };
 
   // EVENT HANDLING
-  const putEntries = async (_entries: (Partial<Entry> | undefined)[]) => {
+  const putEntriesFast = async (entries: Entry[]) => {
+    await putEntriesLocal(entries);
+    storeForceSync();
+    updateLabels();
+  };
+
+  const putEntries = async (
+    _entries: (Partial<Entry> | undefined)[],
+    { shouldPushUpdates = true }: { shouldPushUpdates?: boolean } = {}
+  ) => {
+    if (_entries.length === 0) return;
+
     const newEntries = _entries.map((entry) => {
       const existingEntry = entries.find((e) => e.id === entry?.id);
 
@@ -207,7 +225,7 @@ export const EntriesProvider = (props) => {
 
     updateLabels();
 
-    if (hasNetwork() && loggedIn()) {
+    if (hasNetwork() && loggedIn() && shouldPushUpdates) {
       setPushingUpdates(true);
       await pushUpdates();
       setPushingUpdates(false);
@@ -308,7 +326,7 @@ export const EntriesProvider = (props) => {
   createEffect(() => {
     if (initialized()) {
       if (hasNetwork() && loggedIn()) {
-        untrack(forceSync);
+        untrack(sync);
       }
       untrack(updateLabels);
     }
@@ -371,7 +389,7 @@ export const EntriesProvider = (props) => {
           entries,
           labels,
           dispatch,
-          forceSync,
+          sync,
           syncState,
           undo,
           redo,

@@ -20,7 +20,10 @@ import { Entry, labelFrom } from "../lib/entries";
 import { renderDuration, renderTime } from "../lib/format";
 import { coarseLabel, leafLabel } from "../lib/labels";
 import { actionRule, dateRule, emptyRule, parseString } from "../lib/parse";
+import { clickOutside } from "../lib/solid-ext";
 import { minutesAfter, now } from "../lib/util";
+
+false && clickOutside;
 
 const EmptyBullet = () => {
   return (
@@ -449,7 +452,7 @@ const Track: Component = () => {
           <For each={entries.slice(0, limit())}>
             {(start, i) => {
               const end = createMemo(() => (i() > 0 ? entries[i() - 1] : null));
-              console.log("rerendering", labelFrom(start, end()));
+              //console.log("rerendering", labelFrom(start, end()));
               const conflict = createMemo(
                 () =>
                   end() &&
@@ -475,7 +478,10 @@ const Track: Component = () => {
                     <Line color={end() ? color() : "gray"} />
                     <div
                       class="ml-8 pl-1 flex flex-col justify-center cursor-pointer hover:bg-sky-50 w-56"
-                      onClick={() => setFocusedIndex(i)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setFocusedIndex(i);
+                      }}
                     >
                       <div class={conflict() ? "text-red-600" : ""}>
                         <div>
@@ -496,11 +502,7 @@ const Track: Component = () => {
                       <div
                         class="flex items-center"
                         onkeydown={onkeydown}
-                        onfocusout={(_) => {
-                          if (focusedIndex() === i()) {
-                            setFocusedIndex(-1);
-                          }
-                        }}
+                        use:clickOutside={() => setFocusedIndex(-1)}
                       >
                         {inputBox}
                       </div>
