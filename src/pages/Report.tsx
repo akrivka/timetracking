@@ -260,7 +260,7 @@ const ReportPage: Component = () => {
 
   return (
     <div class="ml-4 mt-4">
-      <div class="space-y-4 h-56">
+      <div class="space-y-4 min-h-[16rem]">
         <div class="flex">
           <label class="w-16">Range:</label>
           <div class="w-96">
@@ -303,7 +303,9 @@ const ReportPage: Component = () => {
             <InputBox
               class="w-72 px-1 border rounded"
               prefixRule={emptyRule}
-              universe={labelsInRange()}
+              universe={labelsInRange().filter(
+                (l1) => !showLabels().some((l2) => l1.startsWith(l2))
+              )}
               submit={async (_, label) => {
                 setShowLabels([...showLabels(), label]);
               }}
@@ -320,11 +322,11 @@ const ReportPage: Component = () => {
                   Clear all
                 </button>
               </div>
-              <div class="flex flex-wrap space-x-1 w-56">
+              <div class="flex flex-wrap w-1/2">
                 <For each={showLabels()}>
                   {(label, i) => {
                     return (
-                      <div class="pl-1 fixeh-6 bg-gray-200 rounded flex items-center">
+                      <div class="pl-1 mx-1 my-0.5 h-6 bg-gray-200 rounded flex items-center">
                         <div>{label}</div>
                         <button
                           class="w-5 h-6 flex justify-center items-center text-gray-500  hover:text-gray-800"
