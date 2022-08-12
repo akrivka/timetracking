@@ -100,12 +100,26 @@ export function* entriesIteratorWithEnds(
   entries: Entry[],
   { start, end }: { start: Date; end: Date }
 ): Generator<Partial<Entry>> {
-  yield { time: end };
-  for (const entry of entries) {
-    if ((!start || entry.time >= start) && (!end || entry.time <= end))
+  for (let i = 0; i < entries.length; i++) {
+    const entry = entries[i];
+    const prevEntry = i > 0 ? entries[i - 1] : null;
+    const nextEntry = i < entries.length - 1 ? entries[i + 1] : null;
+
+    // no boundaries
+    if (!end && !start) yield entry;
+
+    // on boundaries
+    if (end && nextEntry && nextEntry.time < end && entry.time >= end) {
+      yield { ...entry, time: end };
+    }
+    if (start && prevEntry && entry.time <= start && prevEntry.time > start)
+      yield { ...entry, time: start };
+
+    if ((!start || entry.time >= start) && (!end || entry.time <= end)) {
+      if (i == 0) yield { time: end };
       yield entry;
+    }
   }
-  yield { time: start };
 }
 
 export function labelFrom(a: Partial<Entry>, b: Partial<Entry>): string {
