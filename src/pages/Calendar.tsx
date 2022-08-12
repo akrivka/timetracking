@@ -25,7 +25,7 @@ import { useUser } from "../context/UserContext";
 import { MS_IN_HOURS } from "../lib/constants";
 import {
   daysAfter,
-  fractionalHours,
+  hoursBetween,
   msBetween,
   nextMidnight,
   nextWeek,
@@ -34,7 +34,7 @@ import {
 import { Entry, labelFrom } from "../lib/entries";
 import { renderDay } from "../lib/format";
 import { coarseLabel } from "../lib/labels";
-import { it, listPairs } from "../lib/util";
+import { it, listPairs, now } from "../lib/util";
 
 const UpDownInput = (props) => {
   return (
@@ -96,7 +96,7 @@ const Calendar: Component = () => {
       ...es
         .filter((entry) => entry.time > startDay() && entry.time < endDay())
         .reverse(),
-      { ...end, time: endDay() },
+      { ...end, time: endDay() < now() ? endDay() : now() },
     ];
   });
 
@@ -153,49 +153,68 @@ const Calendar: Component = () => {
       }
       day < 7 && result[day].push([a, b]);
     }
+
     return result;
   });
 
   const dayInfos = createMemo(() => {
-    return dayIntervals().map((intervals) => {
+    return dayIntervals().map((intervals, i) => {
       const hiddenBefore = [];
       const hiddenAfter = [];
       const visibleIntervals = [];
 
-      for (const [start, end] of intervals) {
-        if (fractionalHours(end.time) <= startHours()) {
+      const day = daysAfter(startDay(), i);
+
+      const newStart = new Date(
+        day.getFullYear(),
+        day.getMonth(),
+        day.getDate(),
+        startHours(),
+        0
+      );
+      const newEnd = new Date(
+        day.getFullYear(),
+        day.getMonth(),
+        day.getDate(),
+        endHours(),
+        0
+      );
+
+      for (let [start, end] of intervals) {
+        if (end.time > now()) {
+          end = { ...end, time: now() };
+        }
+        if (
+          hoursBetween(start.time, day) <= startHours() &&
+          hoursBetween(end.time, day) >= endHours()
+        ) {
+          const label = labelFrom(start, end);
+          hoursBetween(start.time, day) < startHours() &&
+            hiddenBefore.push(label);
+          hoursBetween(end.time, day) > endHours() && hiddenAfter.push(label);
+          visibleIntervals.push([
+            { ...start, time: newStart },
+            { ...end, time: newEnd },
+          ]);
+        } else if (hoursBetween(end.time, day) <= startHours()) {
           end.before && hiddenBefore.push(end.before);
-        } else if (fractionalHours(start.time) < startHours()) {
+        } else if (hoursBetween(start.time, day) < startHours()) {
           end.before && hiddenBefore.push(end.before);
-          const newStart = new Date(
-            start.time.getFullYear(),
-            start.time.getMonth(),
-            start.time.getDate(),
-            startHours(),
-            0
-          );
 
           visibleIntervals.push([{ ...start, time: newStart }, end]);
-        } else if (endHours() <= fractionalHours(start.time)) {
+        } else if (endHours() <= hoursBetween(start.time, day)) {
           hiddenAfter.push(
             labelFrom(
               { after: getVisibleLabel(start?.after) },
               { before: getVisibleLabel(end?.before) }
             )
           );
-        } else if (endHours() < fractionalHours(end.time)) {
+        } else if (endHours() < hoursBetween(end.time, day)) {
           hiddenAfter.push(
             labelFrom(
               { after: getVisibleLabel(start?.after) },
               { before: getVisibleLabel(end?.before) }
             )
-          );
-          const newEnd = new Date(
-            end.time.getFullYear(),
-            end.time.getMonth(),
-            end.time.getDate(),
-            endHours(),
-            0
           );
 
           visibleIntervals.push([start, { ...end, time: newEnd }]);
@@ -203,6 +222,7 @@ const Calendar: Component = () => {
           visibleIntervals.push([start, end]);
         }
       }
+
       return { hiddenBefore, hiddenAfter, visibleIntervals };
     });
   });

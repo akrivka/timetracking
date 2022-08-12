@@ -1,3 +1,4 @@
+import { MS_IN_HOURS } from "./constants";
 import { DateSpec } from "./parse";
 import { now } from "./util";
 
@@ -35,6 +36,10 @@ export function nextMidnight(date = new Date()) {
 
 export function msBetween(a: Date, b: Date) {
   return Math.abs(a.getTime() - b.getTime());
+}
+
+export function hoursBetween(a: Date, b: Date) {
+  return msBetween(a, b) / MS_IN_HOURS;
 }
 
 export function specToDate(
