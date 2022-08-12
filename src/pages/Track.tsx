@@ -9,7 +9,8 @@ import {
   For,
   onCleanup,
   onMount,
-  Show
+  Show,
+  untrack
 } from "solid-js";
 import { useUIState } from "../App";
 import { InputBox } from "../components/InputBox";
@@ -304,12 +305,14 @@ const Track: Component = () => {
     const observer = new IntersectionObserver(
       (intersections) => {
         if (intersections.some((intersection) => intersection.isIntersecting)) {
-          setLimit(limit() + 10);
+          console.log("increasing limit");
+
+          setLimit(limit() + 100);
         }
       },
       {
         root: scrollContainer,
-        rootMargin: "100px",
+        rootMargin: "300px",
         threshold: 1.0,
       }
     );
@@ -327,7 +330,7 @@ const Track: Component = () => {
   createEffect(async () => {
     const i = jumpIndices()[currentJump()];
 
-    scrollToIndex(i);
+    untrack(() => scrollToIndex(i));
   });
 
   const onkeydown = async (e) => {
@@ -502,7 +505,7 @@ const Track: Component = () => {
                           }
                           if (e.key === "ArrowDown") {
                             setFocusedIndex(
-                              Math.min(entries.length - 1, focusedIndex() + 1)
+                              Math.min(entries.length - 2, focusedIndex() + 1)
                             );
                           }
                         }}
