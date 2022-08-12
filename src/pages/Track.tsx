@@ -7,6 +7,7 @@ import {
   createMemo,
   createSignal,
   For,
+  onCleanup,
   onMount,
   Show
 } from "solid-js";
@@ -87,17 +88,9 @@ const Track: Component = () => {
     "track",
     "focusedIndex"
   );
-
-  const onkeydown = (e) => {
-    if (e.key === "Escape") {
-      setFocusedIndex(-1);
-    }
-    if (e.key === "ArrowUp") {
-      setFocusedIndex(Math.max(0, focusedIndex() - 1));
-    }
-    if (e.key === "ArrowDown") {
-      setFocusedIndex(Math.min(entries.length - 1, focusedIndex() + 1));
-    }
+  const refocusIndex = (i) => {
+    setFocusedIndex(-1);
+    setFocusedIndex(i);
   };
 
   const inputBox = InputBox({
@@ -288,9 +281,20 @@ const Track: Component = () => {
     }, [] as number[]);
   };
 
-  const refocusIndex = (i) => {
-    setFocusedIndex(-1);
-    setFocusedIndex(i);
+  const [focusSearchSignal, setFocusSearchSignal] = createSignal(null);
+  const focusSearch = () => setFocusSearchSignal(!focusSearchSignal());
+
+  const jumpDown = () => {
+    setCurrentJump(Math.min(currentJump() + 1, jumpIndices().length - 1));
+  };
+
+  const jumpUp = () => {
+    setCurrentJump(Math.max(currentJump() - 1, 0));
+  };
+
+  const closeSearch = () => {
+    setSearchText("");
+    setShowSearch(false);
   };
 
   const [limit, setLimit] = createSignal(100);
@@ -326,51 +330,39 @@ const Track: Component = () => {
     scrollToIndex(i);
   });
 
-  const [focusSearchSignal, setFocusSearchSignal] = createSignal(null);
-  const focusSearch = () => setFocusSearchSignal(!focusSearchSignal());
-
-  const jumpDown = () => {
-    setCurrentJump(Math.min(currentJump() + 1, jumpIndices().length - 1));
+  const onkeydown = async (e) => {
+    // if cmd/ctrl+enter pressed
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      scrollToIndex(0);
+    } else if (e.key == "Enter") {
+      // document.activeElement is not of type input
+      if (document.activeElement.tagName != "INPUT" && focusedIndex() >= 0) {
+        refocusIndex(focusedIndex());
+      }
+    }
+    // if cmd/ctrl+f pressed
+    if (e.key === "f" && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      setShowSearch(true);
+      setSearchText("");
+      focusSearch();
+    }
+    // if ctrl+n pressed
+    if (e.key === "n" && e.ctrlKey) {
+      e.preventDefault();
+      jumpDown();
+    }
+    // if ctrl+p pressed
+    if (e.key === "p" && e.ctrlKey) {
+      e.preventDefault();
+      jumpUp();
+    }
   };
-
-  const jumpUp = () => {
-    setCurrentJump(Math.max(currentJump() - 1, 0));
-  };
-
-  const closeSearch = () => {
-    setSearchText("");
-    setShowSearch(false);
-  };
-
   onMount(() => {
-    document.addEventListener("keydown", async (e) => {
-      // if cmd/ctrl+enter pressed
-      if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-        scrollToIndex(0);
-      } else if (e.key == "Enter") {
-        // document.activeElement is not of type input
-        if (document.activeElement.tagName != "INPUT" && focusedIndex() >= 0) {
-          refocusIndex(focusedIndex());
-        }
-      }
-      // if cmd/ctrl+f pressed
-      if (e.key === "f" && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        setShowSearch(true);
-        setSearchText("");
-        focusSearch();
-      }
-      // if ctrl+n pressed
-      if (e.key === "n" && e.ctrlKey) {
-        e.preventDefault();
-        jumpDown();
-      }
-      // if ctrl+p pressed
-      if (e.key === "p" && e.ctrlKey) {
-        e.preventDefault();
-        jumpUp();
-      }
-    });
+    document.addEventListener("keydown", onkeydown);
+  });
+  onCleanup(() => {
+    document.removeEventListener("keydown", onkeydown);
   });
 
   const location = useLocation();
@@ -501,7 +493,19 @@ const Track: Component = () => {
                     <Show when={focusedIndex() === i()}>
                       <div
                         class="flex items-center"
-                        onkeydown={onkeydown}
+                        onkeydown={(e) => {
+                          if (e.key === "Escape") {
+                            setFocusedIndex(-1);
+                          }
+                          if (e.key === "ArrowUp") {
+                            setFocusedIndex(Math.max(0, focusedIndex() - 1));
+                          }
+                          if (e.key === "ArrowDown") {
+                            setFocusedIndex(
+                              Math.min(entries.length - 1, focusedIndex() + 1)
+                            );
+                          }
+                        }}
                         use:clickOutside={() => setFocusedIndex(-1)}
                       >
                         {inputBox}

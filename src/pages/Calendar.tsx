@@ -13,6 +13,7 @@ import {
   createSignal,
   For,
   Match,
+  onCleanup,
   onMount,
   Show,
   Switch
@@ -264,20 +265,24 @@ const Calendar: Component = () => {
     return ticks;
   });
 
-  onMount(() => {
-    document.addEventListener("keydown", (e) => {
-      // if not focus on an input
-      if (!(e.target instanceof HTMLInputElement)) {
-        // if cmd/ctrl+left
-        if (e.key === "ArrowLeft") {
-          setWeek(prevWeek);
-        }
-        // if cmd/ctrl+right
-        if (e.key === "ArrowRight") {
-          setWeek(nextWeek);
-        }
+  const onkeydown = (e) => {
+    // if not focus on an input
+    if (!(e.target instanceof HTMLInputElement)) {
+      // if cmd/ctrl+left
+      if (e.key === "ArrowLeft") {
+        setWeek(prevWeek);
       }
-    });
+      // if cmd/ctrl+right
+      if (e.key === "ArrowRight") {
+        setWeek(nextWeek);
+      }
+    }
+  };
+  onMount(() => {
+    document.addEventListener("keydown", onkeydown);
+  });
+  onCleanup(() => {
+    document.removeEventListener("keydown", onkeydown);
   });
 
   return (

@@ -4,6 +4,7 @@ import {
   createEffect,
   createResource,
   createSignal,
+  onCleanup,
   onMount,
   Show,
   untrack,
@@ -373,13 +374,17 @@ export const EntriesProvider = (props) => {
     setHistory([...history, createEvent({ event, type: "redo" })]);
   };
 
+  const onkeydown = (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === "z") {
+      if (!e.shiftKey) undo();
+      else redo();
+    }
+  };
   onMount(() => {
-    document.addEventListener("keydown", (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "z") {
-        if (!e.shiftKey) undo();
-        else redo();
-      }
-    });
+    document.addEventListener("keydown", onkeydown);
+  });
+  onCleanup(() => {
+    document.removeEventListener("keydown", onkeydown);
   });
 
   return (

@@ -6,6 +6,7 @@ import {
   Component,
   createContext,
   For,
+  onCleanup,
   onMount,
   Setter,
   Show,
@@ -63,16 +64,20 @@ export function useUIState<T>(...path): [get: Accessor<T>, set: Setter<T>] {
 
 const App: Component = () => {
   const navigate = useNavigate();
+  const onkeydown = (e) => {
+    if (e.altKey) {
+      e.code === "Digit1" && navigate("/track");
+      e.code === "Digit2" && navigate("/report");
+      e.code === "Digit3" && navigate("/calendar");
+      e.code === "Digit4" && navigate("/help");
+      e.code === "Backquote" && navigate("/");
+    }
+  };
   onMount(() => {
-    document.addEventListener("keydown", (e) => {
-      if (e.altKey) {
-        e.code === "Digit1" && navigate("/track");
-        e.code === "Digit2" && navigate("/report");
-        e.code === "Digit3" && navigate("/calendar");
-        e.code === "Digit4" && navigate("/help");
-        e.code === "Backquote" && navigate("/");
-      }
-    });
+    document.addEventListener("keydown", onkeydown);
+  });
+  onCleanup(() => {
+    document.removeEventListener("keydown", onkeydown);
   });
 
   return (

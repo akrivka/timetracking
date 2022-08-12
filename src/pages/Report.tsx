@@ -18,6 +18,7 @@ import {
   createSignal,
   For,
   Match,
+  onCleanup,
   onMount,
   Show,
   Switch
@@ -229,29 +230,27 @@ const ReportPage: Component = () => {
     for (const [start, end] of listPairs(
       revit([
         ...entriesIteratorWithEnds(entries, {
-          start: startDate(),
-          end: endDate(),
+          start: startDate() < now() ? startDate() : now(),
+          end: endDate() < now() ? endDate() : now(),
         }),
       ])
     )) {
-      if (end.time !== endDate()) {
-        const baseLabel = labelFrom(start, end);
-        const prefix = showLabels().find((l) => baseLabel.startsWith(l));
+      const baseLabel = labelFrom(start, end);
+      const prefix = showLabels().find((l) => baseLabel.startsWith(l));
 
-        if (!isFiltered() || prefix) {
-          const time = msBetween(start.time, end.time);
-          let label = !isFiltered()
-            ? baseLabel
-            : baseLabel
-                .slice((prefix ?? "").length)
-                .trim()
-                .slice(1);
+      if (!isFiltered() || prefix) {
+        const time = msBetween(start.time, end.time);
+        let label = !isFiltered()
+          ? baseLabel
+          : baseLabel
+              .slice((prefix ?? "").length)
+              .trim()
+              .slice(1);
 
-          dur += time;
-          while (label) {
-            m.set(label, (m.get(label) ?? 0) + time);
-            label = coarseLabel(label);
-          }
+        dur += time;
+        while (label) {
+          m.set(label, (m.get(label) ?? 0) + time);
+          label = coarseLabel(label);
         }
       }
     }
@@ -260,19 +259,23 @@ const ReportPage: Component = () => {
     return new Map([...m].sort((a, b) => b[1] - a[1]));
   });
 
+  const onkeydown = (e) => {
+    if (!(e.target instanceof HTMLInputElement)) {
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+        dateRangeInputEl.focus();
+      } else if (e.key === "ArrowLeft") {
+        shift(-1);
+      } else if (e.key === "ArrowRight") {
+        shift(1);
+      }
+    }
+  };
   let dateRangeInputEl: HTMLInputElement | undefined;
   onMount(() => {
-    document.addEventListener("keydown", (e) => {
-      if (!(e.target instanceof HTMLInputElement)) {
-        if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-          dateRangeInputEl.focus();
-        } else if (e.key === "ArrowLeft") {
-          shift(-1);
-        } else if (e.key === "ArrowRight") {
-          shift(1);
-        }
-      }
-    });
+    document.addEventListener("keydown", onkeydown);
+  });
+  onCleanup(() => {
+    document.removeEventListener("keydown", onkeydown);
   });
 
   return (
@@ -426,7 +429,7 @@ const ReportPage: Component = () => {
                 openLabelEdit({
                   coord: [e.clientX, e.clientY],
                   label: label,
-                  entry: start,
+                  entry: end,
                 });
                 break;
               }
