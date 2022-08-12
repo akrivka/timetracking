@@ -9,9 +9,9 @@ import {
 import {
   Component,
   createMemo,
-  createRenderEffect,
   createSignal,
   For,
+  Index,
   Match,
   onCleanup,
   onMount,
@@ -20,11 +20,12 @@ import {
 } from "solid-js";
 import { useUIState } from "../App";
 import { openLabelEdit } from "../components/LabelEdit";
-import { MyTextInput } from "../components/MyTextInput";
 import { useEntries } from "../context/EntriesContext";
 import { useUser } from "../context/UserContext";
+import { MS_IN_HOURS } from "../lib/constants";
 import {
   daysAfter,
+  fractionalHours,
   msBetween,
   nextMidnight,
   nextWeek,
@@ -33,55 +34,41 @@ import {
 import { Entry, labelFrom } from "../lib/entries";
 import { renderDay } from "../lib/format";
 import { coarseLabel } from "../lib/labels";
-import {
-  dateToDayTimeSpec,
-  DayTimeSpec,
-  dayTimeSpecToMinutes,
-  dayTimeSpecToString,
-  isBeforeDayTime,
-  minutesAfterDayTime,
-  parseString,
-  timeRule
-} from "../lib/parse";
 import { it, listPairs } from "../lib/util";
 
 const UpDownInput = (props) => {
   return (
-    <div class="flex">
-      <MyTextInput
-        class="w-14 text-center"
-        value={props.value}
-        onEnter={props.setValue}
-        onkeydown={(e) => {
-          if (e.key === "ArrowUp") {
-            props.increment();
-          } else if (e.key === "ArrowDown") {
-            props.decrement();
-          }
-        }}
-      />
-      <div class="w-4 flex flex-col">
+    <div class="w-4 flex flex-col h-8">
+      <Show
+        when={props.value > props.boundaries[0]}
+        fallback={<div class="h-1/2" />}
+      >
         <button
           tabindex="-1"
           class="h-1/2 hover:bg-gray-100"
-          onclick={props.increment}
+          onclick={() => props.setValue(props.value - 1)}
         >
           <Icon
             class="w-4 h-3 flex justify-center items-center rounded"
             path={chevronUp}
-          ></Icon>
+          />
         </button>
+      </Show>
+      <Show
+        when={props.value < props.boundaries[1]}
+        fallback={<div class="h-1/2" />}
+      >
         <button
           tabindex="-1"
           class="h-1/2 hover:bg-gray-100"
-          onclick={props.decrement}
+          onclick={() => props.setValue(props.value + 1)}
         >
           <Icon
             class="w-4 h-3 flex justify-center items-center rounded"
             path={chevronDown}
-          ></Icon>
+          />
         </button>
-      </div>
+      </Show>
     </div>
   );
 };
@@ -91,47 +78,14 @@ const Calendar: Component = () => {
   const { getLabelInfo } = useUser();
 
   const [week, setWeek] = useUIState<Date>("calendar", "week");
-  const [startTimeString, setStartTimeString] = useUIState<string>(
-    "calendar",
-    "startTimeString"
-  );
-  const [endTimeString, setEndTimeString] = useUIState<string>(
-    "calendar",
-    "endTimeString"
-  );
 
   const startDay = () => week();
   const endDay = () => daysAfter(week(), 7);
 
-  const [startTime, setStartTime] = createSignal<DayTimeSpec>();
-  const [endTime, setEndTime] = createSignal<DayTimeSpec>();
+  const [startHours, setStartHours] = createSignal<number>(0);
+  const [endHours, setEndHours] = createSignal<number>(24);
 
-  createRenderEffect(() => {
-    const m = parseString(timeRule, startTimeString());
-    if (m == "fail" || m == "prefix") {
-      console.log("Error parsing start time", m);
-    } else {
-      setStartTime(m[0]);
-    }
-  });
-  createRenderEffect(() => {
-    const m = parseString(timeRule, endTimeString());
-    if (m == "fail" || m == "prefix") {
-      console.log("Error parsing end time", m);
-    } else if (
-      dayTimeSpecToMinutes(m[0]) - dayTimeSpecToMinutes(startTime()) <=
-      0
-    ) {
-      console.log("End time is before start time");
-    } else {
-      setEndTime(m[0]);
-    }
-  });
-
-  const msInADay = () =>
-    (dayTimeSpecToMinutes(endTime()) - dayTimeSpecToMinutes(startTime())) *
-    60 *
-    1000;
+  const msInADay = () => (endHours() - startHours()) * MS_IN_HOURS;
 
   const entriesInWeek = createMemo(() => {
     const es = [...entries];
@@ -209,41 +163,40 @@ const Calendar: Component = () => {
       const visibleIntervals = [];
 
       for (const [start, end] of intervals) {
-        if (isBeforeDayTime(dateToDayTimeSpec(end.time), startTime()) >= 0) {
+        if (fractionalHours(end.time) <= startHours()) {
           end.before && hiddenBefore.push(end.before);
-        } else if (
-          isBeforeDayTime(dateToDayTimeSpec(start.time), startTime()) == 1
-        ) {
+        } else if (fractionalHours(start.time) < startHours()) {
           end.before && hiddenBefore.push(end.before);
-          const newStart = new Date(start.time.getTime());
-          newStart.setHours(startTime().hours);
-          newStart.setMinutes(startTime().minutes);
-          newStart.setSeconds(0);
-          newStart.setMilliseconds(0);
+          const newStart = new Date(
+            start.time.getFullYear(),
+            start.time.getMonth(),
+            start.time.getDate(),
+            startHours(),
+            0
+          );
+
           visibleIntervals.push([{ ...start, time: newStart }, end]);
-        } else if (
-          isBeforeDayTime(endTime(), dateToDayTimeSpec(start.time)) >= 0
-        ) {
+        } else if (endHours() <= fractionalHours(start.time)) {
           hiddenAfter.push(
             labelFrom(
               { after: getVisibleLabel(start?.after) },
               { before: getVisibleLabel(end?.before) }
             )
           );
-        } else if (
-          isBeforeDayTime(endTime(), dateToDayTimeSpec(end.time)) == 1
-        ) {
+        } else if (endHours() < fractionalHours(end.time)) {
           hiddenAfter.push(
             labelFrom(
               { after: getVisibleLabel(start?.after) },
               { before: getVisibleLabel(end?.before) }
             )
           );
-          const newEnd = new Date(end.time.getTime());
-          newEnd.setHours(endTime().hours);
-          newEnd.setMinutes(endTime().minutes);
-          newEnd.setSeconds(0);
-          newEnd.setMilliseconds(0);
+          const newEnd = new Date(
+            end.time.getFullYear(),
+            end.time.getMonth(),
+            end.time.getDate(),
+            endHours(),
+            0
+          );
 
           visibleIntervals.push([start, { ...end, time: newEnd }]);
         } else {
@@ -255,13 +208,10 @@ const Calendar: Component = () => {
   });
 
   const timeTicks = createMemo(() => {
-    const ticks: DayTimeSpec[] = [];
-    let time = startTime();
-    while (isBeforeDayTime(time, endTime())) {
-      ticks.push(time);
-      time = minutesAfterDayTime(time, 60);
+    const ticks: number[] = [];
+    for (let h = startHours(); h <= endHours(); h++) {
+      ticks.push(h);
     }
-    ticks.push(endTime());
     return ticks;
   });
 
@@ -275,6 +225,15 @@ const Calendar: Component = () => {
       // if cmd/ctrl+right
       if (e.key === "ArrowRight") {
         setWeek(nextWeek);
+      }
+      if (e.key === "ArrowUp" && e.shiftKey) {
+        endHours() > startHours() && setEndHours(endHours() - 1);
+      } else if (e.key === "ArrowDown" && e.shiftKey) {
+        endHours() < 24 && setEndHours(endHours() + 1);
+      } else if (e.key === "ArrowUp") {
+        startHours() > 0 && setStartHours(startHours() - 1);
+      } else if (e.key === "ArrowDown") {
+        startHours() < endHours() && setStartHours(startHours() + 1);
       }
     }
   };
@@ -307,66 +266,42 @@ const Calendar: Component = () => {
                 <Icon class="w-4 h-4" path={chevronRight}></Icon>
               </button>
             </div>
-            <div class="flex items-center space-x-2">
-              <div class="space-x-1 h-4 flex items-center">
-                <label class="w-18">Start time:</label>
-                <UpDownInput
-                  value={startTimeString()}
-                  setValue={setStartTimeString}
-                  increment={() => {
-                    const newStartTime = minutesAfterDayTime(startTime(), 60);
-                    if (dayTimeSpecToMinutes(newStartTime) <= 24 * 60)
-                      setStartTimeString(dayTimeSpecToString(newStartTime));
-                  }}
-                  decrement={() => {
-                    const newStartTime = minutesAfterDayTime(startTime(), -60);
-                    if (dayTimeSpecToMinutes(newStartTime) >= 0)
-                      setStartTimeString(dayTimeSpecToString(newStartTime));
-                  }}
-                />
-              </div>
-              <div class="space-x-1 h-4 flex items-center">
-                <label class="w-18">End time:</label>
-                <UpDownInput
-                  value={endTimeString()}
-                  setValue={setEndTimeString}
-                  increment={() => {
-                    const newEndTime = minutesAfterDayTime(endTime(), 60);
-                    if (dayTimeSpecToMinutes(newEndTime) <= 24 * 60)
-                      setEndTimeString(dayTimeSpecToString(newEndTime));
-                  }}
-                  decrement={() => {
-                    const newEndTime = minutesAfterDayTime(endTime(), -60);
-                    if (dayTimeSpecToMinutes(newEndTime) >= 0)
-                      setEndTimeString(dayTimeSpecToString(newEndTime));
-                  }}
-                />
-              </div>
-            </div>
           </div>
           <div class="h-[90%] border rounded-sm inline-flex w-full">
             <div class="flex flex-col grow w-48">
               <div class="h-10" />
               <div class="h-4" />
               <div class="relative h-full">
-                <For each={timeTicks()}>
-                  {(mark) => {
-                    const top =
-                      ((dayTimeSpecToMinutes(mark) -
-                        dayTimeSpecToMinutes(startTime())) *
-                        60 *
-                        1000) /
-                      msInADay();
+                <div class="flex flex-col h-full justify-between">
+                  <div class="-translate-x-5 -translate-y-2">
+                    <UpDownInput
+                      value={startHours()}
+                      setValue={setStartHours}
+                      boundaries={[0, endHours()]}
+                    />
+                  </div>
+                  <div class="-translate-x-5 translate-y-2">
+                    <UpDownInput
+                      value={endHours()}
+                      setValue={setEndHours}
+                      boundaries={[startHours(), 24]}
+                    />
+                  </div>
+                </div>
+                <Index each={timeTicks()}>
+                  {(h) => {
+                    const top = () =>
+                      (h() - startHours()) / (endHours() - startHours());
                     return (
                       <div
                         class="text-[8px] flex items-center text-gray-400 absolute h-4 -translate-y-2 w-full justify-end pr-0.5"
-                        style={`top: ${top * 100}%`}
+                        style={`top: ${top() * 100}%`}
                       >
-                        {dayTimeSpecToString(mark)}
+                        {`${h()}:00`}
                       </div>
                     );
                   }}
-                </For>
+                </Index>
               </div>
               <div class="h-4" />
             </div>
