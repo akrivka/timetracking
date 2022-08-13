@@ -72,9 +72,10 @@ const Mobile: Component = () => {
   }
 
   const [entryPairs, setEntryPairs] = createStore(
-    localStorage.getItem("entries")
+    (localStorage.getItem("entries")
       ? deserializeEntryPairs(localStorage.getItem("entries"))
       : []
+    ).filter(([x, sent]) => !sent)
   );
 
   const sync = async () => {
@@ -174,7 +175,6 @@ const Mobile: Component = () => {
             );
           }}
         </For>
-        <div class="text-gray-300">...</div>
       </div>
       <div class="h-1/2 flex justify-center items-center">
         <button
