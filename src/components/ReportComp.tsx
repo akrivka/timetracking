@@ -144,7 +144,7 @@ const Report: Component<ReportProps> = (props) => {
   });
 
   return (
-    <div class="select-none overflow-auto">
+    <div class="select-none">
       <StaticBlock label="total" duration={props.totalDuration} />
       <ReportContext.Provider value={props}>
         <div class="pl-8">

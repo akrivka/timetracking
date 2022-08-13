@@ -279,7 +279,7 @@ const ReportPage: Component = () => {
   });
 
   return (
-    <div class="ml-4 mt-4">
+    <div class="pl-4 pt-4 h-screen overflow-auto">
       <div class="space-y-4 min-h-[16rem]">
         <div class="flex">
           <label class="w-16">Range:</label>
