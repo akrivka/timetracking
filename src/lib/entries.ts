@@ -53,9 +53,14 @@ export function entryEquals(a: Entry, b: Entry) {
 }
 
 function pretifyEntry(entry: Entry) {
-  return `[${entry.id}, ${entry.time.toISOString()}, ${entry.before}, ${
-    entry.after
-  }, ${entry.deleted}, ${entry.lastModified.toISOString()}]`;
+  return `{
+    id: ${entry.id},
+    before: ${entry.before},
+    after: ${entry.after},
+    time: ${entry.time.toISOString()},
+    lastModified: ${entry.lastModified.toISOString()},
+    deleted: ${entry.deleted}
+  }`;
 }
 
 export function entrySetEquals(xs: Entry[], ys: Entry[]) {
@@ -72,13 +77,13 @@ export function entrySetEquals(xs: Entry[], ys: Entry[]) {
 
   for (const x of xs) {
     const y = yMap.get(x.id);
-    if (y === undefined) return pretifyEntry(x) + " not found (x)";
+    if (y === undefined) return [x, null]
     const eq = entryEquals(x, y);
     if (eq !== true) return eq;
   }
   for (const y of ys) {
     const x = xMap.get(y.id);
-    if (x === undefined) return pretifyEntry(y) + " not found (y)";
+    if (x === undefined) return [null, y];
     const eq = entryEquals(x, y);
     if (eq !== true) return eq;
   }

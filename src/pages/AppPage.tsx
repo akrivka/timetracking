@@ -21,7 +21,13 @@ const Page: Component = () => {
               syncState.remote.pullingUpdates()
             }
           >
-            Syncing...
+            Pushing and pulling updates...
+          </Match>
+          <Match when={syncState.remote.pushingUpdates()}>
+            Pushing updates...
+          </Match>
+          <Match when={syncState.remote.pullingUpdates()}>
+            Pulling updates...
           </Match>
           <Match when={syncState.remote.validating()}>Validating...</Match>
           <Match when={ok()}>Ok!</Match>

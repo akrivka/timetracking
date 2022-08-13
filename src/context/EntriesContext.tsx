@@ -1,12 +1,15 @@
 import axios from "axios";
+import { Dialog, DialogOverlay, DialogPanel } from "solid-headless";
 import {
   createContext,
   createEffect,
   createResource,
   createSignal,
+  Match,
   onCleanup,
   onMount,
   Show,
+  Switch,
   untrack,
   useContext
 } from "solid-js";
@@ -162,6 +165,8 @@ export const EntriesProvider = (props) => {
   };
 
   const [validating, setValidating] = createSignal();
+  const [validationError, setValidationError] = createSignal();
+
   const fullValidate = async (credentials: Credentials) => {
     setValidating(true);
     const remoteEntries = await getEntriesRemote(credentials, {
@@ -175,7 +180,15 @@ export const EntriesProvider = (props) => {
     return result === true ? "ok" : result;
   };
 
-  const twowayUpdate = async () => {
+  const [validateTimer, setValidateTimer] = createSignal();
+  onMount(() => {
+    setValidateTimer(setInterval(sync, 60 * 1000));
+  });
+  onCleanup(() => {
+    validateTimer() && clearInterval(validateTimer() as NodeJS.Timer);
+  });
+
+  const fullUpdate = async () => {
     const remoteEntries = await getEntriesRemote(credentials, {
       includeDeleted: true,
     });
@@ -203,9 +216,13 @@ export const EntriesProvider = (props) => {
     if (result === "ok") console.log("ok!");
     else {
       console.log("detected error:", result);
-      console.log("doing twoway update");
-      await twowayUpdate();
-      console.log("done twoway update");
+      setValidationError(result);
+      console.log("doing full update");
+      await fullUpdate();
+      console.log("done full update");
+      if ((await fullValidate(credentials)) === "ok") {
+        setValidationError(null);
+      }
     }
   };
 
@@ -287,9 +304,7 @@ export const EntriesProvider = (props) => {
     updateLabels();
 
     if (hasNetwork() && loggedIn() && shouldPushUpdates) {
-      setPushingUpdates(true);
       await pushUpdates();
-      setPushingUpdates(false);
     }
   };
 
@@ -464,6 +479,24 @@ export const EntriesProvider = (props) => {
         <Show when={initialized()} fallback="Loading...">
           {props.children}
         </Show>
+        <Dialog
+          isOpen={validationError() ? true : false}
+          onClose={() => setValidationError(false)}
+          class="fixed inset-0 z-10 overflow-y-auto"
+        >
+          <div class="min-h-screen flex items-center justify-center">
+            <DialogOverlay class="fixed inset-0 bg-gray-800 opacity-25" />
+            <DialogPanel class="inline-block bg-white px-4 py-3 rounded-lg border-1 shadow z-20 space-y-1">
+              <div class="font-bold">Validation error!</div>
+              <pre>{JSON.stringify(validationError(), null, 2)}</pre>
+              <Switch>
+                <Match when={validating()}>Revalidating...</Match>
+                <Match when={!validationError()}>Ok!</Match>
+                <Match when={true}>Still not ok...</Match>
+              </Switch>
+            </DialogPanel>
+          </div>
+        </Dialog>
       </EntriesContext.Provider>
     </>
   );
