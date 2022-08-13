@@ -505,7 +505,7 @@ const Track: Component = () => {
                           }
                           if (e.key === "ArrowDown") {
                             setFocusedIndex(
-                              Math.min(entries.length - 2, focusedIndex() + 1)
+                              Math.min(entries.length - 1, focusedIndex() + 1)
                             );
                           }
                         }}
