@@ -1,5 +1,5 @@
 import { IDBPDatabase, openDB } from "idb/with-async-ittr";
-import { Entry, uid } from "./entries";
+import { Entry } from "./entries";
 import { delay, wait } from "./util";
 
 let db: undefined | IDBPDatabase;
@@ -26,15 +26,45 @@ export async function connectDB(username: string) {
   return { success: true };
 }
 
-export async function getAllEntries() {
+export async function getEntryByIdLocal(id: string) {
   await wait(delay);
 
-  return (await db?.getAllFromIndex("entries", "time"))
-    .reverse()
-    .filter((e) => !e.deleted);
+  try {
+    const entry = await db!.get("entries", id);
+    return entry;
+  } catch (e) {
+    console.error(e);
+    return {};
+  }
 }
 
-export async function getAllEntriesModifiedAfter(date: Date) {
+export async function getEntriesLocal({
+  modifiedAfter,
+  includeDeleted,
+}: { modifiedAfter?: Date; includeDeleted?: boolean } = {}) {
+  await wait(delay);
+
+  let entries;
+
+  if (modifiedAfter) {
+    entries = (
+      await db?.getAllFromIndex(
+        "entries",
+        "lastModified",
+        IDBKeyRange.lowerBound(modifiedAfter)
+      )
+    ).sort((a, b) => b.time.getTime() - a.time.getTime());
+  } else {
+    entries = (await db?.getAllFromIndex("entries", "time")).reverse();
+  }
+
+  if (!includeDeleted) {
+    entries = entries.filter((e) => !e.deleted);
+  }
+  return entries;
+}
+
+export async function getAllEntriesLocalModifiedAfter(date: Date) {
   await wait(delay);
 
   const index = db?.transaction("entries").store.index("lastModified");
@@ -46,24 +76,16 @@ export async function getAllEntriesModifiedAfter(date: Date) {
   return entries.reverse();
 }
 
-export async function putEntryLocal(entry: Entry) {
+export async function getAllEntriesLocal() {
   await wait(delay);
 
-  try {
-    return await db?.put("entries", entry);
-  } catch (e) {
-    console.error(e);
-  }
-}
-
-export async function removeEntryLocal(id: uid) {
-  await wait(delay);
-
-  return await db?.delete("entries", id);
+  return (await db?.getAllFromIndex("entries", "time"))
+    .reverse()
+    .filter((e) => !e.deleted);
 }
 
 export async function putEntriesLocal(entries: Entry[]) {
-  await wait(delay);
+  //await wait(delay);
 
   const tx = db.transaction("entries", "readwrite");
 

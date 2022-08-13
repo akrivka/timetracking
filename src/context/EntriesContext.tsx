@@ -18,16 +18,15 @@ import {
   entrySetEquals,
   getDistinctLabels,
   makeEntry,
-  serializeEntries
+  mergeEntries
 } from "../lib/entries";
 import {
   connectDB,
-  getAllEntries,
-  getAllEntriesModifiedAfter,
-  putEntriesLocal,
-  putEntryLocal
+  getEntriesLocal,
+  getEntryByIdLocal,
+  putEntriesLocal
 } from "../lib/localDB";
-import { getEntriesRemote } from "../lib/remoteDB";
+import { getEntriesRemote, putEntriesRemote } from "../lib/remoteDB";
 import { createSyncedStoreArray } from "../lib/solid-ext";
 import { insertIntoSortedDecreasingBy, now, wait } from "../lib/util";
 import { Credentials, useUser } from "./UserContext";
@@ -37,8 +36,8 @@ type EntriesContextType = {
   entries: Entry[];
   labels: Label[];
   dispatch: (any) => any;
-  syncState: any;
   sync: () => void;
+  syncState: any;
   undo: () => void;
   redo: () => void;
   history: any[];
@@ -59,7 +58,7 @@ export const EntriesProvider = (props) => {
     entries,
     { update, initialized, querying, mutating, forceSync: storeForceSync },
   ] = createSyncedStoreArray<Entry>(localDB, {
-    query: getAllEntries,
+    query: getEntriesLocal,
     equals: (entriesA, entriesB) => {
       const eq = entriesA.some(
         (entryA, i) => entryEquals(entryA, entriesB[i]) !== true
@@ -80,24 +79,23 @@ export const EntriesProvider = (props) => {
 
     setPushingUpdates(true);
     const lastPushed = new Date(JSON.parse(localStorage.lastPushed || "0"));
+    const newTime = now().getTime();
 
     // get all local entries modified after lastPushed
-    const entries = await getAllEntriesModifiedAfter(lastPushed);
+    const updatedEntries = await getEntriesLocal({
+      modifiedAfter: lastPushed,
+      includeDeleted: true,
+    });
 
-    // serialize entries
-    const s = serializeEntries(entries);
-
-    // send to server using axios
     setPushedUpdates(true);
-    const response = await axios.post(
-      "/api/update",
-      "entries=" + encodeURIComponent(s),
-      { params: credentials }
-    );
-    //if(response.)
 
-    // update lastPushed
-    localStorage.lastPushed = JSON.stringify(now().getTime());
+    const response = await putEntriesRemote(credentials, updatedEntries);
+    if (response === "ok") {
+      console.log("pushed updates", updatedEntries.length);
+
+      localStorage.lastPushed = JSON.stringify(newTime);
+    }
+
     setPushingUpdates(false);
   };
 
@@ -109,42 +107,106 @@ export const EntriesProvider = (props) => {
     const lastPulled = new Date(JSON.parse(localStorage.lastPulled || "0"));
 
     // pull all entries from the server modified after lastPulled
-    const entries = await getEntriesRemote(
-      { after: lastPulled.getTime() },
-      credentials
-    );
+    const newLastPulled = now().getTime();
 
-    if (entries.length > 100) {
-      await putEntriesFast(entries);
+    const pulledEntries = await getEntriesRemote(credentials, {
+      modifiedAfter: lastPulled.getTime(),
+      includeDeleted: true,
+    });
+
+    const updatedEntries = [];
+    for (const newEntry of pulledEntries) {
+      const existingEntry = await getEntryByIdLocal(newEntry.id);
+      if (
+        !existingEntry ||
+        newEntry.lastModified > existingEntry.lastModified.getTime()
+      ) {
+        updatedEntries.push(newEntry);
+      }
+    }
+
+    if (updatedEntries.length > 100) {
+      await putEntriesFast(updatedEntries);
     } else {
-      await putEntries(entries, { shouldPushUpdates: false });
+      await update({
+        mutate: () => putEntriesLocal(updatedEntries),
+        expect: (set) => {
+          set(
+            updatedEntries.reduce((es, newEntry) => {
+              const fes = es.filter((e) => e.id !== newEntry.id);
+              if (newEntry.deleted) return fes;
+              else
+                return insertIntoSortedDecreasingBy(
+                  fes,
+                  (e) => e.time.getTime(),
+                  newEntry
+                );
+            }, entries)
+          );
+        },
+      });
+
+      updateLabels();
+    }
+
+    console.log("pulled updates", updatedEntries.length);
+    if (updatedEntries.length > 0) {
+      console.log(updatedEntries);
     }
 
     // change last pulled
-    localStorage.lastPulled = JSON.stringify(now().getTime());
+    console.log("changing lastPulled");
+
+    localStorage.lastPulled = JSON.stringify(newLastPulled);
     setPullingUpdates(false);
   };
 
   const [validating, setValidating] = createSignal();
   const fullValidate = async (credentials: Credentials) => {
     setValidating(true);
-    const response = await axios.get("/api/entries", {
-      params: credentials,
+    const remoteEntries = await getEntriesRemote(credentials, {
+      includeDeleted: true,
     });
-    const remoteEntries = deserializeEntries(decodeURIComponent(response.data));
-    const localEntries = await getAllEntries();
-    console.log("validated", remoteEntries.length, "entries");
+    const localEntries = await getEntriesLocal({ includeDeleted: true });
+    console.log("validating", remoteEntries.length, "entries");
 
     const result = entrySetEquals(localEntries, remoteEntries);
     setValidating(false);
     return result === true ? "ok" : result;
   };
 
+  const twowayUpdate = async () => {
+    const remoteEntries = await getEntriesRemote(credentials, {
+      includeDeleted: true,
+    });
+    const localEntries = await getEntriesLocal({ includeDeleted: true });
+    const [localUpdates, remoteUpdates] = mergeEntries(
+      localEntries,
+      remoteEntries
+    );
+    console.log(localUpdates, remoteUpdates);
+
+    const [localResponse, remoteResponse] = await Promise.all([
+      putEntriesLocal(localUpdates),
+      putEntriesRemote(credentials, remoteUpdates),
+    ]);
+    console.log(localResponse, remoteResponse);
+
+    await storeForceSync();
+  };
+
   const sync = async () => {
     await Promise.all([pushUpdates(), pullUpdates()]);
 
     console.log("validating");
-    console.log(await fullValidate(credentials));
+    const result = await fullValidate(credentials);
+    if (result === "ok") console.log("ok!");
+    else {
+      console.log("detected error:", result);
+      console.log("doing twoway update");
+      await twowayUpdate();
+      console.log("done twoway update");
+    }
   };
 
   // long polling real time updates
@@ -172,8 +234,7 @@ export const EntriesProvider = (props) => {
 
   onMount(() => {
     //untrack(subscribe);
-
-    document.addEventListener("focus", () => pullUpdates());
+    window.addEventListener("focus", () => pullUpdates());
   });
 
   // SYNC STATE
@@ -206,8 +267,7 @@ export const EntriesProvider = (props) => {
     });
 
     await update({
-      mutate: () =>
-        Promise.all(newEntries.map((newEntry) => putEntryLocal(newEntry))),
+      mutate: () => putEntriesLocal(newEntries),
       expect: (set) => {
         set(
           newEntries.reduce((es, newEntry) => {

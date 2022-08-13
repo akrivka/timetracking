@@ -72,13 +72,13 @@ export function entrySetEquals(xs: Entry[], ys: Entry[]) {
 
   for (const x of xs) {
     const y = yMap.get(x.id);
-    if (y === undefined) return pretifyEntry(x) + " not found";
+    if (y === undefined) return pretifyEntry(x) + " not found (x)";
     const eq = entryEquals(x, y);
     if (eq !== true) return eq;
   }
   for (const y of ys) {
     const x = xMap.get(y.id);
-    if (x === undefined) return pretifyEntry(y) + " not found";
+    if (x === undefined) return pretifyEntry(y) + " not found (y)";
     const eq = entryEquals(x, y);
     if (eq !== true) return eq;
   }
@@ -198,4 +198,46 @@ export function deserializeEntries(s: string): Entry[] {
   } finally {
     return result;
   }
+}
+
+export function mergeEntries(xs: Entry[], ys: Entry[]) {
+  function makeMap(entries: Entry[]): Map<uid, Entry> {
+    const result = new Map();
+    for (const entry of entries) {
+      result.set(entry.id, entry);
+    }
+    return result;
+  }
+  const xMap: Map<uid, Entry> = makeMap(xs);
+  const yMap: Map<uid, Entry> = makeMap(ys);
+  const merged: Entry[] = [];
+  const xUpdates: Entry[] = [];
+  const yUpdates: Entry[] = [];
+  for (const entry of xs) {
+    const other = yMap.get(entry.id);
+    if (
+      other == undefined ||
+      other.lastModified.getTime() < entry.lastModified.getTime()
+    ) {
+      yUpdates.push(entry);
+      merged.push(entry);
+    }
+    if (
+      other !== undefined &&
+      other.lastModified.getTime() == entry.lastModified.getTime()
+    ) {
+      merged.push(entry);
+    }
+  }
+  for (const entry of ys) {
+    const other = xMap.get(entry.id);
+    if (
+      other == undefined ||
+      other.lastModified.getTime() < entry.lastModified.getTime()
+    ) {
+      xUpdates.push(entry);
+      merged.push(entry);
+    }
+  }
+  return [xUpdates, yUpdates];
 }

@@ -120,13 +120,16 @@ const app = express()
     await wait(delay);
     const credentials = getCredentialsFromReq(req);
 
-    const after = req.query.after || 0;
+    const modifiedAfter = req.query.modifiedAfter || 0;
+    const includeDeleted = req.query.includeDeleted || false;
 
     try {
       const success: boolean = await userExists(credentials);
       if (success) {
         const entries = (
-          await sql`SELECT id, time, before, after, lastmodified, deleted from entries WHERE username = ${credentials.username} and lastmodified > ${after} and deleted = false`
+          !includeDeleted
+            ? await sql`SELECT id, time, before, after, lastmodified, deleted from entries WHERE username = ${credentials.username} and lastmodified > ${modifiedAfter} and deleted = false`
+            : await sql`SELECT id, time, before, after, lastmodified, deleted from entries WHERE username = ${credentials.username} and lastmodified > ${modifiedAfter}`
         ).map((row: any) => ({
           time: new Date(row.time as number),
           before: (row.before || undefined) as string | undefined,
@@ -136,8 +139,7 @@ const app = express()
           id: row.id as string,
         }));
 
-        const s = serializeEntries(entries);
-        res.send(encodeURIComponent(s));
+        res.send(encodeURIComponent(serializeEntries(entries)));
       } else {
         res.send("username+password not found");
       }
@@ -158,7 +160,8 @@ const app = express()
         let entries = deserializeEntries(decodeURIComponent(req.body.entries));
 
         for (const entry of entries) {
-          await sql`INSERT INTO entries (username, id, time, before, after, lastmodified, deleted)
+          const result =
+            await sql`INSERT INTO entries (username, id, time, before, after, lastmodified, deleted)
           VALUES (
               ${credentials.username},
               ${entry.id},
@@ -178,6 +181,7 @@ const app = express()
               entries.lastmodified < EXCLUDED.lastmodified
       `;
         }
+
         resolveSubscribers(credentials.username);
         res.send("ok");
       } else {
