@@ -18,8 +18,9 @@ const Mobile = lazy(() => import("./pages/Mobile"));
 const PublicReportPage = lazy(() => import("./pages/PublicReportPage"));
 const Help = lazy(() => import("./pages/Help"));
 
-render(
-  () => (
+render(() => {
+  const isMobile = window.innerWidth < 768;
+  return (
     <WindowProvider>
       <Router>
         <Routes>
@@ -27,24 +28,26 @@ render(
             <Route path="/login" component={Login} />
             <Route path="/signup" component={Signup} />
           </Route>
-          <Route path="/" component={App}>
-            <Route path="/" component={Home} />
-            <Route path="/" component={Page}>
-              <Route path="/track" component={Track} />
-              <Route path="/report" component={Report} />
-              <Route path="/calendar" component={Calendar} />
-              <Route path="/help" component={Help} />
-            </Route>
-          </Route>
           <Route
             path="/r/:id"
             component={PublicReportPage}
             data={PublicReportData}
           />
-          <Route path="/mobile" component={Mobile} />
+          {isMobile ? (
+            <Route path="/" component={Mobile} />
+          ) : (
+            <Route path="/" component={App}>
+              <Route path="/" component={Home} />
+              <Route path="/" component={Page}>
+                <Route path="/track" component={Track} />
+                <Route path="/report" component={Report} />
+                <Route path="/calendar" component={Calendar} />
+                <Route path="/help" component={Help} />
+              </Route>
+            </Route>
+          )}
         </Routes>
       </Router>
     </WindowProvider>
-  ),
-  document.getElementById("root") as HTMLElement
-);
+  );
+}, document.getElementById("root") as HTMLElement);
