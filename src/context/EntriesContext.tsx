@@ -380,6 +380,8 @@ export const EntriesProvider = (props) => {
     const entries = deserializeEntries(serializedEntries);
     try {
       await putEntriesLocal(entries);
+      console.log(`successfully saved ${entries.length} entries`);
+      return true;
     } catch (e) {
       console.error(e);
     }
