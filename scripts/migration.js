@@ -1,5 +1,7 @@
-// 1. RUN THIS IN THE ORIGINAL APP CONSOLE
-// =======
+/* 1. RUN THIS IN THE ORIGINAL APP CONSOLE AND
+ COPY THE RESULT TO CLIPBOARD (there should be 
+ a neat button if you're using Chrome) */
+
 function serializeEntries(entries) {
     return JSON.stringify(
         entries.map((x) => ({
@@ -27,10 +29,8 @@ indexedDB.open("timetrack", 1).onsuccess = function (event) {
         console.log(serializedEntries);
     }
 }
-// =======
 
-// 2. COPY THE RESULT TO CLIPBOARD (there should be a neat button)
+/* 2. IN THE NEW APP CONSOLE, WRITE THIS AND 
+PASTE FROM THE PREVIOUS STEP INTO THE BACKTICKS */
 
-// 3. IN THE NEW APP CONSOLE, WRITE (make sure to use backticks)
-
-window.timemarker.pushEntriesFromConsole(`*past the content of your clipboard here*`)
+window.timemarker.pushEntriesFromConsole(``)
