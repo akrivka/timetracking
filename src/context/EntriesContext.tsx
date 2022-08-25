@@ -104,6 +104,7 @@ export const EntriesProvider = (props) => {
 
   const [pullingUpdates, setPullingUpdates] = createSignal();
   const pullUpdates = async () => {
+    storeForceSync();
     console.log("pulling updates");
 
     setPullingUpdates(true);
