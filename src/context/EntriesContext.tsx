@@ -190,6 +190,8 @@ export const EntriesProvider = (props) => {
   });
 
   const fullUpdate = async () => {
+    console.log("doing full update");
+
     const remoteEntries = await getEntriesRemote(credentials, {
       includeDeleted: true,
     });
@@ -207,24 +209,23 @@ export const EntriesProvider = (props) => {
     console.log(localResponse, remoteResponse);
 
     await storeForceSync();
+    console.log("done full update");
   };
 
   const sync = async () => {
     await Promise.all([pushUpdates(), pullUpdates()]);
 
     console.log("validating");
-    const result = await fullValidate(credentials);
-    if (result === "ok") console.log("ok!");
-    else {
-      console.log("detected error:", result);
-      setValidationError(result);
-      console.log("doing full update");
-      await fullUpdate();
-      console.log("done full update");
-      if ((await fullValidate(credentials)) === "ok") {
-        setValidationError(null);
-      }
-    }
+    const result1 = await fullValidate(credentials);
+    if (result1 === "ok") return console.log("ok!");
+
+    await fullUpdate();
+
+    const result2 = await fullValidate(credentials);
+    if (result2 === "ok") return console.log("ok!");
+
+    console.log("detected error:", result2);
+    setValidationError(result2);
   };
 
   // long polling real time updates
