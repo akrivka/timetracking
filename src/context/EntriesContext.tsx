@@ -122,7 +122,7 @@ export const EntriesProvider = (props) => {
       const existingEntry = await getEntryByIdLocal(newEntry.id);
       if (
         !existingEntry ||
-        newEntry.lastModified > existingEntry.lastModified.getTime()
+        newEntry.lastModified.getTime() > existingEntry.lastModified.getTime()
       ) {
         updatedEntries.push(newEntry);
       }

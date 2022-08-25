@@ -30,11 +30,10 @@ export async function getEntryByIdLocal(id: string) {
   await wait(delay);
 
   try {
-    const entry = await db!.get("entries", id);
+    const entry = (await db!.get("entries", id)) as Entry;
     return entry;
   } catch (e) {
     console.error(e);
-    return {};
   }
 }
 
