@@ -227,14 +227,18 @@ const ReportPage: Component = () => {
     const m: Map<Label, number> = new Map();
     let dur = 0;
 
+    const _now = now();
+
     for (const [start, end] of listPairs(
       revit([
         ...entriesIteratorWithEnds(entries, {
           start: startDate() < now() ? startDate() : now(),
-          end: endDate() < now() ? endDate() : now(),
+          end: endDate() < _now ? endDate() : _now,
         }),
       ])
     )) {
+      if (end.time.getTime() === _now.getTime()) continue;
+
       const baseLabel = labelFrom(start, end);
       const prefix = showLabels().find((l) => baseLabel.startsWith(l));
 
