@@ -4,9 +4,10 @@ import { createStore } from "solid-js/store";
 import { useEntries } from "../context/EntriesContext";
 import { labelFrom } from "../lib/entries";
 import { coarseLabel } from "../lib/labels";
+import { emptyRule } from "../lib/parse";
 import { listPairs, revit } from "../lib/util";
+import { InputBox } from "./InputBox";
 import { MyButton } from "./MyButton";
-import { MyTextInput } from "./MyTextInput";
 
 const [state, setState] = createStore(null);
 
@@ -15,7 +16,7 @@ export const openBulkRenameDialog = (info) => {
 };
 
 export const BulkRename: Component = () => {
-  const { dispatch, entries } = useEntries();
+  const { dispatch, entries, labels } = useEntries();
   const [newName, setNewName] = createSignal(state.label);
   const [moveChildren, setMoveChildren] = createSignal(true);
   createEffect(() => {
@@ -74,11 +75,12 @@ export const BulkRename: Component = () => {
             <div class="flex">
               <label class="w-12">To:</label>
               <div class="w-full">
-                <MyTextInput
-                  oninput={(e) => setNewName(e.currentTarget.value)}
-                  onEnter={onSubmit}
-                  value={state.label}
-                  class="w-full"
+                <InputBox
+                  class="w-72 px-1 border rounded"
+                  prefixRule={emptyRule}
+                  universe={labels}
+                  submit={onSubmit}
+                  oninput={(s) => setNewName(s)}
                 />
                 <div class="text-[10px] text-gray-600">
                   {labelFrequencies().get(newName()) || 0} existing entries

@@ -4,6 +4,7 @@ import { wait } from "../lib/util";
 interface InputBoxProps<T> {
   prefixRule: Rule<T>;
   submit: (x: T, s: string) => void;
+  oninput?: (s: string) => void;
   universe: string[];
   focusSignal?: Accessor<any>;
   clearAndRefocus?: boolean;
@@ -15,6 +16,7 @@ export function InputBox<T>(props: InputBoxProps<T>) {
   const {
     prefixRule,
     submit,
+    oninput,
     focusSignal,
     clearAndRefocus = false,
     universe: _,
@@ -89,9 +91,12 @@ export function InputBox<T>(props: InputBoxProps<T>) {
             }
           }
         }}
-        oninput={(e) => onInput(e.currentTarget.value)}
         ref={ref}
         {...otherProps}
+        oninput={(e) => {
+          onInput(e.currentTarget.value);
+          if (oninput) oninput(e.currentTarget.value);
+        }}
         class={"" + props.class}
       />
 
