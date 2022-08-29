@@ -14,7 +14,6 @@ import {
   useContext
 } from "solid-js";
 import { createStore } from "solid-js/store";
-import { MS_IN_HOURS } from "../lib/constants";
 import {
   deserializeEntries,
   Entry,
@@ -178,10 +177,10 @@ export const EntriesProvider = (props) => {
 
   const [validateTimer, setValidateTimer] = createSignal();
   onMount(() => {
-    setValidateTimer(setInterval(sync, MS_IN_HOURS));
+    //setValidateTimer(setInterval(sync, MS_IN_HOURS));
   });
   onCleanup(() => {
-    validateTimer() && clearInterval(validateTimer() as NodeJS.Timer);
+    //validateTimer() && clearInterval(validateTimer() as NodeJS.Timer);
   });
 
   const fullUpdate = async () => {
