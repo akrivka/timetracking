@@ -105,15 +105,13 @@ export const EntriesProvider = (props) => {
 
   const [pullingUpdates, setPullingUpdates] = createSignal();
   const pullUpdates = async () => {
-    storeForceSync();
     console.log("pulling updates");
 
     setPullingUpdates(true);
     const lastPulled = new Date(JSON.parse(localStorage.lastPulled || "0"));
-
-    // pull all entries from the server modified after lastPulled
     const newLastPulled = now().getTime();
 
+    // pull all entries from the server modified after lastPulled
     const pulledEntries = await getEntriesRemote(credentials, {
       modifiedAfter: lastPulled.getTime(),
       includeDeleted: true,
@@ -132,7 +130,7 @@ export const EntriesProvider = (props) => {
 
     if (updatedEntries.length > 100) {
       await putEntriesFast(updatedEntries);
-    } else {
+    } else if (updatedEntries.length > 0) {
       await update({
         mutate: () => putEntriesLocal(updatedEntries),
         expect: (set) => {
@@ -155,13 +153,9 @@ export const EntriesProvider = (props) => {
     }
 
     console.log("pulled updates", updatedEntries.length);
-    if (updatedEntries.length > 0) {
-      console.log(updatedEntries);
-    }
 
     // change last pulled
     console.log("changing lastPulled");
-
     localStorage.lastPulled = JSON.stringify(newLastPulled);
     setPullingUpdates(false);
   };
