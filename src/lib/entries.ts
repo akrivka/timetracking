@@ -10,7 +10,6 @@ export interface Entry {
   time: Date; // time of the time mark
   id: uid; // unique id of the entry (random, not auto incremented)
   lastModified: Date; // last time the entry was modified, for syncing purposes
-  lastSynced: Date;
   deleted: boolean;
 }
 
@@ -25,7 +24,6 @@ export function makeEntry(): Entry {
     time: new Date(),
     id: newUID(),
     lastModified: new Date(),
-    lastSynced: new Date(0),
     deleted: false,
   };
 }
@@ -47,8 +45,6 @@ export function entryEquals(a: Entry, b: Entry) {
       a.lastModified.getTime(),
       b.lastModified.getTime(),
     ];
-  } else if (a.lastSynced?.getTime() !== b.lastSynced?.getTime()) {
-    return [a, b, "lastSynced", a.lastSynced.getTime(), b.lastSynced.getTime()];
   } else if (a.deleted !== b.deleted) {
     return [a, b, "deleted", a.deleted, b.deleted];
   } else {
@@ -63,7 +59,6 @@ function pretifyEntry(entry: Entry) {
     after: ${entry.after},
     time: ${entry.time.toISOString()},
     lastModified: ${entry.lastModified.toISOString()},
-    lastSynced: ${entry.lastSynced.toISOString()},
     deleted: ${entry.deleted}
   }`;
 }
@@ -170,7 +165,6 @@ export function preserializeEntry(x: Entry) {
     before: x.before,
     after: x.after,
     lastModified: x.lastModified.getTime(),
-    lastSynced: x.lastSynced.getTime(),
     deleted: x.deleted,
     id: x.id,
   };
@@ -185,8 +179,6 @@ export function parseEntry(x): Entry {
     typeof x.time == "number" ? new Date(x.time) : undefined;
   const lastModified: Date =
     typeof x.lastModified == "number" ? new Date(x.lastModified) : now();
-  const lastSynced: Date =
-    typeof x.lastSynced == "number" ? new Date(x.lastSynced) : now();
   const before: string | undefined =
     typeof x.before == "string" ? x.before : undefined;
   const after: string | undefined =
@@ -196,7 +188,6 @@ export function parseEntry(x): Entry {
   return {
     time,
     lastModified,
-    lastSynced,
     before,
     after,
     deleted,

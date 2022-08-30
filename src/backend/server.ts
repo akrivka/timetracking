@@ -134,8 +134,8 @@ const app = express()
       if (success) {
         const entries = (
           !includeDeleted
-            ? await sql`SELECT id, time, before, after, lastmodified, deleted from entries WHERE username = ${credentials.username} and lastmodified > ${modifiedAfter} and lastsynced >= ${syncedAfter} and deleted = false`
-            : await sql`SELECT id, time, before, after, lastmodified, deleted from entries WHERE username = ${credentials.username} and lastmodified > ${modifiedAfter} and lastsynced >= ${syncedAfter}`
+            ? await sql`SELECT id, time, before, after, lastmodified, lastsynced, deleted from entries WHERE username = ${credentials.username} and lastmodified > ${modifiedAfter} and lastsynced >= ${syncedAfter} and deleted = false`
+            : await sql`SELECT id, time, before, after, lastmodified, lastsynced, deleted from entries WHERE username = ${credentials.username} and lastmodified > ${modifiedAfter} and lastsynced >= ${syncedAfter}`
         ).map((row: any) => ({
           time: new Date(row.time as number),
           before: (row.before || undefined) as string | undefined,
@@ -169,8 +169,7 @@ const app = express()
 
         const lastSynced = now().getTime();
         for (const entry of entries) {
-          const result =
-            await sql`INSERT INTO entries (username, id, time, before, after, lastmodified, lastsynced, deleted)
+          await sql`INSERT INTO entries (username, id, time, before, after, lastmodified, lastsynced, deleted)
           VALUES (
               ${credentials.username},
               ${entry.id},

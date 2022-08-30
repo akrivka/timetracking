@@ -14,6 +14,7 @@ import {
   useContext
 } from "solid-js";
 import { createStore } from "solid-js/store";
+import { MS_IN_HOURS } from "../lib/constants";
 import {
   deserializeEntries,
   Entry,
@@ -32,7 +33,7 @@ import {
 import { getEntriesRemote, putEntriesRemote } from "../lib/remoteDB";
 import { createSyncedStoreArray } from "../lib/solid-ext";
 import { insertIntoSortedDecreasingBy, now, wait } from "../lib/util";
-import { Credentials, useUser } from "./UserContext";
+import { useUser } from "./UserContext";
 import { useWindow } from "./WindowContext";
 
 function newClientID() {
@@ -96,14 +97,6 @@ export const EntriesProvider = (props) => {
     let response;
     if (updatedEntries.length > 0) {
       response = await putEntriesRemote(credentials, clientID, updatedEntries);
-      if (response.status === "ok") {
-        updateEntries(
-          updatedEntries.map((entry) => ({
-            ...entry,
-            lastSynced: new Date(response.lastSynced),
-          }))
-        );
-      }
     }
 
     if (updatedEntries.length === 0 || response.status === "ok") {
@@ -129,7 +122,6 @@ export const EntriesProvider = (props) => {
       syncedAfter: lastPulled.getTime(),
       includeDeleted: true,
     });
-    console.log(pulledEntries.length);
 
     const updatedEntries = [];
     for (const newEntry of pulledEntries) {
@@ -141,67 +133,15 @@ export const EntriesProvider = (props) => {
         updatedEntries.push(newEntry);
       }
     }
+
     if (updatedEntries.length > 0) {
-      if (updatedEntries.length > 100) {
-        await putEntriesLocal(updatedEntries);
-        storeForceSync();
-        updateLabels();
-      } else {
-        await updateEntries(updatedEntries);
-      }
+      await updateEntries(updatedEntries);
     }
 
     console.log(`PULL end (${updatedEntries.length})`);
     localStorage.lastPulled = JSON.stringify(newLastPulled);
 
     setPullingUpdates(false);
-  };
-
-  // VALIDATION (TO BE REWRITTEN)
-  const [validating, setValidating] = createSignal();
-  const [validationError, setValidationError] = createSignal();
-  const fullValidate = async (credentials: Credentials) => {
-    setValidating(true);
-    const remoteEntries = await getEntriesRemote(credentials, {
-      includeDeleted: true,
-    });
-    const localEntries = await getEntriesLocal({ includeDeleted: true });
-    console.log("validating", remoteEntries.length, "entries");
-
-    const result = entrySetEquals(localEntries, remoteEntries);
-    setValidating(false);
-    return result === true ? "ok" : result;
-  };
-
-  const [validateTimer, setValidateTimer] = createSignal();
-  onMount(() => {
-    //setValidateTimer(setInterval(sync, MS_IN_HOURS));
-  });
-  onCleanup(() => {
-    //validateTimer() && clearInterval(validateTimer() as NodeJS.Timer);
-  });
-
-  const fullUpdate = async () => {
-    console.log("doing full update");
-
-    const remoteEntries = await getEntriesRemote(credentials, {
-      includeDeleted: true,
-    });
-    const localEntries = await getEntriesLocal({ includeDeleted: true });
-    const [localUpdates, remoteUpdates] = mergeEntries(
-      localEntries,
-      remoteEntries
-    );
-    console.log(localUpdates, remoteUpdates);
-
-    const [localResponse, remoteResponse] = await Promise.all([
-      putEntriesLocal(localUpdates),
-      putEntriesRemote(credentials, null, remoteUpdates),
-    ]);
-    console.log(localResponse, remoteResponse);
-
-    await storeForceSync();
-    console.log("done full update");
   };
 
   const sync = async () => {
@@ -225,12 +165,6 @@ export const EntriesProvider = (props) => {
     await subscribe();
   };
 
-  // SYNC STATE
-  const syncState = {
-    local: { initialized, querying, mutating },
-    remote: { loggedIn, pushingUpdates, pullingUpdates, validating },
-  };
-
   // SET UP BROADCASTING TO OTHER TABS
   const bc = new BroadcastChannel("timetracking");
   bc.onmessage = (e) => {
@@ -239,25 +173,94 @@ export const EntriesProvider = (props) => {
     updateEntries(e.data);
   };
 
+  // VALIDATION
+  const [validating, setValidating] = createSignal();
+  const [validationError, setValidationError] = createSignal();
+  const fullValidate = async () => {
+    setValidating(true);
+    console.log("VALIDATE start");
+
+    const remoteEntries = await getEntriesRemote(credentials, {
+      includeDeleted: true,
+    });
+    const localEntries = await getEntriesLocal({ includeDeleted: true });
+    console.log(
+      `VALIDATE END (remote: ${remoteEntries.length}, local: ${localEntries.length})`
+    );
+
+    const result = entrySetEquals(localEntries, remoteEntries);
+    setValidating(false);
+    return result === true ? "ok" : result;
+  };
+
+  const fullUpdate = async () => {
+    console.log("FULL UPDATE start");
+
+    const remoteEntries = await getEntriesRemote(credentials, {
+      includeDeleted: true,
+    });
+    const localEntries = await getEntriesLocal({ includeDeleted: true });
+    const [localUpdates, remoteUpdates] = mergeEntries(
+      localEntries,
+      remoteEntries
+    );
+    console.log(localUpdates, remoteUpdates);
+
+    const [localResponse, remoteResponse] = await Promise.all([
+      localUpdates.length > 0 && putEntriesLocal(localUpdates),
+      remoteUpdates.length > 0 &&
+        putEntriesRemote(credentials, null, remoteUpdates),
+    ]);
+    console.log(
+      `FULL UPDATE end (remote: ${remoteUpdates.length}, local ${localUpdates.length})`
+    );
+
+    await storeForceSync();
+  };
+
+  onMount(() => {
+    const lastFull = localStorage.lastFull
+      ? JSON.parse(localStorage.lastFull)
+      : { time: 0 };
+    const nowTime = now().getTime();
+
+    if (nowTime - lastFull.time > MS_IN_HOURS) {
+      console.log("PERIODIC FULL UPDATE/VALIDATION");
+
+      const f = async () => {
+        await fullUpdate();
+        const res = await fullValidate();
+        localStorage.lastFull = JSON.stringify({ time: nowTime, result: res });
+        window.removeEventListener("blur", f);
+      };
+      window.addEventListener("blur", () => f());
+    }
+  });
+
   // EVENT HANDLING
   const updateEntries = async (_entries: Entry[]) => {
-    await update({
-      mutate: () => putEntriesLocal(_entries),
-      expect: (set) => {
-        set(
-          _entries.reduce((es, newEntry) => {
-            const fes = es.filter((e) => e.id !== newEntry.id);
-            if (newEntry.deleted) return fes;
-            else
-              return insertIntoSortedDecreasingBy(
-                fes,
-                (e) => e.time.getTime(),
-                newEntry
-              );
-          }, entries)
-        );
-      },
-    });
+    if (_entries.length > 100) {
+      await putEntriesLocal(_entries);
+      storeForceSync();
+    } else {
+      await update({
+        mutate: () => putEntriesLocal(_entries),
+        expect: (set) => {
+          set(
+            _entries.reduce((es, newEntry) => {
+              const fes = es.filter((e) => e.id !== newEntry.id);
+              if (newEntry.deleted) return fes;
+              else
+                return insertIntoSortedDecreasingBy(
+                  fes,
+                  (e) => e.time.getTime(),
+                  newEntry
+                );
+            }, entries)
+          );
+        },
+      });
+    }
     updateLabels();
   };
 
@@ -426,6 +429,12 @@ export const EntriesProvider = (props) => {
       }
     };
   });
+
+  // SYNC STATE
+  const syncState = {
+    local: { initialized, querying, mutating },
+    remote: { loggedIn, pushingUpdates, pullingUpdates, validating },
+  };
 
   // INITAIALIZATION
   createEffect(async () => {

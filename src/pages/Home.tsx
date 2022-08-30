@@ -1,6 +1,7 @@
 import { NavLink, useNavigate } from "solid-app-router";
 import { Component, Match, Switch } from "solid-js";
 import { deleteLocalUser, useUser } from "../context/UserContext";
+import { renderTime } from "../lib/format";
 
 const MyLink: Component<{
   href: string;
@@ -22,7 +23,7 @@ const Navbar: Component = () => {
       <MyLink href="/calendar" label="Calendar" />
       <MyLink href="/help" label="Help" />
       <MyLink href="/mobile" label="Mobile" />
-      <div class="w-4"/>
+      <div class="w-4" />
       <Switch>
         <Match when={!credentials}>
           <MyLink href="/signup" label="Sign up" />
@@ -44,9 +45,15 @@ const Navbar: Component = () => {
 };
 
 const Home: Component = () => {
+  const lastFull = JSON.parse(localStorage.lastFull || "{}");
   return (
     <div>
       <Navbar />
+      <div class="text-xs text-gray-500">
+        Last full update and validation performed at{" "}
+        <span class="italic">{renderTime(new Date(lastFull?.time))}</span> (
+        {JSON.stringify(lastFull?.result, null, 2)})
+      </div>
     </div>
   );
 };
