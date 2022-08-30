@@ -298,32 +298,54 @@ const Track: Component = () => {
     setShowSearch(false);
   };
 
-  const [limit, setLimit] = createSignal(100);
+  const RENDER_LENGTH = 100;
+  const [limit, setLimit] = createSignal([0, RENDER_LENGTH]);
+  let startOfList!: HTMLDivElement;
   let endOfList!: HTMLDivElement;
   let scrollContainer!: HTMLDivElement;
   onMount(() => {
-    const observer = new IntersectionObserver(
+    const endObserver = new IntersectionObserver(
       (intersections) => {
         if (intersections.some((intersection) => intersection.isIntersecting)) {
-          console.log("increasing limit");
-
-          setLimit(limit() + 100);
+          const newEnd = Math.min(
+            limit()[1] + RENDER_LENGTH / 2,
+            entries.length
+          );
+          setLimit([newEnd - RENDER_LENGTH, newEnd]);
         }
       },
       {
         root: scrollContainer,
         rootMargin: "300px",
-        threshold: 1.0,
       }
     );
-    observer.observe(endOfList);
+    endObserver.observe(endOfList);
+    const startObserver = new IntersectionObserver(
+      (intersections) => {
+        if (
+          limit()[0] > 0 &&
+          intersections.some((intersection) => intersection.isIntersecting)
+        ) {
+          const newStart = Math.max(0, limit()[0] - RENDER_LENGTH / 2);
+          setLimit([newStart, newStart + RENDER_LENGTH]);
+          scrollToIndex(focusedIndex());
+        }
+      },
+      {
+        root: scrollContainer,
+        rootMargin: "300px",
+      }
+    );
+    startObserver.observe(startOfList);
   });
 
-  const scrollToIndex = (i) => {
-    if (i > limit()) {
-      setLimit(i + 100);
+  const scrollToIndex = async (i) => {
+    if (i > limit()[1] || i < limit()[0]) {
+      const newStart = Math.max(0, i - RENDER_LENGTH / 2);
+      const newEnd = Math.min(newStart + RENDER_LENGTH, entries.length);
+      setLimit([newStart, newEnd]);
     }
-    document.getElementById(`entry-${i}`)?.scrollIntoView();
+    document.getElementById(`entry-${i}`)?.scrollIntoView({ block: "center" });
     refocusIndex(i);
   };
 
@@ -335,10 +357,12 @@ const Track: Component = () => {
 
   const onkeydown = async (e) => {
     // if cmd/ctrl+enter pressed
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-      scrollToIndex(0);
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && e.shiftKey) {
+      scrollToIndex(entries.length - 1);
+    } else if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
       setShowSearch(false);
       setSearchText("");
+      scrollToIndex(0);
     } else if (e.key == "Enter") {
       // document.activeElement is not of type input
       if (document.activeElement.tagName != "INPUT" && focusedIndex() >= 0) {
@@ -453,8 +477,11 @@ const Track: Component = () => {
           ref={scrollContainer}
         >
           <EmptyBullet />
-          <For each={entries.slice(0, limit())}>
-            {(start, i) => {
+          <div class="w-0 h-0" ref={startOfList} />
+
+          <For each={entries.slice(limit()[0], limit()[1])}>
+            {(start, _i) => {
+              const i = () => limit()[0] + _i();
               const end = createMemo(() => (i() > 0 ? entries[i() - 1] : null));
               //console.log("rerendering", labelFrom(start, end()));
               const conflict = createMemo(
