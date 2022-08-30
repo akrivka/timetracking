@@ -438,11 +438,14 @@ export const EntriesProvider = (props) => {
 
   // INITAIALIZATION
   createEffect(async () => {
-    if (initialized() && hasNetwork() && loggedIn()) {
-      console.log("INIT");
+    if (initialized()) {
+      updateLabels();
+      if (hasNetwork() && loggedIn()) {
+        console.log("INIT");
 
-      await untrack(sync);
-      await untrack(subscribe);
+        await untrack(sync);
+        await untrack(subscribe);
+      }
     }
   });
 

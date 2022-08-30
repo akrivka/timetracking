@@ -545,9 +545,6 @@ const Track: Component = () => {
                             );
                           }
                         }}
-                        onfocusout={(e) => {
-                          document.getElementById("InputBox").focus();
-                        }}
                         use:clickOutside={() => setFocusedIndex(-1)}
                       >
                         {inputBox}

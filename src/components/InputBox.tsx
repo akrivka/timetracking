@@ -26,6 +26,13 @@ export function InputBox<T>(props: InputBoxProps<T>) {
   const [searchPhrase, setSearchPhrase] = createSignal("");
   const [command, setCommand] = createSignal("");
 
+  const clear = () => {
+    setSearchPhrase("");
+    setCommand("");
+    setSelected(-1);
+    if (clearAndRefocus) ref.value = "";
+  };
+
   const onEnter = (s: string) => {
     const m = parseString(prefixRule, s);
     if (m == "prefix" || m == "fail") {
@@ -33,9 +40,7 @@ export function InputBox<T>(props: InputBoxProps<T>) {
     } else {
       submit(m[0], m[2].trim());
     }
-    setSearchPhrase("");
-    setCommand("");
-    setSelected(-1);
+    clear();
   };
 
   const onInput = (s: string) => {
@@ -47,7 +52,10 @@ export function InputBox<T>(props: InputBoxProps<T>) {
   let ref: HTMLInputElement;
   if (focusSignal) {
     createEffect(() => {
-      if (focusSignal() != null) ref.focus();
+      console.log(focusSignal());
+
+      if (focusSignal() === -1) clear();
+      else if (focusSignal() !== null) ref.focus();
     });
   }
 
