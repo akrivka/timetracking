@@ -519,11 +519,7 @@ const Track: Component = () => {
                           }
                         }}
                         onfocusout={(e) => {
-                          // console.log("blur!");
-
-                          if (focusedIndex() === i()) {
-                            refocusIndex(focusedIndex());
-                          }
+                          document.getElementById("InputBox").focus();
                         }}
                         use:clickOutside={() => setFocusedIndex(-1)}
                       >
