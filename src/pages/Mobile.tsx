@@ -89,7 +89,7 @@ const Mobile: Component = () => {
       "entries=" + encodeURIComponent(serializeEntries(entries)),
       { params: credentials }
     );
-    if (response.data === "ok") {
+    if (response.data.status === "ok") {
       setEntryPairs(
         entryPairs
           .map((entryPair) =>
