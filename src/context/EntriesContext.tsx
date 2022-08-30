@@ -35,6 +35,10 @@ import { insertIntoSortedDecreasingBy, now, wait } from "../lib/util";
 import { Credentials, useUser } from "./UserContext";
 import { useWindow } from "./WindowContext";
 
+function newClientID() {
+  return Math.random().toString(36).substring(2, 10);
+}
+
 type EntriesContextType = {
   entries: Entry[];
   labels: Label[];
@@ -56,7 +60,7 @@ export const EntriesProvider = (props) => {
 
   const [localDB, _] = createResource(() => connectDB(credentials?.username));
 
-  // set up synced SolidJS store with the local database
+  // SET UP SYNCED SOLIDJS STORE TO INDEXEDDB
   const [
     entries,
     { update, initialized, querying, mutating, forceSync: storeForceSync },
@@ -74,15 +78,14 @@ export const EntriesProvider = (props) => {
     },
   });
 
+  // CORE SYNCING FUNCTIONS
   const [pushingUpdates, setPushingUpdates] = createSignal();
-  const [pushedUpdates, setPushedUpdates] = createSignal(false);
-
   const pushUpdates = async () => {
-    console.log("pushing updates");
+    console.log("PUSH start");
 
     setPushingUpdates(true);
     const lastPushed = new Date(JSON.parse(localStorage.lastPushed || "0"));
-    const newTime = now().getTime();
+    const newLastPushed = now().getTime();
 
     // get all local entries modified after lastPushed
     const updatedEntries = await getEntriesLocal({
@@ -90,13 +93,24 @@ export const EntriesProvider = (props) => {
       includeDeleted: true,
     });
 
-    setPushedUpdates(true);
+    let response;
+    if (updatedEntries.length > 0) {
+      response = await putEntriesRemote(credentials, clientID, updatedEntries);
+      if (response.status === "ok") {
+        updateEntries(
+          updatedEntries.map((entry) => ({
+            ...entry,
+            lastSynced: new Date(response.lastSynced),
+          }))
+        );
+      }
+    }
 
-    const response = await putEntriesRemote(credentials, updatedEntries);
-    if (response === "ok") {
-      console.log("pushed updates", updatedEntries.length);
-
-      localStorage.lastPushed = JSON.stringify(newTime);
+    if (updatedEntries.length === 0 || response.status === "ok") {
+      console.log(`PUSH end (${updatedEntries.length})`);
+      localStorage.lastPushed = JSON.stringify(newLastPushed);
+    } else {
+      console.log(`PUSH error: ${response}`);
     }
 
     setPushingUpdates(false);
@@ -104,17 +118,18 @@ export const EntriesProvider = (props) => {
 
   const [pullingUpdates, setPullingUpdates] = createSignal();
   const pullUpdates = async () => {
-    console.log("pulling updates");
-
+    console.log("PULL start");
     setPullingUpdates(true);
+
     const lastPulled = new Date(JSON.parse(localStorage.lastPulled || "0"));
     const newLastPulled = now().getTime();
 
     // pull all entries from the server modified after lastPulled
     const pulledEntries = await getEntriesRemote(credentials, {
-      modifiedAfter: lastPulled.getTime(),
+      syncedAfter: lastPulled.getTime(),
       includeDeleted: true,
     });
+    console.log(pulledEntries.length);
 
     const updatedEntries = [];
     for (const newEntry of pulledEntries) {
@@ -126,42 +141,25 @@ export const EntriesProvider = (props) => {
         updatedEntries.push(newEntry);
       }
     }
-
-    if (updatedEntries.length > 100) {
-      await putEntriesFast(updatedEntries);
-    } else if (updatedEntries.length > 0) {
-      await update({
-        mutate: () => putEntriesLocal(updatedEntries),
-        expect: (set) => {
-          set(
-            updatedEntries.reduce((es, newEntry) => {
-              const fes = es.filter((e) => e.id !== newEntry.id);
-              if (newEntry.deleted) return fes;
-              else
-                return insertIntoSortedDecreasingBy(
-                  fes,
-                  (e) => e.time.getTime(),
-                  newEntry
-                );
-            }, entries)
-          );
-        },
-      });
-
-      updateLabels();
+    if (updatedEntries.length > 0) {
+      if (updatedEntries.length > 100) {
+        await putEntriesLocal(updatedEntries);
+        storeForceSync();
+        updateLabels();
+      } else {
+        await updateEntries(updatedEntries);
+      }
     }
 
-    console.log("pulled updates", updatedEntries.length);
-
-    // change last pulled
-    console.log("changing lastPulled");
+    console.log(`PULL end (${updatedEntries.length})`);
     localStorage.lastPulled = JSON.stringify(newLastPulled);
+
     setPullingUpdates(false);
   };
 
+  // VALIDATION (TO BE REWRITTEN)
   const [validating, setValidating] = createSignal();
   const [validationError, setValidationError] = createSignal();
-
   const fullValidate = async (credentials: Credentials) => {
     setValidating(true);
     const remoteEntries = await getEntriesRemote(credentials, {
@@ -198,7 +196,7 @@ export const EntriesProvider = (props) => {
 
     const [localResponse, remoteResponse] = await Promise.all([
       putEntriesLocal(localUpdates),
-      putEntriesRemote(credentials, remoteUpdates),
+      putEntriesRemote(credentials, null, remoteUpdates),
     ]);
     console.log(localResponse, remoteResponse);
 
@@ -208,47 +206,24 @@ export const EntriesProvider = (props) => {
 
   const sync = async () => {
     await Promise.all([pushUpdates(), pullUpdates()]);
-
-    console.log("validating");
-    const result1 = await fullValidate(credentials);
-    if (result1 === "ok") return console.log("ok!");
-
-    await fullUpdate();
-
-    const result2 = await fullValidate(credentials);
-    if (result2 === "ok") return console.log("ok!");
-
-    console.log("detected error:", result2);
-    setValidationError(result2);
   };
 
-  // long polling real time updates
+  // LONG POLLING FOR REAL TIME UPDATES
+  const clientID = newClientID();
+
   const subscribe = async () => {
-    console.log("resubscribing");
-
     const res = await axios.get("/api/sync", {
-      params: credentials,
+      params: { ...credentials, clientID },
     });
+    console.log(`SUBRES (${clientID})`);
 
-    if (res.status === 502) {
-      await subscribe();
-    } else if (res.status !== 200) {
+    if (res.status !== 200) {
       await wait(1000);
-      await subscribe();
     } else {
-      if (!pushedUpdates()) {
-        setPushedUpdates(false);
-        await pullUpdates();
-      }
-      setPushedUpdates(false);
-      await subscribe();
+      await pullUpdates();
     }
+    await subscribe();
   };
-
-  onMount(() => {
-    //untrack(subscribe);
-    window.addEventListener("focus", () => pullUpdates());
-  });
 
   // SYNC STATE
   const syncState = {
@@ -256,34 +231,21 @@ export const EntriesProvider = (props) => {
     remote: { loggedIn, pushingUpdates, pullingUpdates, validating },
   };
 
-  // EVENT HANDLING
-  const putEntriesFast = async (entries: Entry[]) => {
-    await putEntriesLocal(entries);
-    storeForceSync();
-    updateLabels();
+  // SET UP BROADCASTING TO OTHER TABS
+  const bc = new BroadcastChannel("timetracking");
+  bc.onmessage = (e) => {
+    console.log(`MES (${e.data.length})`);
+
+    updateEntries(e.data);
   };
 
-  const putEntries = async (
-    _entries: (Partial<Entry> | undefined)[],
-    { shouldPushUpdates = true }: { shouldPushUpdates?: boolean } = {}
-  ) => {
-    if (_entries.length === 0) return;
-
-    const newEntries = _entries.map((entry) => {
-      const existingEntry = entries.find((e) => e.id === entry?.id);
-
-      return {
-        ...(existingEntry || makeEntry()),
-        ...entry,
-        lastModified: now(),
-      };
-    });
-
+  // EVENT HANDLING
+  const updateEntries = async (_entries: Entry[]) => {
     await update({
-      mutate: () => putEntriesLocal(newEntries),
+      mutate: () => putEntriesLocal(_entries),
       expect: (set) => {
         set(
-          newEntries.reduce((es, newEntry) => {
+          _entries.reduce((es, newEntry) => {
             const fes = es.filter((e) => e.id !== newEntry.id);
             if (newEntry.deleted) return fes;
             else
@@ -296,10 +258,26 @@ export const EntriesProvider = (props) => {
         );
       },
     });
-
     updateLabels();
+  };
 
-    if (hasNetwork() && loggedIn() && shouldPushUpdates) {
+  const putEntries = async (_entries: (Partial<Entry> | undefined)[]) => {
+    if (_entries.length === 0) return;
+
+    const newEntries = _entries.map((entry) => {
+      const existingEntry = entries.find((e) => e.id === entry?.id);
+
+      return {
+        ...(existingEntry || makeEntry()),
+        ...entry,
+        lastModified: now(),
+      };
+    });
+
+    await updateEntries(newEntries);
+
+    bc.postMessage(newEntries);
+    if (hasNetwork() && loggedIn()) {
       await pushUpdates();
     }
   };
@@ -370,41 +348,11 @@ export const EntriesProvider = (props) => {
     await putEntries(updatedEntriesWithIds);
   };
 
-  const putEntry = (entry: Partial<Entry> | undefined) => putEntries([entry]);
-
-  const pushEntriesFromConsole = async (serializedEntries) => {
-    const entries = deserializeEntries(serializedEntries);
-    try {
-      await putEntriesLocal(entries);
-      console.log(`successfully saved ${entries.length} entries`);
-      return true;
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  onMount(() => {
-    window.timemarker = {};
-    window.timemarker.pushEntriesFromConsole = pushEntriesFromConsole;
-    window.timemarker.putEntries = putEntries;
-    window.timemarker.entries = entries;
-  });
-
   // LABELS
   const [labels, setLabels] = createStore([]);
   const updateLabels = () => {
     setLabels(getDistinctLabels([...entries]));
   };
-
-  // INITAIALIZATION
-  createEffect(() => {
-    if (initialized()) {
-      if (hasNetwork() && loggedIn()) {
-        untrack(sync);
-      }
-      untrack(updateLabels);
-    }
-  });
 
   // UNDO
   const [undoStack, setUndoStack] = createStore([]),
@@ -427,6 +375,7 @@ export const EntriesProvider = (props) => {
     setTimeout(() => setShow(false), 2000);
     return { show, event, type };
   };
+
   const undo = async () => {
     if (undoStack.length === 0) return;
     const { prev, next, event } = undoStack[undoStack.length - 1];
@@ -447,17 +396,45 @@ export const EntriesProvider = (props) => {
     setHistory([...history, createEvent({ event, type: "redo" })]);
   };
 
-  const onkeydown = (e) => {
+  const undoKeyHandler = (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key === "z") {
       if (!e.shiftKey) undo();
       else redo();
     }
   };
+
   onMount(() => {
-    document.addEventListener("keydown", onkeydown);
+    document.addEventListener("keydown", undoKeyHandler);
   });
   onCleanup(() => {
-    document.removeEventListener("keydown", onkeydown);
+    document.removeEventListener("keydown", undoKeyHandler);
+  });
+
+  // EXPOSING FUNCTIONS TO THE CONSOLE
+  onMount(() => {
+    window.timemarker = {};
+    window.timemarker.putEntries = putEntries;
+    window.timemarker.entries = entries;
+    window.timemarker.pushEntriesFromConsole = async (serializedEntries) => {
+      const entries = deserializeEntries(serializedEntries);
+      try {
+        await putEntriesLocal(entries);
+        console.log(`successfully saved ${entries.length} entries`);
+        return true;
+      } catch (e) {
+        console.error(e);
+      }
+    };
+  });
+
+  // INITAIALIZATION
+  createEffect(async () => {
+    if (initialized() && hasNetwork() && loggedIn()) {
+      console.log("INIT");
+
+      await untrack(sync);
+      await untrack(subscribe);
+    }
   });
 
   return (

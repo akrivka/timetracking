@@ -24,7 +24,7 @@ import { debug } from "./lib/util";
 
 const defaultTrackState = {
   scrollTop: 0,
-  focusedIndex: null,
+  focusedIndex: 0,
   showSearch: false,
   searchText: "",
   currentJump: 0,
@@ -65,7 +65,13 @@ export function useUIState<T>(...path): [get: Accessor<T>, set: Setter<T>] {
 const App: Component = () => {
   const navigate = useNavigate();
   const onkeydown = (e) => {
-    if (e.altKey) {
+    if (
+      e.altKey &&
+      ["Digit1", "Digit2", "Digit3", "Digit4", "Backquote"].some(
+        (key) => e.code === key
+      )
+    ) {
+      e.preventDefault();
       e.code === "Digit1" && navigate("/track");
       e.code === "Digit2" && navigate("/report");
       e.code === "Digit3" && navigate("/calendar");

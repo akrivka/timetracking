@@ -1,8 +1,10 @@
 import { Outlet } from "solid-app-router";
 import { Component, createEffect, createSignal, Match, Switch } from "solid-js";
 import { useEntries } from "../context/EntriesContext";
+import { useWindow } from "../context/WindowContext";
 
 const Page: Component = () => {
+  const { hasNetwork } = useWindow();
   const { syncState } = useEntries();
   const [ok, setOk] = createSignal(false);
   createEffect(() => {
@@ -15,9 +17,10 @@ const Page: Component = () => {
     <>
       <div class="absolute top-1 right-1 text-sm text-gray-400">
         <Switch>
+          <Match when={!hasNetwork()}>Offline.</Match>
           <Match
             when={
-              syncState.remote.pushingUpdates() ||
+              syncState.remote.pushingUpdates() &&
               syncState.remote.pullingUpdates()
             }
           >

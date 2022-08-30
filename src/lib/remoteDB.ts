@@ -7,13 +7,18 @@ export async function getEntriesRemote(
   credentials: Credentials,
   {
     modifiedAfter,
+    syncedAfter,
     includeDeleted,
-  }: { modifiedAfter?: number; includeDeleted?: boolean } = {
+  }: {
+    modifiedAfter?: number;
+    syncedAfter?: number;
+    includeDeleted?: boolean;
+  } = {
     includeDeleted: false,
   }
 ) {
   const response = await axios.get("/api/entries", {
-    params: { ...credentials, modifiedAfter, includeDeleted },
+    params: { ...credentials, modifiedAfter, syncedAfter, includeDeleted },
   });
 
   // store entries in localDB
@@ -22,6 +27,7 @@ export async function getEntriesRemote(
 
 export async function putEntriesRemote(
   credentials: Credentials,
+  clientID,
   entries: Entry[]
 ) {
   await wait(delay);
@@ -29,7 +35,7 @@ export async function putEntriesRemote(
   const response = await axios.post(
     "/api/update",
     "entries=" + encodeURIComponent(serializeEntries(entries)),
-    { params: credentials }
+    { params: { ...credentials, clientID } }
   );
 
   return response.data;

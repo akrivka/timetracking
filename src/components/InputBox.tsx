@@ -81,6 +81,7 @@ export function InputBox<T>(props: InputBoxProps<T>) {
     <div class="relative inline-block" onkeydown={onkeydown}>
       <input
         type="text"
+        id="inputbox"
         onkeydown={async (e) => {
           if (e.key === "Enter") {
             onEnter(e.currentTarget.value);

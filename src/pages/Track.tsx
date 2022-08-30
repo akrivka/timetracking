@@ -337,6 +337,8 @@ const Track: Component = () => {
     // if cmd/ctrl+enter pressed
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
       scrollToIndex(0);
+      setShowSearch(false);
+      setSearchText("");
     } else if (e.key == "Enter") {
       // document.activeElement is not of type input
       if (document.activeElement.tagName != "INPUT" && focusedIndex() >= 0) {
@@ -346,6 +348,7 @@ const Track: Component = () => {
     // if cmd/ctrl+f pressed
     if (e.key === "f" && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
+      setFocusedIndex(-1);
       setShowSearch(true);
       setSearchText("");
       focusSearch();
@@ -361,15 +364,21 @@ const Track: Component = () => {
       jumpUp();
     }
   };
+  const onfocus = (_) => {
+    refocusIndex(focusedIndex() >= 0 ? focusedIndex() : 0);
+  };
   onMount(() => {
-    document.addEventListener("keydown", onkeydown);
+    window.addEventListener("keydown", onkeydown);
+    window.addEventListener("focus", onfocus);
   });
   onCleanup(() => {
-    document.removeEventListener("keydown", onkeydown);
+    window.removeEventListener("keydown", onkeydown);
+    window.removeEventListener("focus", onfocus);
   });
 
   const location = useLocation();
   onMount(() => {
+    refocusIndex(focusedIndex());
     if (location.state) {
       //@ts-ignore
       const { entry, label } = location.state;
@@ -507,6 +516,13 @@ const Track: Component = () => {
                             setFocusedIndex(
                               Math.min(entries.length - 1, focusedIndex() + 1)
                             );
+                          }
+                        }}
+                        onfocusout={(e) => {
+                          // console.log("blur!");
+
+                          if (focusedIndex() === i()) {
+                            refocusIndex(focusedIndex());
                           }
                         }}
                         use:clickOutside={() => setFocusedIndex(-1)}
