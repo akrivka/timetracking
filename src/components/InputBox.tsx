@@ -52,8 +52,6 @@ export function InputBox<T>(props: InputBoxProps<T>) {
   let ref: HTMLInputElement;
   if (focusSignal) {
     createEffect(() => {
-      console.log(focusSignal());
-
       if (focusSignal() === -1) clear();
       else if (focusSignal() !== null) ref.focus();
     });
@@ -123,8 +121,6 @@ export function InputBox<T>(props: InputBoxProps<T>) {
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  console.log("here");
-
                   onEnter(command() + " " + m);
                 }}
               >
