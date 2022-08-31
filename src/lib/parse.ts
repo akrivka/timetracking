@@ -305,7 +305,7 @@ type lessThan7 = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
 function lastDayOfWeek(n: lessThan7, weeksAgo: number = 0): DaySpec {
   const d = new Date();
-  while (d.getDay() != n) d.setDate(d.getDate() - 1);
+  while ((d.getDay() - 1) % 7 != n) d.setDate(d.getDate() - 1);
   d.setDate(d.getDate() - 7 * weeksAgo);
   return { month: d.getMonth(), day: d.getDate(), year: d.getFullYear() };
 }
