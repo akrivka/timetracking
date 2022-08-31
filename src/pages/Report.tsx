@@ -306,12 +306,14 @@ const ReportPage: Component = () => {
                 <button
                   class="w-4 h-4 flex items-center justify-center border-r hover:bg-gray-50"
                   onclick={() => shift(-1)}
+                  tabindex={-1}
                 >
                   {"«"}
                 </button>
                 <button
                   class="w-4 h-4 flex items-center justify-center border-l hover:bg-gray-50"
                   onclick={() => shift(1)}
+                  tabindex={-1}
                 >
                   {"»"}
                 </button>
@@ -388,6 +390,7 @@ const ReportPage: Component = () => {
                               ? "bg-gray-200 outline-1 outline outline-gray-300"
                               : "hover:bg-gray-100")
                           }
+                          tabindex={-1}
                         >
                           {type}
                         </button>
