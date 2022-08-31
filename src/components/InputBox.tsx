@@ -88,6 +88,7 @@ export function InputBox<T>(props: InputBoxProps<T>) {
       <input
         type="text"
         id="InputBox"
+        autocomplete="off"
         onkeydown={async (e) => {
           if (e.key === "Enter") {
             onEnter(e.currentTarget.value);
