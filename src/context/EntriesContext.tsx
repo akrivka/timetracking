@@ -153,17 +153,20 @@ export const EntriesProvider = (props) => {
 
   const subscribe = async () => {
     console.log(`SUB START (${clientID})`);
-    const res = await axios.get("/api/sync", {
-      params: { ...credentials, clientID },
-    });
-    console.log(`SUB RES (${clientID})`);
 
-    if (res.status !== 200) {
+    try {
+      const res = await axios.get("/api/sync", {
+        params: { ...credentials, clientID },
+      });
+      if (res.status === 200) {
+        await untrack(pullUpdates);
+      }
+    } catch (e) {
       await wait(1000);
-    } else {
-      await pullUpdates();
     }
-    await subscribe();
+
+    console.log(`SUB RES (${clientID})`);
+    subscribe();
   };
 
   // SET UP BROADCASTING TO OTHER TABS
@@ -440,7 +443,7 @@ export const EntriesProvider = (props) => {
   // INITAIALIZATION
   createEffect(async () => {
     if (initialized()) {
-      updateLabels();
+      untrack(updateLabels);
       if (hasNetwork() && loggedIn()) {
         console.log("INIT");
 
