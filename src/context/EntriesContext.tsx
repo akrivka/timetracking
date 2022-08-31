@@ -24,6 +24,7 @@ import {
   makeEntry,
   mergeEntries
 } from "../lib/entries";
+import { renderDuration } from "../lib/format";
 import {
   connectDB,
   getEntriesLocal,
@@ -153,6 +154,7 @@ export const EntriesProvider = (props) => {
 
   const subscribe = async () => {
     console.log(`SUB START (${clientID})`);
+    const timeStart = now().getTime();
 
     try {
       const res = await axios.get("/api/sync", {
@@ -165,7 +167,10 @@ export const EntriesProvider = (props) => {
       await wait(1000);
     }
 
-    console.log(`SUB RES (${clientID})`);
+    const timeEnd = now().getTime();
+    console.log(
+      `SUB RES (${clientID}, after ${renderDuration(timeEnd - timeStart)})`
+    );
     subscribe();
   };
 
