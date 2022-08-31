@@ -69,10 +69,10 @@ export function InputBox<T>(props: InputBoxProps<T>) {
         e.preventDefault();
 
         if (e.key === "ArrowUp" || (e.key === "Tab" && e.shiftKey)) {
-          setSelected(Math.max(selected() - 1, -1));
+          setSelected(Math.max(selected() - 1, 0));
         }
         if (e.key === "ArrowDown" || e.key === "Tab") {
-          setSelected(Math.min(selected() + 1, props.universe.length - 1));
+          setSelected(Math.min(selected() + 1, filteredUniverse().length - 1));
         }
 
         if (selected() >= 0) {
