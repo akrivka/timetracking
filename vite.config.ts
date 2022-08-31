@@ -9,6 +9,9 @@ export default defineConfig({
     mix({ handler: "./src/backend/server.ts" }),
     VitePWA({
       registerType: "autoUpdate",
+      workbox: {
+        globPatterns: ["**/*.{js,css}"],
+      },
       // mode: "development",
       // devOptions: {
       //   enabled: true,
