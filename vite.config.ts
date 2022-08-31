@@ -11,6 +11,7 @@ export default defineConfig({
       registerType: "autoUpdate",
       workbox: {
         globPatterns: ["**/*.{js,css}"],
+        navigateFallback: null,
       },
       // mode: "development",
       // devOptions: {
