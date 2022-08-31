@@ -1,6 +1,15 @@
 import axios from "axios";
 import { useNavigate } from "solid-app-router";
-import { Component, createSignal, For, onMount, Show } from "solid-js";
+import {
+  Component,
+  createEffect,
+  createSignal,
+  For,
+  Match,
+  onMount,
+  Show,
+  Switch
+} from "solid-js";
 import { createStore } from "solid-js/store";
 import { useWindow } from "../context/WindowContext";
 import { serializeEntries } from "../lib/entries";
@@ -78,7 +87,10 @@ const Mobile: Component = () => {
     ).filter(([x, sent]) => !sent)
   );
 
+  const [sending, setSending] = createSignal(false);
   const sync = async () => {
+    if (!hasNetwork) return;
+    setSending(true);
     const entries = entryPairs.reduce(
       (es, [entry, sent]) => (!sent ? [...es, entry] : es),
       []
@@ -93,12 +105,15 @@ const Mobile: Component = () => {
       setEntryPairs(
         entryPairs
           .map((entryPair) =>
-            entryPair[1] === false ? [entryPair[0], true] : entryPair
+            entries.some((e) => e.id === entryPair[0].id)
+              ? [entryPair[0], true]
+              : entryPair
           )
           .slice(0, 5)
       );
       localStorage.setItem("entries", serializeEntryPairs(entryPairs));
     }
+    setSending(false);
   };
 
   const onclick = () => {
@@ -112,10 +127,22 @@ const Mobile: Component = () => {
 
   onMount(sync);
 
+  createEffect(() => {
+    if (hasNetwork()) {
+      sync();
+    }
+  });
+
   return (
     <div class="h-screen">
       <div class="h-1/2 px-4 pt-2">
         <div class="flex justify-end w-full text-xs space-x-2">
+          <span class="text-gray-300 mr-2">
+            <Switch>
+              <Match when={!hasNetwork()}>No internet.</Match>
+              <Match when={sending()}>Sending updates...</Match>
+            </Switch>
+          </span>
           <span class="text-gray-500">({credentials.username})</span>
           <button
             class="underline"
@@ -126,19 +153,6 @@ const Mobile: Component = () => {
           >
             Log out
           </button>
-          {/* <Switch>
-            <Match when={!hasNetwork()}>No internet.</Match>
-            <Match when={syncing()}>Syncing...</Match>
-            <Match when={entries.length > 0}>
-              <button
-                class="p-1 w-6 h-6 hover:bg-gray-100 active:bg-gray-200 rounded"
-                onclick={sync}
-              >
-                Retry
-              </button>
-            </Match>
-            <Match when={true}>All entries sent successfully.</Match>
-          </Switch> */}
         </div>
         <div class="h-4" />
         <For each={entryPairs}>
@@ -176,13 +190,25 @@ const Mobile: Component = () => {
           }}
         </For>
       </div>
-      <div class="h-1/2 flex justify-center items-center">
-        <button
-          class="px-12 py-6 text-lg hover:bg-gray-100 active:bg-gray-200 active:shadow rounded border-2 border-black"
-          onclick={onclick}
-        >
-          Add entry
-        </button>
+      <div class="h-1/2">
+        <div class="w-full flex justify-end pr-4">
+          <Show when={entryPairs.filter(([_, sent]) => !sent).length > 0}>
+            <button
+              class="px-3 py-2 text-xs hover:bg-gray-100 active:bg-gray-200 active-shadow rounded border"
+              onclick={() => sync()}
+            >
+              Retry
+            </button>
+          </Show>
+        </div>
+        <div class="h-full flex justify-center items-center">
+          <button
+            class="px-12 py-6 text-lg hover:bg-gray-100 active:bg-gray-200 active:shadow rounded border-2 border-black"
+            onclick={onclick}
+          >
+            Add entry
+          </button>
+        </div>
       </div>
     </div>
   );
