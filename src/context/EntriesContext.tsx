@@ -153,7 +153,7 @@ export const EntriesProvider = (props) => {
   const clientID = newClientID();
 
   const subscribe = async () => {
-    console.log(`SUB START (${clientID})`);
+    console.log(`SUB start (${clientID})`);
     const timeStart = now().getTime();
 
     try {
@@ -169,7 +169,7 @@ export const EntriesProvider = (props) => {
 
     const timeEnd = now().getTime();
     console.log(
-      `SUB RES (${clientID}, after ${renderDuration(timeEnd - timeStart)})`
+      `SUB resolve (${clientID}, after ${renderDuration(timeEnd - timeStart)})`
     );
     subscribe();
   };
@@ -193,11 +193,11 @@ export const EntriesProvider = (props) => {
       includeDeleted: true,
     });
     const localEntries = await getEntriesLocal({ includeDeleted: true });
-    console.log(
-      `VALIDATE END (remote: ${remoteEntries.length}, local: ${localEntries.length})`
-    );
 
     const result = entrySetEquals(localEntries, remoteEntries);
+
+    console.log(`VALIDATE end (${result === true ? "ok" : result})`);
+
     setValidating(false);
     return result === true ? "ok" : result;
   };
@@ -213,7 +213,6 @@ export const EntriesProvider = (props) => {
       localEntries,
       remoteEntries
     );
-    console.log(localUpdates, remoteUpdates);
 
     const [localResponse, remoteResponse] = await Promise.all([
       localUpdates.length > 0 && putEntriesLocal(localUpdates),
@@ -221,13 +220,14 @@ export const EntriesProvider = (props) => {
         putEntriesRemote(credentials, null, remoteUpdates),
     ]);
     console.log(
-      `FULL UPDATE end (remote: ${remoteUpdates.length}, local ${localUpdates.length})`
+      `FULL UPDATE end (remote updates: ${remoteUpdates.length}, local updates: ${localUpdates.length})`
     );
 
     await storeForceSync();
   };
 
-  onMount(() => {
+  // PERIODIC FULL UPDATE/FULL VALIDATION ON BLUR
+  const onblur = async () => {
     const lastFull = localStorage.lastFull
       ? JSON.parse(localStorage.lastFull)
       : { time: 0 };
@@ -236,14 +236,22 @@ export const EntriesProvider = (props) => {
     if (nowTime - lastFull.time > MS_IN_HOURS) {
       console.log("PERIODIC FULL UPDATE/VALIDATION");
 
-      const f = async () => {
-        await fullUpdate();
-        const res = await fullValidate();
-        localStorage.lastFull = JSON.stringify({ time: nowTime, result: res });
-        window.removeEventListener("blur", f);
-      };
-      window.addEventListener("blur", () => f());
+      localStorage.lastFull = JSON.stringify({
+        time: nowTime,
+        result: "pending...",
+      });
+
+      await untrack(fullUpdate);
+      const res = await untrack(fullValidate);
+
+      localStorage.lastFull = JSON.stringify({ time: nowTime, result: res });
     }
+  };
+  onMount(() => {
+    window.addEventListener("blur", onblur);
+  });
+  onCleanup(() => {
+    window.removeEventListener("blur", onblur);
   });
 
   // EVENT HANDLING
