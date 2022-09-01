@@ -466,6 +466,29 @@ export const EntriesProvider = (props) => {
     }
   });
 
+  // PULLING AND PUSHING KEYBINDS
+  const pullKeybinds = async (e) => {
+    if (!loggedIn() || !hasNetwork()) return;
+
+    // if option+p
+    if (e.altKey) {
+      if (e.code === "KeyP") {
+        untrack(sync);
+      }
+      // if option+shift+p
+      if (e.shiftKey && e.code === "KeyP") {
+        await untrack(fullUpdate);
+        await untrack(fullValidate);
+      }
+    }
+  };
+  onMount(() => {
+    window.addEventListener("keydown", pullKeybinds);
+  });
+  onCleanup(() => {
+    window.removeEventListener("keydown", pullKeybinds);
+  });
+
   return (
     <>
       <EntriesContext.Provider
