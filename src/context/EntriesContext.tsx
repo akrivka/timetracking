@@ -436,13 +436,18 @@ export const EntriesProvider = (props) => {
     window.timemarker.putEntries = putEntries;
     window.timemarker.entries = entries;
     window.timemarker.pushEntriesFromConsole = async (serializedEntries) => {
+      console.log("PUSH ENTRIES FROM CONSOLE start");
+
       const entries = deserializeEntries(serializedEntries);
-      try {
-        await putEntriesLocal(entries);
-        console.log(`successfully saved ${entries.length} entries`);
-        return true;
-      } catch (e) {
-        console.error(e);
+      if (typeof entries === "string") {
+        console.log("PUSH ENTRIES FROM CONSOLE parse error", entries);
+      } else {
+        try {
+          await putEntriesLocal(entries);
+          console.log(`PUSH ENTRIES FROM CONSOLE success (${entries.length})`);
+        } catch (e) {
+          console.error("PUSH ENTRIES FROM CONSOLE save error", e);
+        }
       }
     };
   });

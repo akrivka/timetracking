@@ -195,17 +195,21 @@ export function parseEntry(x): Entry {
   };
 }
 
-export function deserializeEntries(s: string): Entry[] {
-  const result: Entry[] = [];
+export function deserializeEntries(s: string): Entry[] | string {
   try {
     const json = JSON.parse(s);
     if (Array.isArray(json)) {
+      const result: Entry[] = [];
       for (const x of json) {
         result.push(parseEntry(x));
       }
+      return result;
+    } else {
+      return "not an array";
     }
-  } finally {
-    return result;
+  } catch (e) {
+    console.log("deserializeEntries:", e);
+    return "error";
   }
 }
 
