@@ -3,7 +3,6 @@ import { Component, Match, Resource, Switch } from "solid-js";
 import { createStore } from "solid-js/store";
 import Report from "../components/ReportComp";
 import { WrappedInfo } from "../context/UserContext";
-import { msBetween } from "../lib/date";
 import { renderTimeFull } from "../lib/format";
 
 // duplicating here not ideal!
@@ -21,6 +20,11 @@ const PublicReport: Component<ReportExport> = (props) => {
     labelInfoMap.set(label, [labelInfo, (info) => setLabelInfo(info)]);
   }
 
+  let totalDuration = 0;
+  for (const duration of props.labelTimeMap.values()) {
+    totalDuration += duration;
+  }
+
   const getLabelInfo = (label: string) => labelInfoMap.get(label);
 
   return (
@@ -33,7 +37,7 @@ const PublicReport: Component<ReportExport> = (props) => {
       <div class="h-2" />
       <Report
         labelTimeMap={props.labelTimeMap}
-        totalDuration={msBetween(props.startDate, props.endDate)}
+        totalDuration={totalDuration}
         getLabelInfo={getLabelInfo}
       />
     </div>
