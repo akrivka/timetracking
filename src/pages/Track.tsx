@@ -186,7 +186,7 @@ const Track: Component = () => {
               entry: {
                 time: minutesAfter(end?.time || now(), -action.minutes),
                 after: label,
-                before: start.after,
+                before: start.after || end.before,
               },
             },
           ]);
