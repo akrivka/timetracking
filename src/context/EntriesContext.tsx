@@ -24,7 +24,6 @@ import {
   makeEntry,
   mergeEntries
 } from "../lib/entries";
-import { renderDuration } from "../lib/format";
 import {
   connectDB,
   getEntriesLocal,
@@ -124,24 +123,32 @@ export const EntriesProvider = (props) => {
       includeDeleted: true,
     });
 
-    const updatedEntries = [];
-    for (const newEntry of pulledEntries) {
-      const existingEntry = await getEntryByIdLocal(newEntry.id);
-      if (
-        !existingEntry ||
-        newEntry.lastModified.getTime() > existingEntry.lastModified.getTime()
-      ) {
-        updatedEntries.push(newEntry);
+    if (typeof pulledEntries === "string") {
+      console.log(`PULL deserialization error: ${pulledEntries}`);
+    } else {
+      console.log("PULL received entries from server");
+
+      const updatedEntries = [];
+      for (const newEntry of pulledEntries) {
+        const existingEntry = await getEntryByIdLocal(newEntry.id);
+        if (
+          !existingEntry ||
+          newEntry.lastModified.getTime() > existingEntry.lastModified.getTime()
+        ) {
+          updatedEntries.push(newEntry);
+        }
       }
+      console.log(
+        `PULL parsed entries (total # of updated entries ${updatedEntries.length})`
+      );
+
+      if (updatedEntries.length > 0) {
+        await updateEntries(updatedEntries);
+      }
+
+      console.log(`PULL end (${updatedEntries.length})`);
+      localStorage.lastPulled = JSON.stringify(newLastPulled);
     }
-
-    if (updatedEntries.length > 0) {
-      await updateEntries(updatedEntries);
-    }
-
-    console.log(`PULL end (${updatedEntries.length})`);
-    localStorage.lastPulled = JSON.stringify(newLastPulled);
-
     setPullingUpdates(false);
   };
 
@@ -153,7 +160,7 @@ export const EntriesProvider = (props) => {
   const clientID = newClientID();
 
   const subscribe = async () => {
-    console.log(`SUB start (${clientID})`);
+    //console.log(`SUB start (${clientID})`);
     const timeStart = now().getTime();
 
     try {
@@ -168,9 +175,9 @@ export const EntriesProvider = (props) => {
     }
 
     const timeEnd = now().getTime();
-    console.log(
-      `SUB resolve (${clientID}, after ${renderDuration(timeEnd - timeStart)})`
-    );
+    //    console.log(
+    //    `SUB resolve (${clientID}, after ${renderDuration(timeEnd - timeStart)})`
+    //  );
     subscribe();
   };
 
