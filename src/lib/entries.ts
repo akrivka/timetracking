@@ -195,7 +195,9 @@ export function parseEntry(x): Entry {
   };
 }
 
-export function deserializeEntries(s: string): Entry[] | string {
+export function deserializeEntries(
+  s: string
+): Entry[] | "error" | "not an array" {
   try {
     const json = JSON.parse(s);
     if (Array.isArray(json)) {
