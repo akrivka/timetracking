@@ -90,7 +90,13 @@ export function InputBox<T>(props: InputBoxProps<T>) {
         id="InputBox"
         autocomplete="off"
         onkeydown={async (e) => {
-          if (e.key === "Enter") {
+          if (
+            e.key === "Enter" &&
+            !e.ctrlKey &&
+            !e.shiftKey &&
+            !e.altKey &&
+            !e.metaKey
+          ) {
             onEnter(e.currentTarget.value);
             if (clearAndRefocus) {
               ref.value = "";
