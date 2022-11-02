@@ -192,7 +192,7 @@ const app = express()
       `;
         }
 
-        resolveSubscribers(credentials.username, clientID);
+        clientID && resolveSubscribers(credentials.username, clientID);
         res.send({ lastSynced, status: "ok" });
       } else {
         res.send("username+password not found");

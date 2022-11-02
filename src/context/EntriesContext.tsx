@@ -221,6 +221,10 @@ export const EntriesProvider = (props) => {
       remoteEntries
     );
 
+    console.log(
+      `FULL UPDATE midpoint (remote updates: ${remoteUpdates.length}, local updates: ${localUpdates.length})`
+    );
+
     const [localResponse, remoteResponse] = await Promise.all([
       localUpdates.length > 0 && putEntriesLocal(localUpdates),
       remoteUpdates.length > 0 &&
@@ -248,10 +252,16 @@ export const EntriesProvider = (props) => {
         result: "pending...",
       });
 
-      await untrack(fullUpdate);
-      const res = await untrack(fullValidate);
+      let res;
+      try {
+        await untrack(fullUpdate);
+        res = await untrack(fullValidate);
+      } catch (e) {
+        console.log(`PERIODIC FULL UPDATE/VALIDATION error: ${e}`);
+      }
 
       localStorage.lastFull = JSON.stringify({ time: nowTime, result: res });
+      console.log(`PERIODIC FULL UPDATE/VALIDATION end (${res})`);
     }
   };
   onMount(() => {
