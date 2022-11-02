@@ -1,5 +1,11 @@
 import { Dialog, DialogOverlay, DialogPanel, Transition } from "solid-headless";
-import { Component, createEffect, createSignal } from "solid-js";
+import {
+  Component,
+  createEffect,
+  createSignal,
+  onCleanup,
+  onMount
+} from "solid-js";
 import { createStore } from "solid-js/store";
 import { useEntries } from "../context/EntriesContext";
 import { labelFrom } from "../lib/entries";
@@ -59,6 +65,18 @@ export const BulkRename: Component = () => {
     }, 200);
   });
 
+  const keydown = (e) => {
+    // if cmd/ctrl+enter pressed
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      onSubmit();
+    }
+  };
+  onMount(() => {
+    window.addEventListener("keydown", keydown);
+  });
+  onCleanup(() => {
+    window.removeEventListener("keydown", keydown);
+  });
   return (
     <Transition appear show={state.isOpen}>
       <Dialog
