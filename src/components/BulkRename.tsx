@@ -17,11 +17,9 @@ export const openBulkRenameDialog = (info) => {
 
 export const BulkRename: Component = () => {
   const { dispatch, entries, labels } = useEntries();
-  const [newName, setNewName] = createSignal(state.label);
+  const [newName, setNewName] = createSignal("");
+  const [newNameDelayed, setNewNameDelayed] = createSignal("");
   const [moveChildren, setMoveChildren] = createSignal(true);
-  createEffect(() => {
-    if (state.isOpen) setNewName(state.label);
-  });
 
   const onSubmit = () => {
     dispatch([
@@ -52,6 +50,15 @@ export const BulkRename: Component = () => {
     return m;
   };
 
+  let timeoutID;
+  createEffect(() => {
+    clearTimeout(timeoutID);
+    const name = newName();
+    timeoutID = setTimeout(() => {
+      setNewNameDelayed(name);
+    }, 200);
+  });
+
   return (
     <Transition appear show={state.isOpen}>
       <Dialog
@@ -63,28 +70,25 @@ export const BulkRename: Component = () => {
           <DialogOverlay class="fixed inset-0 bg-gray-800 opacity-25" />
           <DialogPanel class="inline-block w-[36rem] bg-white px-4 py-3 rounded-lg border-1 shadow z-20 space-y-1">
             <div class="font-bold">Bulk Rename</div>
-            <div class="flex">
+            <div class="flex space-x-1 items-center">
               <label class="w-12">From:</label>
-              <div>
-                {state.label}
-                <div class="text-[10px] text-gray-600 -translate-y-1">
-                  {labelFrequencies().get(state.label) || 0} existing entries
-                </div>
+              <div class="w-72">{state.label}</div>
+              <div class="text-[10px] text-gray-600 -translate-y-1">
+                {labelFrequencies().get(state.label) || 0} existing entries
               </div>
             </div>
-            <div class="flex">
+            <div class="flex space-x-1 items-center">
               <label class="w-12">To:</label>
-              <div class="w-full">
-                <InputBox
-                  class="w-72 px-1 border rounded"
-                  prefixRule={emptyRule}
-                  universe={labels}
-                  submit={onSubmit}
-                  oninput={(s) => setNewName(s)}
-                />
-                <div class="text-[10px] text-gray-600">
-                  {labelFrequencies().get(newName()) || 0} existing entries
-                </div>
+              <InputBox
+                class="w-72 px-1 border rounded"
+                prefixRule={emptyRule}
+                universe={labels}
+                submit={(_, n) => setNewName(n)}
+                oninput={(s) => setNewName(s)}
+                onchange={(s) => setNewName(s)}
+              />
+              <div class="text-[10px] text-gray-600">
+                {labelFrequencies().get(newNameDelayed()) || 0} existing entries
               </div>
             </div>
             <div class="flex">

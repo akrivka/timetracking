@@ -5,6 +5,7 @@ interface InputBoxProps<T> {
   prefixRule: Rule<T>;
   submit: (x: T, s: string) => void;
   oninput?: (s: string) => void;
+  onchange?: (s: string) => void;
   universe: string[];
   focusSignal?: Accessor<any>;
   clearAndRefocus?: boolean;
@@ -17,6 +18,7 @@ export function InputBox<T>(props: InputBoxProps<T>) {
     prefixRule,
     submit,
     oninput,
+    onchange,
     focusSignal,
     clearAndRefocus = false,
     universe: _,
@@ -76,8 +78,10 @@ export function InputBox<T>(props: InputBoxProps<T>) {
         }
 
         if (selected() >= 0) {
-          ref.value =
+          let s =
             (command() && command() + " ") + filteredUniverse()[selected()];
+          ref.value = s;
+          props.onchange(s);
         }
       }
     }
@@ -128,6 +132,12 @@ export function InputBox<T>(props: InputBoxProps<T>) {
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
+                  setSelected(i());
+                  let s =
+                    (command() && command() + " ") +
+                    filteredUniverse()[selected()];
+                  ref.value = s;
+                  onchange(s);
                   onEnter(command() + " " + m);
                 }}
               >
