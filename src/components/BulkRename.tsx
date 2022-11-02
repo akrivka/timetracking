@@ -4,7 +4,8 @@ import {
   createEffect,
   createSignal,
   onCleanup,
-  onMount
+  onMount,
+  Show
 } from "solid-js";
 import { createStore } from "solid-js/store";
 import { useEntries } from "../context/EntriesContext";
@@ -14,6 +15,7 @@ import { emptyRule } from "../lib/parse";
 import { listPairs, revit } from "../lib/util";
 import { InputBox } from "./InputBox";
 import { MyButton } from "./MyButton";
+import { SpinnerIcon } from "./SpinnerIcon";
 
 const [state, setState] = createStore(null);
 
@@ -26,9 +28,11 @@ export const BulkRename: Component = () => {
   const [newName, setNewName] = createSignal("");
   const [newNameDelayed, setNewNameDelayed] = createSignal("");
   const [moveChildren, setMoveChildren] = createSignal(true);
+  const [loading, setLoading] = createSignal(false);
 
-  const onSubmit = () => {
-    dispatch([
+  const onSubmit = async () => {
+    setLoading(true);
+    await dispatch([
       "bulkRename",
       {
         from: state.label,
@@ -36,6 +40,7 @@ export const BulkRename: Component = () => {
         moveChildren: moveChildren(),
       },
     ]);
+    setLoading(false);
     setState({ isOpen: false });
     //triggerRerender();
   };
@@ -86,43 +91,53 @@ export const BulkRename: Component = () => {
       >
         <div class="min-h-screen flex items-center justify-center">
           <DialogOverlay class="fixed inset-0 bg-gray-800 opacity-25" />
-          <DialogPanel class="inline-block w-[36rem] bg-white px-4 py-3 rounded-lg border-1 shadow z-20 space-y-1">
-            <div class="font-bold">Bulk Rename</div>
-            <div class="flex space-x-1 items-center">
-              <label class="w-12">From:</label>
-              <div class="w-72">{state.label}</div>
-              <div class="text-[10px] text-gray-600 -translate-y-1">
-                {labelFrequencies().get(state.label) || 0} existing entries
+          <DialogPanel class="inline-block w-[36rem] bg-white px-4 py-3 rounded-lg border-1 shadow z-20 space-y-1 h-48">
+            <Show
+              when={!loading()}
+              fallback={
+                <div class="flex w-full h-full justify-center items-center">
+                  <SpinnerIcon />
+                </div>
+              }
+            >
+              <div class="font-bold">Bulk Rename</div>
+              <div class="flex space-x-1 items-center">
+                <label class="w-12">From:</label>
+                <div class="w-72">{state.label}</div>
+                <div class="text-[10px] text-gray-600 -translate-y-1">
+                  {labelFrequencies().get(state.label) || 0} existing entries
+                </div>
               </div>
-            </div>
-            <div class="flex space-x-1 items-center">
-              <label class="w-12">To:</label>
-              <InputBox
-                class="w-72 px-1 border rounded"
-                prefixRule={emptyRule}
-                universe={labels}
-                submit={(_, n) => setNewName(n)}
-                oninput={(s) => setNewName(s)}
-                onchange={(s) => setNewName(s)}
-              />
-              <div class="text-[10px] text-gray-600">
-                {labelFrequencies().get(newNameDelayed()) || 0} existing entries
+              <div class="flex space-x-1 items-center">
+                <label class="w-12">To:</label>
+                <InputBox
+                  class="w-72 px-1 border rounded"
+                  prefixRule={emptyRule}
+                  universe={labels}
+                  submit={(_, n) => setNewName(n)}
+                  oninput={(s) => setNewName(s)}
+                  onchange={(s) => setNewName(s)}
+                />
+                <div class="text-[10px] text-gray-600">
+                  {labelFrequencies().get(newNameDelayed()) || 0} existing
+                  entries
+                </div>
               </div>
-            </div>
-            <div class="flex">
-              <label class="w-28">With children:</label>
-              <input
-                type="checkbox"
-                checked
-                onchange={(e) => setMoveChildren(e.currentTarget.checked)}
-              />
-            </div>
-            <div class="flex justify-end space-x-2">
-              <MyButton onclick={() => setState({ isOpen: false })}>
-                Cancel
-              </MyButton>
-              <MyButton onclick={onSubmit}>Rename</MyButton>
-            </div>
+              <div class="flex">
+                <label class="w-28">With children:</label>
+                <input
+                  type="checkbox"
+                  checked
+                  onchange={(e) => setMoveChildren(e.currentTarget.checked)}
+                />
+              </div>
+              <div class="flex justify-end space-x-2">
+                <MyButton onclick={() => setState({ isOpen: false })}>
+                  Cancel
+                </MyButton>
+                <MyButton onclick={onSubmit}>Rename</MyButton>
+              </div>
+            </Show>
           </DialogPanel>
         </div>
       </Dialog>
