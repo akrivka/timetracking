@@ -8,6 +8,7 @@ import { renderTimeFull } from "../lib/format";
 // duplicating here not ideal!
 type ReportExport = {
   labelTimeMap: Map<Label, number>;
+  totalDuration: number;
   startDate: Date;
   endDate: Date;
 };
@@ -18,11 +19,6 @@ const PublicReport: Component<ReportExport> = (props) => {
   for (const label of [...props.labelTimeMap.keys()]) {
     const [labelInfo, setLabelInfo] = createStore({ expanded: true });
     labelInfoMap.set(label, [labelInfo, (info) => setLabelInfo(info)]);
-  }
-
-  let totalDuration = 0;
-  for (const duration of props.labelTimeMap.values()) {
-    totalDuration += duration;
   }
 
   const getLabelInfo = (label: string) => labelInfoMap.get(label);
@@ -37,7 +33,7 @@ const PublicReport: Component<ReportExport> = (props) => {
       <div class="h-2" />
       <Report
         labelTimeMap={props.labelTimeMap}
-        totalDuration={totalDuration}
+        totalDuration={props.totalDuration}
         getLabelInfo={getLabelInfo}
       />
     </div>

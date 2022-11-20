@@ -3,9 +3,10 @@ import { createResource } from "solid-js";
 //import { deserializeReportExport } from "../Report";
 // DUPLICATING FOR NOW NOT IDEAL!
 function deserializeReportExport(json: string) {
-  const { labelTimeMap, startDate, endDate } = JSON.parse(json);
+  const { labelTimeMap, startDate, totalDuration, endDate } = JSON.parse(json);
   return {
     labelTimeMap: new Map(labelTimeMap),
+    totalDuration: totalDuration,
     startDate: new Date(startDate),
     endDate: new Date(endDate),
   };

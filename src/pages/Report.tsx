@@ -48,6 +48,7 @@ const showTypes = ["total", "weekly", "daily", "percent"];
 
 export type ReportExport = {
   labelTimeMap: Map<Label, number>;
+  totalDuration: number;
   startDate: Date;
   endDate: Date;
 };
@@ -60,9 +61,10 @@ export function serializeReportExport(report: ReportExport): string {
 }
 
 export function deserializeReportExport(json: string): ReportExport {
-  const { labelTimeMap, startDate, endDate } = JSON.parse(json);
+  const { labelTimeMap, totalDuration, startDate, endDate } = JSON.parse(json);
   return {
     labelTimeMap: new Map(labelTimeMap),
+    totalDuration: totalDuration,
     startDate: new Date(startDate),
     endDate: new Date(endDate),
   };
@@ -412,6 +414,7 @@ const ReportPage: Component = () => {
         </div>
         <Export
           labelTimeMap={labelTimeMap()}
+          totalDuration={totalDuration()}
           startDate={startDate()}
           endDate={endDate()}
         />
