@@ -1,5 +1,5 @@
 import axios from "axios";
-import { createContext, createSignal, onMount, useContext } from "solid-js";
+import { createContext, createSignal, onMount, untrack, useContext } from "solid-js";
 import { createStore, unwrap } from "solid-js/store";
 import { stringToColor } from "../lib/colors";
 import { isIterable } from "../lib/util";
@@ -143,7 +143,7 @@ function wrapInfo(
       ..._info,
       lastModified: new Date(),
     });
-    pushProfile();
+    untrack(pushProfile);
   };
   return [_info, setInfo];
 }
@@ -210,7 +210,7 @@ export const UserProvider = (props) => {
     if (hasNetwork() && user.credentials) {
       remoteProfile = await getRemoteProfile(user.credentials);
     }
-    const localProfile = unwrapProfile(profile());
+    const localProfile = unwrapProfile(untrack(profile));
     const mergedProfile = remoteProfile
       ? mergeProfiles(localProfile, remoteProfile)
       : localProfile;
@@ -242,7 +242,7 @@ export const UserProvider = (props) => {
       profile().labelInfo.set(label, newInfo);
       info = newInfo;
 
-      syncProfile();
+      untrack(syncProfile);
     }
     return info;
   };
