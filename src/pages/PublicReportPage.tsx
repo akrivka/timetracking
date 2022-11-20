@@ -17,7 +17,7 @@ const PublicReport: Component<ReportExport> = (props) => {
   const labelInfoMap = new Map<string, WrappedInfo>();
 
   for (const label of [...props.labelTimeMap.keys()]) {
-    const [labelInfo, setLabelInfo] = createStore({ expanded: true });
+    const [labelInfo, setLabelInfo] = createStore({ expanded: false });
     labelInfoMap.set(label, [labelInfo, (info) => setLabelInfo(info)]);
   }
 
