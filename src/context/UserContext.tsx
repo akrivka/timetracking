@@ -4,6 +4,7 @@ import { createStore, unwrap } from "solid-js/store";
 import { stringToColor } from "../lib/colors";
 import { isIterable } from "../lib/util";
 import { useWindow } from "./WindowContext";
+import { Label } from "../lib/entries";
 
 export type Credentials = { username: string; hashedPassword: string };
 

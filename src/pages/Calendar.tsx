@@ -4,7 +4,7 @@ import {
   chevronDown,
   chevronLeft,
   chevronRight,
-  chevronUp
+  chevronUp,
 } from "solid-heroicons/solid";
 import {
   Component,
@@ -16,7 +16,7 @@ import {
   onCleanup,
   onMount,
   Show,
-  Switch
+  Switch,
 } from "solid-js";
 import { useUIState } from "../App";
 import { openLabelEdit } from "../components/LabelEdit";
@@ -29,7 +29,7 @@ import {
   msBetween,
   nextMidnight,
   nextWeek,
-  prevWeek
+  prevWeek,
 } from "../lib/date";
 import { Entry, labelFrom } from "../lib/entries";
 import { renderDay } from "../lib/format";

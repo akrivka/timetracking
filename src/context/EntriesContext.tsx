@@ -21,6 +21,7 @@ import {
   entryEquals,
   entrySetEquals,
   getDistinctLabels,
+  Label,
   makeEntry,
   mergeEntries
 } from "../lib/entries";

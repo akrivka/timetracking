@@ -3,5 +3,5 @@ dist
 dev-dist
 build
 .env
-.envrc
+.vscode
 test

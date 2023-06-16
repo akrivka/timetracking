@@ -4,6 +4,7 @@ import { createStore } from "solid-js/store";
 import Report from "../components/ReportComp";
 import { WrappedInfo } from "../context/UserContext";
 import { renderTimeFull } from "../lib/format";
+import { Label } from "../lib/entries";
 
 // duplicating here not ideal!
 type ReportExport = {

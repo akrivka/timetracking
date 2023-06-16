@@ -9,6 +9,7 @@
     "jsx": "preserve",
     "jsxImportSource": "solid-js",
     "types": ["vite/client"],
+    "lib": ["esnext", "WebWorker"],
     "noEmit": true,
     "isolatedModules": true
   }

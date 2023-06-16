@@ -9,7 +9,7 @@ import {
 } from "solid-js";
 import { createStore } from "solid-js/store";
 import { useEntries } from "../context/EntriesContext";
-import { labelFrom } from "../lib/entries";
+import { Label, labelFrom } from "../lib/entries";
 import { coarseLabel } from "../lib/labels";
 import { emptyRule } from "../lib/parse";
 import { listPairs, revit } from "../lib/util";

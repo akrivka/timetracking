@@ -34,6 +34,7 @@ import { useEntries } from "../context/EntriesContext";
 import { useUser } from "../context/UserContext";
 import { msBetween, specToDate } from "../lib/date";
 import {
+  Label,
   entriesIterator,
   entriesIteratorWithEnds,
   getDistinctLabels,
