@@ -28,7 +28,7 @@ async function userExists(credentials: Credentials): Promise<boolean> {
   return results.length > 0;
 }
 
-function getCredentialsFromReq(req: any): Credentials {
+function getCredentialsFromReq(req): Credentials {
   return {
     username: req.query.username,
     hashedPassword: req.query.hashedPassword,
@@ -55,10 +55,10 @@ const resolveSubscribers = (username: string, clientID?: string) => {
 const app = express()
   .use(bodyParser.urlencoded({ limit: "200mb", extended: false }))
   .get("/api/test", async (_, res) => res.send("Hello, world!"))
-  .get("/api/login", async (req: any, res: any) => {
-    const credentials = getCredentialsFromReq(req);
-
+  .get("/api/login", async (req, res, next) => {
     try {
+      const credentials = getCredentialsFromReq(req);
+
       const success: boolean = await userExists(credentials);
       if (success) {
         res.send("ok");
@@ -66,10 +66,10 @@ const app = express()
         res.send("username+password not found");
       }
     } catch (e) {
-      res.send(e);
+      next(e);
     }
   })
-  .post("/api/signup", async (req: any, res: any) => {
+  .post("/api/signup", async (req, res, next) => {
     const credentials = getCredentialsFromReq(req);
 
     if (credentials.username.length < 1) {
@@ -81,11 +81,12 @@ const app = express()
         await signup(credentials);
         res.send("ok");
       } catch (e) {
-        res.send(e);
+        console.log(e);
+        next(e);
       }
     }
   })
-  .get("/api/profile", async (req: any, res: any) => {
+  .get("/api/profile", async (req, res, next) => {
     const credentials = getCredentialsFromReq(req);
 
     try {
@@ -100,10 +101,10 @@ const app = express()
         res.send("username+password not found");
       }
     } catch (e) {
-      res.send(e);
+      next(e);
     }
   })
-  .post("/api/profile", async (req: any, res: any) => {
+  .post("/api/profile", async (req, res, next) => {
     const credentials = getCredentialsFromReq(req);
 
     try {
@@ -118,10 +119,10 @@ const app = express()
         res.send("username+password not found");
       }
     } catch (e) {
-      res.send(e);
+      next(e);
     }
   })
-  .get("/api/entries", async (req: any, res: any) => {
+  .get("/api/entries", async (req, res, next) => {
     await wait(delay);
     const credentials = getCredentialsFromReq(req);
 
@@ -136,7 +137,7 @@ const app = express()
           !includeDeleted
             ? await sql`SELECT id, time, before, after, lastmodified, lastsynced, deleted from entries WHERE username = ${credentials.username} and lastmodified > ${modifiedAfter} and lastsynced >= ${syncedAfter} and deleted = false`
             : await sql`SELECT id, time, before, after, lastmodified, lastsynced, deleted from entries WHERE username = ${credentials.username} and lastmodified > ${modifiedAfter} and lastsynced >= ${syncedAfter}`
-        ).map((row: any) => ({
+        ).map((row) => ({
           time: new Date(row.time as number),
           before: (row.before || undefined) as string | undefined,
           after: (row.after || undefined) as string | undefined,
@@ -151,15 +152,13 @@ const app = express()
         res.send("username+password not found");
       }
     } catch (e) {
-      console.log(e);
-
-      res.send(e);
+      next(e);
     }
   })
-  .post("/api/update", async (req: any, res: any) => {
+  .post("/api/update", async (req, res, next) => {
     await wait(delay);
     const credentials = getCredentialsFromReq(req);
-    const clientID = req.query.clientID;
+    const clientID = req.query.clientID as string;
 
     try {
       const success: boolean = await userExists(credentials);
@@ -198,12 +197,10 @@ const app = express()
         res.send("username+password not found");
       }
     } catch (e) {
-      console.log(e);
-
-      res.send(e);
+      next(e);
     }
   })
-  .post("/api/export", async (req: any, res: any) => {
+  .post("/api/export", async (req, res, next) => {
     try {
       const results = await sql`
             INSERT INTO reports (id, username, serialized)
@@ -213,28 +210,24 @@ const app = express()
           `;
       res.send("ok");
     } catch (err) {
-      console.log(err);
-
-      res.send(err);
+      next(err);
     }
   })
-  .get("/api/report", async (req: any, res: any) => {
+  .get("/api/report", async (req, res, next) => {
     try {
       const results = await sql`
             SELECT serialized FROM reports WHERE id = ${decodeURIComponent(
-              req.query.id
+              req.query.id as string
             )}
           `;
       res.send(JSON.stringify(results[0]?.serialized) || "not found");
     } catch (err) {
-      console.log(err);
-
-      res.send(err);
+      next(err);
     }
   })
-  .get("/api/sync", async (req: any, res: any) => {
+  .get("/api/sync", async (req, res, next) => {
     const credentials = getCredentialsFromReq(req);
-    const clientID = req.query.clientID;
+    const clientID = req.query.clientID as string;
 
     try {
       if (await userExists(credentials)) {
@@ -244,8 +237,15 @@ const app = express()
         subscribers.get(credentials.username).set(clientID, res);
       }
     } catch (e) {
-      console.log(e);
-      res.send(e);
+      next(e);
+    }
+  })
+  .use((err, req, res, next) => {
+    // Convert postgres errors into reasonable errors. (Otherwise the .code property confuses Express.)
+    if (typeof err.code === "string" && err.code.length == 5) {
+      next(new Error("Postgres error: " + err.code, { cause: err }));
+    } else {
+      next(err);
     }
   });
 
