@@ -242,7 +242,7 @@ const app = express()
   })
   .use((err, req, res, next) => {
     // Convert postgres errors into reasonable errors. (Otherwise the .code property confuses Express.)
-    if (typeof err.code === "string" && err.code.length == 5) {
+    if (typeof err.code === "string") {
       next(new Error("Postgres error: " + err.code, { cause: err }));
     } else {
       next(err);
