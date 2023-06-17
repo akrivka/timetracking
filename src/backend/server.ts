@@ -126,8 +126,8 @@ const app = express()
     await wait(delay);
     const credentials = getCredentialsFromReq(req);
 
-    const modifiedAfter = req.query.modifiedAfter || 0;
-    const syncedAfter = req.query.syncedAfter || 0;
+    const modifiedAfter = req.query.modifiedAfter as string || 0;
+    const syncedAfter = req.query.syncedAfter as string || 0;
     const includeDeleted = req.query.includeDeleted || false;
 
     try {
