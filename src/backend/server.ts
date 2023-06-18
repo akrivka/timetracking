@@ -126,8 +126,8 @@ const app = express()
     await wait(delay);
     const credentials = getCredentialsFromReq(req);
 
-    const modifiedAfter = req.query.modifiedAfter as string || 0;
-    const syncedAfter = req.query.syncedAfter as string || 0;
+    const modifiedAfter = (req.query.modifiedAfter as string) || 0;
+    const syncedAfter = (req.query.syncedAfter as string) || 0;
     const includeDeleted = req.query.includeDeleted || false;
 
     try {
@@ -167,28 +167,30 @@ const app = express()
         let entries = deserializeEntries(decodeURIComponent(req.body.entries));
 
         const lastSynced = now().getTime();
-        for (const entry of entries) {
-          await sql`INSERT INTO entries (username, id, time, before, after, lastmodified, lastsynced, deleted)
-          VALUES (
-              ${credentials.username},
-              ${entry.id},
-              ${entry.time.getTime()},
-              ${entry.before || null},
-              ${entry.after || null},
-              ${entry.lastModified.getTime()},
-              ${lastSynced},
-              ${entry.deleted}
-          )
-          ON CONFLICT ON CONSTRAINT uniqueness DO UPDATE SET
-              before = EXCLUDED.before,
-              after = EXCLUDED.after,
-              time = EXCLUDED.time,
-              lastmodified = EXCLUDED.lastmodified,
-              lastsynced = ${lastSynced},
-              deleted = EXCLUDED.deleted
-          WHERE
-              entries.lastmodified < EXCLUDED.lastmodified
-      `;
+
+        const BATCH_SIZE = 2000;
+        for (let i = 0; i < entries.length; i += BATCH_SIZE) {
+          const batch = entries.slice(i, i + BATCH_SIZE);
+          const rows = batch.map((entry) => ({
+            username: credentials.username,
+            id: entry.id,
+            time: entry.time.getTime(),
+            before: entry.before || null,
+            after: entry.after || null,
+            lastModified: entry.lastModified.getTime(),
+            lastSynced,
+            deleted: entry.deleted,
+          }));
+          await sql`INSERT INTO entries ${sql(rows)}
+            ON CONFLICT ON CONSTRAINT uniqueness DO UPDATE SET
+                before = EXCLUDED.before,
+                after = EXCLUDED.after,
+                time = EXCLUDED.time,
+                lastmodified = EXCLUDED.lastmodified,
+                lastsynced = ${lastSynced},
+                deleted = EXCLUDED.deleted
+            WHERE
+                entries.lastmodified < EXCLUDED.lastmodified`;
         }
 
         clientID && resolveSubscribers(credentials.username, clientID);
