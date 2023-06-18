@@ -81,7 +81,6 @@ const app = express()
         await signup(credentials);
         res.send("ok");
       } catch (e) {
-        console.log(e);
         next(e);
       }
     }
