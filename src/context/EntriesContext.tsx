@@ -3,6 +3,7 @@ import { Dialog, DialogOverlay, DialogPanel } from "solid-headless";
 import {
   createContext,
   createEffect,
+  createMemo,
   createResource,
   createSignal,
   Match,
@@ -11,7 +12,7 @@ import {
   Show,
   Switch,
   untrack,
-  useContext
+  useContext,
 } from "solid-js";
 import { createStore } from "solid-js/store";
 import { MS_IN_HOURS } from "../lib/constants";
@@ -23,13 +24,13 @@ import {
   getDistinctLabels,
   Label,
   makeEntry,
-  mergeEntries
+  mergeEntries,
 } from "../lib/entries";
 import {
   connectDB,
   getEntriesLocal,
   getEntryByIdLocal,
-  putEntriesLocal
+  putEntriesLocal,
 } from "../lib/localDB";
 import { getEntriesRemote, putEntriesRemote } from "../lib/remoteDB";
 import { createSyncedStoreArray } from "../lib/solid-ext";
@@ -78,6 +79,14 @@ export const EntriesProvider = (props) => {
         return true;
       }
     },
+  });
+
+  const entriesById = createMemo(() => {
+    const m = new Map();
+    for (const entry of entries) {
+      m.set(entry.id, entry);
+    }
+    return m;
   });
 
   // CORE SYNCING FUNCTIONS
@@ -303,7 +312,7 @@ export const EntriesProvider = (props) => {
     if (_entries.length === 0) return;
 
     const newEntries = _entries.map((entry) => {
-      const existingEntry = entries.find((e) => e.id === entry?.id);
+      const existingEntry = entry?.id ? entriesById().get(entry.id) : undefined;
 
       return {
         ...(existingEntry || makeEntry()),
@@ -398,7 +407,7 @@ export const EntriesProvider = (props) => {
     [history, setHistory] = createStore([]);
   const pushToUndoStack = (updatedEntries, event) => {
     const previousEntries = updatedEntries.map((entry) => {
-      const existingEntry = entries.find((e) => e.id === entry.id);
+      const existingEntry = entriesById().get(entry.id);
       return existingEntry || { ...entry, deleted: true };
     });
     setUndoStack([
