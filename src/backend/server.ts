@@ -1,6 +1,6 @@
 import bodyParser from "body-parser";
 import "dotenv/config";
-import express from "express";
+import express, { Request, Response } from "express";
 import postgres from "postgres";
 import { Credentials } from "../context/UserContext";
 import { deserializeEntries, serializeEntries } from "../lib/entries";
@@ -36,15 +36,16 @@ function getCredentialsFromReq(req): Credentials {
 }
 
 // subscribers map from usernames to array of response callbacks
-const subscribers = new Map<string, Map<string, any>>();
+const subscribers = new Map<string, Map<string, [Response, NodeJS.Timeout]>>();
 
 const resolveSubscribers = (username: string, clientID?: string) => {
   const clients = subscribers.get(username);
 
   if (clients) {
-    clients.forEach((res, id) => {
+    clients.forEach(([res, timeoutId], id) => {
       if (id !== clientID) {
         res.send("ok");
+        clearTimeout(timeoutId);
         clients.delete(id);
       }
     });
@@ -235,7 +236,11 @@ const app = express()
         if (!subscribers.has(credentials.username)) {
           subscribers.set(credentials.username, new Map<string, any>());
         }
-        subscribers.get(credentials.username).set(clientID, res);
+        const timeoutId = setTimeout(() => {
+          res.send("timeout");
+          subscribers.get(credentials.username).delete(clientID);
+        }, 25000);
+        subscribers.get(credentials.username).set(clientID, [res, timeoutId]);
       }
     } catch (e) {
       next(e);

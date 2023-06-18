@@ -177,7 +177,7 @@ export const EntriesProvider = (props) => {
       const res = await axios.get("/api/sync", {
         params: { ...credentials, clientID },
       });
-      if (res.status === 200) {
+      if (res.status === 200 && res.data == "ok") {
         await untrack(pullUpdates);
       }
     } catch (e) {
