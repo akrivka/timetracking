@@ -16,7 +16,7 @@ export function createSyncedStoreArray<T>(
     update: (arg: {
       mutate: () => Promise<any>;
       expect: (setStore: SetStoreFunction<T[]>) => void;
-    }) => void;
+    }) => Promise<void>;
     initialized: Accessor<boolean>;
     mutating: Accessor<boolean>;
     querying: Accessor<boolean>;

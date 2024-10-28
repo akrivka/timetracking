@@ -1,6 +1,6 @@
 import bodyParser from "body-parser";
 import "dotenv/config";
-import express from "express";
+import express, { Request, Response } from "express";
 import postgres from "postgres";
 import { Credentials } from "../context/UserContext";
 import { deserializeEntries, serializeEntries } from "../lib/entries";
@@ -28,7 +28,7 @@ async function userExists(credentials: Credentials): Promise<boolean> {
   return results.length > 0;
 }
 
-function getCredentialsFromReq(req: any): Credentials {
+function getCredentialsFromReq(req): Credentials {
   return {
     username: req.query.username,
     hashedPassword: req.query.hashedPassword,
@@ -36,15 +36,16 @@ function getCredentialsFromReq(req: any): Credentials {
 }
 
 // subscribers map from usernames to array of response callbacks
-const subscribers = new Map<string, Map<string, any>>();
+const subscribers = new Map<string, Map<string, [Response, NodeJS.Timeout]>>();
 
 const resolveSubscribers = (username: string, clientID?: string) => {
   const clients = subscribers.get(username);
 
   if (clients) {
-    clients.forEach((res, id) => {
+    clients.forEach(([res, timeoutId], id) => {
       if (id !== clientID) {
         res.send("ok");
+        clearTimeout(timeoutId);
         clients.delete(id);
       }
     });
@@ -55,10 +56,10 @@ const resolveSubscribers = (username: string, clientID?: string) => {
 const app = express()
   .use(bodyParser.urlencoded({ limit: "200mb", extended: false }))
   .get("/api/test", async (_, res) => res.send("Hello, world!"))
-  .get("/api/login", async (req: any, res: any) => {
-    const credentials = getCredentialsFromReq(req);
-
+  .get("/api/login", async (req, res, next) => {
     try {
+      const credentials = getCredentialsFromReq(req);
+
       const success: boolean = await userExists(credentials);
       if (success) {
         res.send("ok");
@@ -66,10 +67,10 @@ const app = express()
         res.send("username+password not found");
       }
     } catch (e) {
-      res.send(e);
+      next(e);
     }
   })
-  .post("/api/signup", async (req: any, res: any) => {
+  .post("/api/signup", async (req, res, next) => {
     const credentials = getCredentialsFromReq(req);
 
     if (credentials.username.length < 1) {
@@ -81,11 +82,11 @@ const app = express()
         await signup(credentials);
         res.send("ok");
       } catch (e) {
-        res.send(e);
+        next(e);
       }
     }
   })
-  .get("/api/profile", async (req: any, res: any) => {
+  .get("/api/profile", async (req, res, next) => {
     const credentials = getCredentialsFromReq(req);
 
     try {
@@ -100,10 +101,10 @@ const app = express()
         res.send("username+password not found");
       }
     } catch (e) {
-      res.send(e);
+      next(e);
     }
   })
-  .post("/api/profile", async (req: any, res: any) => {
+  .post("/api/profile", async (req, res, next) => {
     const credentials = getCredentialsFromReq(req);
 
     try {
@@ -118,15 +119,15 @@ const app = express()
         res.send("username+password not found");
       }
     } catch (e) {
-      res.send(e);
+      next(e);
     }
   })
-  .get("/api/entries", async (req: any, res: any) => {
+  .get("/api/entries", async (req, res, next) => {
     await wait(delay);
     const credentials = getCredentialsFromReq(req);
 
-    const modifiedAfter = req.query.modifiedAfter || 0;
-    const syncedAfter = req.query.syncedAfter || 0;
+    const modifiedAfter = (req.query.modifiedAfter as string) || 0;
+    const syncedAfter = (req.query.syncedAfter as string) || 0;
     const includeDeleted = req.query.includeDeleted || false;
 
     try {
@@ -136,7 +137,7 @@ const app = express()
           !includeDeleted
             ? await sql`SELECT id, time, before, after, lastmodified, lastsynced, deleted from entries WHERE username = ${credentials.username} and lastmodified > ${modifiedAfter} and lastsynced >= ${syncedAfter} and deleted = false`
             : await sql`SELECT id, time, before, after, lastmodified, lastsynced, deleted from entries WHERE username = ${credentials.username} and lastmodified > ${modifiedAfter} and lastsynced >= ${syncedAfter}`
-        ).map((row: any) => ({
+        ).map((row) => ({
           time: new Date(row.time as number),
           before: (row.before || undefined) as string | undefined,
           after: (row.after || undefined) as string | undefined,
@@ -151,15 +152,13 @@ const app = express()
         res.send("username+password not found");
       }
     } catch (e) {
-      console.log(e);
-
-      res.send(e);
+      next(e);
     }
   })
-  .post("/api/update", async (req: any, res: any) => {
+  .post("/api/update", async (req, res, next) => {
     await wait(delay);
     const credentials = getCredentialsFromReq(req);
-    const clientID = req.query.clientID;
+    const clientID = req.query.clientID as string;
 
     try {
       const success: boolean = await userExists(credentials);
@@ -168,28 +167,30 @@ const app = express()
         let entries = deserializeEntries(decodeURIComponent(req.body.entries));
 
         const lastSynced = now().getTime();
-        for (const entry of entries) {
-          await sql`INSERT INTO entries (username, id, time, before, after, lastmodified, lastsynced, deleted)
-          VALUES (
-              ${credentials.username},
-              ${entry.id},
-              ${entry.time.getTime()},
-              ${entry.before || null},
-              ${entry.after || null},
-              ${entry.lastModified.getTime()},
-              ${lastSynced},
-              ${entry.deleted}
-          )
-          ON CONFLICT ON CONSTRAINT uniqueness DO UPDATE SET
-              before = EXCLUDED.before,
-              after = EXCLUDED.after,
-              time = EXCLUDED.time,
-              lastmodified = EXCLUDED.lastmodified,
-              lastsynced = ${lastSynced},
-              deleted = EXCLUDED.deleted
-          WHERE
-              entries.lastmodified < EXCLUDED.lastmodified
-      `;
+
+        const BATCH_SIZE = 2000;
+        for (let i = 0; i < entries.length; i += BATCH_SIZE) {
+          const batch = entries.slice(i, i + BATCH_SIZE);
+          const rows = batch.map((entry) => ({
+            username: credentials.username,
+            id: entry.id,
+            time: entry.time.getTime(),
+            before: entry.before || null,
+            after: entry.after || null,
+            lastModified: entry.lastModified.getTime(),
+            lastSynced,
+            deleted: entry.deleted,
+          }));
+          await sql`INSERT INTO entries ${sql(rows)}
+            ON CONFLICT ON CONSTRAINT uniqueness DO UPDATE SET
+                before = EXCLUDED.before,
+                after = EXCLUDED.after,
+                time = EXCLUDED.time,
+                lastmodified = EXCLUDED.lastmodified,
+                lastsynced = ${lastSynced},
+                deleted = EXCLUDED.deleted
+            WHERE
+                entries.lastmodified < EXCLUDED.lastmodified`;
         }
 
         clientID && resolveSubscribers(credentials.username, clientID);
@@ -198,12 +199,10 @@ const app = express()
         res.send("username+password not found");
       }
     } catch (e) {
-      console.log(e);
-
-      res.send(e);
+      next(e);
     }
   })
-  .post("/api/export", async (req: any, res: any) => {
+  .post("/api/export", async (req, res, next) => {
     try {
       const results = await sql`
             INSERT INTO reports (id, username, serialized)
@@ -213,39 +212,47 @@ const app = express()
           `;
       res.send("ok");
     } catch (err) {
-      console.log(err);
-
-      res.send(err);
+      next(err);
     }
   })
-  .get("/api/report", async (req: any, res: any) => {
+  .get("/api/report", async (req, res, next) => {
     try {
       const results = await sql`
             SELECT serialized FROM reports WHERE id = ${decodeURIComponent(
-              req.query.id
+              req.query.id as string
             )}
           `;
       res.send(JSON.stringify(results[0]?.serialized) || "not found");
     } catch (err) {
-      console.log(err);
-
-      res.send(err);
+      next(err);
     }
   })
-  .get("/api/sync", async (req: any, res: any) => {
+  .get("/api/sync", async (req, res, next) => {
     const credentials = getCredentialsFromReq(req);
-    const clientID = req.query.clientID;
+    const clientID = req.query.clientID as string;
 
     try {
       if (await userExists(credentials)) {
         if (!subscribers.has(credentials.username)) {
           subscribers.set(credentials.username, new Map<string, any>());
         }
-        subscribers.get(credentials.username).set(clientID, res);
+        const timeoutId = setTimeout(() => {
+          res.send("timeout");
+          subscribers.get(credentials.username).delete(clientID);
+        }, 25000);
+        subscribers.get(credentials.username).set(clientID, [res, timeoutId]);
       }
     } catch (e) {
-      console.log(e);
-      res.send(e);
+      next(e);
+    }
+  })
+  .use((err, req, res, next) => {
+    // Convert postgres errors into reasonable errors. (Otherwise the .code property confuses Express.)
+    console.log(err);
+    if (typeof err.code === "string") {
+      next(new Error("Postgres error: " + err.code, { cause: err }));
+    } else {
+      next(err);
     }
   });
 

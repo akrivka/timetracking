@@ -197,21 +197,16 @@ export function parseEntry(x): Entry {
 
 export function deserializeEntries(
   s: string
-): Entry[] | "error" | "not an array" {
-  try {
-    const json = JSON.parse(s);
-    if (Array.isArray(json)) {
-      const result: Entry[] = [];
-      for (const x of json) {
-        result.push(parseEntry(x));
-      }
-      return result;
-    } else {
-      return "not an array";
+): Entry[] {
+  const json = JSON.parse(s);
+  if (Array.isArray(json)) {
+    const result: Entry[] = [];
+    for (const x of json) {
+      result.push(parseEntry(x));
     }
-  } catch (e) {
-    console.log("deserializeEntries:", e);
-    return "error";
+    return result;
+  } else {
+    throw new Error("not an array");
   }
 }
 

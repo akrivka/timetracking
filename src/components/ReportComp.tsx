@@ -4,11 +4,12 @@ import {
   createMemo,
   For,
   Show,
-  useContext
+  useContext,
 } from "solid-js";
 import { MS_IN_DAYS, MS_IN_WEEKS } from "../lib/constants";
 import { renderDuration, renderPercentage } from "../lib/format";
 import { getLabelImmediateChildren, leafLabel } from "../lib/labels";
+import { Label } from "../lib/entries";
 
 export type ShowType = "total" | "weekly" | "daily" | "percent";
 
@@ -69,7 +70,7 @@ const Block: Component<{
       )
     );
   });
-  
+
   return (
     <Show
       when={

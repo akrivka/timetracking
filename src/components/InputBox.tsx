@@ -81,7 +81,7 @@ export function InputBox<T>(props: InputBoxProps<T>) {
           let s =
             (command() && command() + " ") + filteredUniverse()[selected()];
           ref.value = s;
-          props.onchange(s);
+          if(onchange) onchange(s);
         }
       }
     }
@@ -137,7 +137,7 @@ export function InputBox<T>(props: InputBoxProps<T>) {
                     (command() && command() + " ") +
                     filteredUniverse()[selected()];
                   ref.value = s;
-                  onchange(s);
+                  if(onchange) onchange(s);
                   onEnter(command() + " " + m);
                 }}
               >

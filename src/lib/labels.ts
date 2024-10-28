@@ -1,4 +1,5 @@
 import { addRgbColors, rgbToHex, stringToRgbColor } from "./colors";
+import { Label } from "./entries";
 import { numberOfOccurrences } from "./util";
 
 export function coarseLabel(label: string): string {
