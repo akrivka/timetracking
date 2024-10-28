@@ -311,7 +311,7 @@ const Track: Component = () => {
             limit()[1] + RENDER_LENGTH / 2,
             entries.length
           );
-          setLimit([newEnd - RENDER_LENGTH, newEnd]);
+          setLimit([Math.max(0, newEnd - RENDER_LENGTH), newEnd]);
         }
       },
       {
