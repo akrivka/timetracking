@@ -1,5 +1,11 @@
 # Timetracking app for Paul Christiano
 
+Complex timetracking application with a granular input method, power user commands, comprehensive reporting and calendar view, full offline functionality with a reliable sync, bulk operations and minimalist design.
+
+Brief showcase:
+
+![](media/showcase.gif)
+
 ## Technologies
 
 * SolidJS
@@ -10,17 +16,4 @@
 
 ## Development
 
-### `npm install` (or `pnpm install` or `yarn install`)
-
-Installs all necessary dependencies.
-
-### `npm dev` or `npm start`
-
-Runs the app in the development mode.<br>
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
-
-The page will reload if you make edits.<br>
-
-### `npm run build`
-
-Builds the app for production to the `dist` folder.<br>
+Ommitted. Contact me if interested.
